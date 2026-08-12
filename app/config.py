@@ -16,7 +16,9 @@ class Settings:
         self.spai_cfg = os.environ.get("SPAI_CFG", "./configs/spai.yaml")
         self.spai_model = os.environ.get("SPAI_MODEL", "./weights/spai.pth")
         self.spai_timeout_seconds = int(os.environ.get("SPAI_TIMEOUT_SECONDS", "120"))
-        self.work_dir = Path(os.environ.get("SPAI_WORK_DIR", "./tmp"))
+        # Must be absolute: the SPAI subprocess runs with cwd=spai_repo_dir,
+        # so a relative path here would resolve against the wrong directory.
+        self.work_dir = Path(os.environ.get("SPAI_WORK_DIR", "./tmp")).resolve()
         self.work_dir.mkdir(parents=True, exist_ok=True)
 
 
