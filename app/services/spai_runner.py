@@ -2,6 +2,7 @@ import csv
 import shutil
 import subprocess
 import uuid
+from pathlib import PureWindowsPath
 
 from app.config import get_settings
 
@@ -12,6 +13,14 @@ class SpaiInferenceError(RuntimeError):
     pass
 
 
+def _safe_filename(filename: str) -> str:
+    # PureWindowsPath treats both / and \ as separators, so this strips any
+    # directory components regardless of host OS, preventing a crafted upload
+    # filename from writing outside the job's temp dir.
+    name = PureWindowsPath(filename).name
+    return name if name and name not in (".", "..") else "upload"
+
+
 def run_spai_inference(image_bytes: bytes, filename: str) -> float:
     settings = get_settings()
     job_dir = settings.work_dir / uuid.uuid4().hex
@@ -20,7 +29,7 @@ def run_spai_inference(image_bytes: bytes, filename: str) -> float:
     input_dir.mkdir(parents=True, exist_ok=True)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    (input_dir / filename).write_bytes(image_bytes)
+    (input_dir / _safe_filename(filename)).write_bytes(image_bytes)
 
     command = [
         settings.spai_python,
