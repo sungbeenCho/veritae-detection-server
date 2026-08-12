@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from pathlib import Path
 
 
@@ -19,4 +20,6 @@ class Settings:
         self.work_dir.mkdir(parents=True, exist_ok=True)
 
 
-settings = Settings()
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

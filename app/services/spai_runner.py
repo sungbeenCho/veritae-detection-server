@@ -3,7 +3,7 @@ import shutil
 import subprocess
 import uuid
 
-from app.config import settings
+from app.config import get_settings
 
 SPAI_SCORE_TAG = "spai"
 
@@ -13,6 +13,7 @@ class SpaiInferenceError(RuntimeError):
 
 
 def run_spai_inference(image_bytes: bytes, filename: str) -> float:
+    settings = get_settings()
     job_dir = settings.work_dir / uuid.uuid4().hex
     input_dir = job_dir / "input"
     output_dir = job_dir / "output"
