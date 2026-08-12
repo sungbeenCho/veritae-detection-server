@@ -11,6 +11,10 @@ Veritae 프로젝트의 AI 생성물 탐지 서버 (이미지, SPAI 모델). Spr
 
 이 서버는 SPAI를 파이썬에서 직접 import하지 않고, **별도 프로세스로 실행**시킨 뒤 결과 CSV를 읽어온다 (SPAI가 라이브러리가 아니라 CLI 도구로 설계되어 있기 때문). 그래서 두 환경을 완전히 분리해도 되고, 오히려 분리하는 게 의존성 충돌을 피하는 데 유리하다.
 
+## 이 문서에서 쓰는 작업 폴더 경로
+
+아래 모든 명령어는 작업 폴더를 **`C:\ai`로 고정**해서 작성했다. 그대로 복사해서 쓰면 된다. 다른 위치를 쓰고 싶다면, 이 문서에 나오는 `C:\ai`를 전부 그 경로로 바꿔서 실행하면 된다 (일부만 바꾸면 경로가 안 맞아서 에러 난다).
+
 ---
 
 ## 0. 사전 준비 확인
@@ -33,7 +37,17 @@ winget install --id Git.Git -e --source winget
 
 설치 후 PowerShell 새로 열기.
 
-## 2. Miniconda 설치 (없다면)
+## 2. VS Code 설치 (선택, 추천)
+
+필수는 아니다 — 이후 모든 단계는 PowerShell만으로 그대로 진행 가능하다. 다만 나중에 버그 수정 등으로 코드를 직접 열어보거나, 서버를 켜고 끄는 걸 터미널 창 여러 개 대신 IDE 하나로 편하게 하고 싶으면 깔아두면 좋다.
+
+```powershell
+winget install --id Microsoft.VisualStudioCode -e --source winget
+```
+
+설치 후에는 `code C:\ai\veritae-detection-server` 로 폴더를 열거나, VS Code에서 `파일 > 폴더 열기`로 열면 된다. 이후 나오는 PowerShell 명령어들은 VS Code 하단의 **통합 터미널**(`Ctrl+\``)에 그대로 쳐도 되고, 지금처럼 별도 PowerShell 창에 쳐도 된다 — 결과는 동일하다. VS Code는 명령어를 바꾸지 않고, 그냥 그 명령어를 칠 곳과 파일을 볼 곳을 하나로 묶어줄 뿐이다.
+
+## 3. Miniconda 설치 (없다면)
 
 ```powershell
 winget install --id Anaconda.Miniconda3 -e --source winget
@@ -41,9 +55,7 @@ winget install --id Anaconda.Miniconda3 -e --source winget
 
 설치 후 PowerShell 새로 열기. `conda --version`으로 확인.
 
-## 3. 레포 두 개 clone
-
-작업 폴더를 하나 정한다 (예: `C:\ai`).
+## 4. 작업 폴더 만들고 레포 두 개 clone
 
 ```powershell
 mkdir C:\ai
@@ -52,7 +64,7 @@ git clone https://github.com/sungbeenCho/veritae-detection-server.git
 git clone https://github.com/mever-team/spai.git
 ```
 
-## 4. `spai` conda 환경 구성 (SPAI 모델 실행용)
+## 5. `spai` conda 환경 구성 (SPAI 모델 실행용)
 
 ```powershell
 conda create -n spai python=3.11 -y
@@ -64,7 +76,7 @@ pip install -r requirements.txt
 
 시간이 꽤 걸린다 (PyTorch + CUDA 다운로드).
 
-## 5. SPAI 모델 가중치 다운로드
+## 6. SPAI 모델 가중치 다운로드
 
 1. [Google Drive 링크](https://drive.google.com/file/d/1vvXmZqs6TVJdj8iF1oJ4L_fcgdQrp_YI/view?usp=sharing)에서 가중치 파일 다운로드
 2. `C:\ai\spai\weights\` 폴더를 만들고 그 안에 다운로드한 파일을 넣는다 (파일명은 `spai.pth`로 맞추면 아래 기본값과 그대로 맞는다)
@@ -74,7 +86,7 @@ mkdir C:\ai\spai\weights
 # 다운로드한 파일을 C:\ai\spai\weights\spai.pth 로 이동
 ```
 
-## 6. `spai` 환경의 python.exe 절대경로 확인
+## 7. `spai` 환경의 python.exe 절대경로 확인
 
 아래 환경변수 설정에 필요하다.
 
@@ -85,7 +97,7 @@ conda activate spai
 
 출력된 경로를 메모해둔다 (예: `C:\Users\<user>\miniconda3\envs\spai\python.exe`).
 
-## 7. `detection-api` conda 환경 구성 (FastAPI 서버 실행용)
+## 8. `detection-api` conda 환경 구성 (FastAPI 서버 실행용)
 
 ```powershell
 conda deactivate
@@ -95,18 +107,20 @@ cd C:\ai\veritae-detection-server
 pip install -r requirements.txt
 ```
 
-## 8. 환경변수 설정
+## 9. 환경변수 설정
 
 이 서버가 SPAI를 어디서 어떻게 실행할지 알려주는 값들이다. PowerShell 세션마다 설정해야 하니, 매번 치기 귀찮으면 아래를 `C:\ai\veritae-detection-server\run.ps1` 같은 스크립트로 저장해두고 실행하면 편하다.
 
 ```powershell
 $env:SPAI_REPO_DIR = "C:\ai\spai"
-$env:SPAI_PYTHON   = "C:\Users\<user>\miniconda3\envs\spai\python.exe"   # 6번에서 확인한 경로
+$env:SPAI_PYTHON   = "C:\Users\<user>\miniconda3\envs\spai\python.exe"   # 7번에서 확인한 경로
 $env:SPAI_CFG      = "./configs/spai.yaml"
 $env:SPAI_MODEL    = "./weights/spai.pth"
 ```
 
-## 9. 서버 실행
+## 10. 서버 실행
+
+PowerShell 창이든 VS Code 통합 터미널이든 상관없다.
 
 ```powershell
 conda activate detection-api
@@ -114,9 +128,11 @@ cd C:\ai\veritae-detection-server
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-## 10. 정상 동작 확인
+끌 때는 이 터미널에서 `Ctrl+C`.
 
-새 PowerShell 창을 열고:
+## 11. 정상 동작 확인
+
+새 PowerShell 창을 열고 (서버는 10번에서 계속 켜둔 채로):
 
 ```powershell
 curl http://localhost:8000/health
@@ -126,7 +142,7 @@ curl -F "file=@C:\path\to\test.jpg;type=image/jpeg" http://localhost:8000/proces
 # {"ai_detection":{"model":"spai","score":0.xx}} 가 나오면 SPAI 연동까지 정상
 ```
 
-## 11. 홈 LAN에서 Spring이 접근할 수 있게 방화벽 허용
+## 12. 홈 LAN에서 Spring이 접근할 수 있게 방화벽 허용
 
 관리자 권한 PowerShell에서:
 
@@ -134,7 +150,7 @@ curl -F "file=@C:\path\to\test.jpg;type=image/jpeg" http://localhost:8000/proces
 New-NetFirewallRule -DisplayName "Veritae Detection Server" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow
 ```
 
-## 12. 데스크탑의 로컬 IP 확인 (Spring 쪽 설정에 필요)
+## 13. 데스크탑의 로컬 IP 확인 (Spring 쪽 설정에 필요)
 
 ```powershell
 ipconfig
