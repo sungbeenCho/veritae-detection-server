@@ -16,6 +16,9 @@ class Settings:
         self.spai_cfg = os.environ.get("SPAI_CFG", "./configs/spai.yaml")
         self.spai_model = os.environ.get("SPAI_MODEL", "./weights/spai.pth")
         self.spai_timeout_seconds = int(os.environ.get("SPAI_TIMEOUT_SECONDS", "120"))
+        # Full-resolution phone photos (3000px+) blow past an 8GB GPU's VRAM
+        # in SPAI's patch-based forward pass, so downscale before inference.
+        self.spai_resize_to = int(os.environ.get("SPAI_RESIZE_TO", "1024"))
         # Must be absolute: the SPAI subprocess runs with cwd=spai_repo_dir,
         # so a relative path here would resolve against the wrong directory.
         self.work_dir = Path(os.environ.get("SPAI_WORK_DIR", "./tmp")).resolve()

@@ -116,6 +116,7 @@ $env:SPAI_REPO_DIR = "C:\ai\spai"
 $env:SPAI_PYTHON   = "C:\Users\<user>\miniconda3\envs\spai\python.exe"   # 7번에서 확인한 경로
 $env:SPAI_CFG      = "./configs/spai.yaml"
 $env:SPAI_MODEL    = "./weights/spai.pth"
+$env:SPAI_RESIZE_TO = "1024"   # 안 정하면 기본값 1024. 8GB급 GPU에서 폰 원본 사진(3000px+)을 그대로 돌리면 CUDA OOM 남
 ```
 
 ## 10. 서버 실행

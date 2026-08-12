@@ -39,6 +39,7 @@ def run_spai_inference(image_bytes: bytes, filename: str) -> float:
         "--input", str(input_dir),
         "--output", str(output_dir),
         "--tag", SPAI_SCORE_TAG,
+        "--resize-to", str(settings.spai_resize_to),
     ]
 
     try:
