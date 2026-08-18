@@ -194,7 +194,7 @@ pip install -e .
 ### 3. 나머지 패키지 설치
 
 ```powershell
-pip install librosa scikit-learn julius julius soundfile h5py
+pip install librosa scikit-learn julius soundfile h5py
 ```
 
 ### 4. AntiDeepfake 저장소 클론
