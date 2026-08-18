@@ -165,6 +165,125 @@ detection.service.url=http://<위에서 확인한 IP>:8000
 
 ---
 
+## 음성(AntiDeepfake) 셋업
+
+이 서버는 이미지뿐만 아니라 음성 파일의 AI 생성(deepfake) 여부도 탐지할 수 있다. SPAI와 달리 AntiDeepfake는 CPU에서 충분히 빠르게 동작하므로, 별도의 GPU 설정 없이 설치할 수 있다.
+
+### 1. `antideepfake` conda 환경 구성
+
+```powershell
+conda create -n antideepfake python==3.9.0 -y
+conda activate antideepfake
+pip install torch==2.6.0 torchaudio==2.6.0
+```
+
+**중요:** SPAI와 달리 `--index-url`을 붙이지 않는다. CPU 전용 빌드이므로 PyTorch의 기본 pip 버전으로 충분하다.
+
+시간이 꽤 걸린다 (PyTorch 다운로드).
+
+### 2. fairseq 특정 커밋 체크아웃 및 editable 설치
+
+```powershell
+cd C:\ai
+git clone https://github.com/pytorch/fairseq.git
+cd fairseq
+git checkout 862efab86f649c04ea31545ce28d13c59560113d
+pip install -e .
+```
+
+### 3. 나머지 패키지 설치
+
+```powershell
+pip install librosa scikit-learn julius julius soundfile h5py
+```
+
+### 4. AntiDeepfake 저장소 클론
+
+```powershell
+cd C:\ai
+git clone https://github.com/nii-yamagishilab/AntiDeepfake.git
+```
+
+### 5. 모델 체크포인트 다운로드
+
+```powershell
+mkdir C:\ai\AntiDeepfake\downloads
+cd C:\ai\AntiDeepfake\downloads
+wget -O mms_300m.ckpt https://zenodo.org/records/15580543/files/mms_300m.ckpt
+```
+
+Windows에 wget이 없으면 PowerShell의 `curl`을 사용할 수 있다:
+
+```powershell
+curl -o mms_300m.ckpt https://zenodo.org/records/15580543/files/mms_300m.ckpt
+```
+
+### 6. `antideepfake` 환경의 python.exe 절대경로 확인
+
+아래 환경변수 설정에 필요하다.
+
+```powershell
+conda activate antideepfake
+(Get-Command python).Source
+```
+
+출력된 경로를 메모해둔다 (예: `C:\Users\<user>\miniconda3\envs\antideepfake\python.exe`).
+
+### 7. veritae-detection-server 최신 코드 적용
+
+```powershell
+cd C:\ai\veritae-detection-server
+git pull origin main
+```
+
+### 8. 환경변수 설정
+
+이 서버가 AntiDeepfake를 어디서 어떻게 실행할지 알려주는 값들이다. PowerShell 세션마다 설정해야 하니, 매번 치기 귀찮으면 아래를 `C:\ai\veritae-detection-server\run.ps1` 같은 스크립트에 추가해서 실행하면 편하다.
+
+```powershell
+$env:ANTIDEEPFAKE_REPO_DIR       = "C:\ai\AntiDeepfake"
+$env:ANTIDEEPFAKE_CHECKPOINT     = "C:\ai\AntiDeepfake\downloads\mms_300m.ckpt"
+$env:ANTIDEEPFAKE_PYTHON         = "C:\Users\<user>\miniconda3\envs\antideepfake\python.exe"   # 위에서 확인한 경로
+```
+
+### 9. 서버 실행 (또는 재시작)
+
+이미 detection-api 서버가 켜져 있다면, 환경변수가 적용되도록 다시 시작해야 한다.
+
+```powershell
+conda activate detection-api
+cd C:\ai\veritae-detection-server
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### 10. 정상 동작 확인
+
+새 PowerShell 창을 열고 (서버는 9번에서 계속 켜둔 채로):
+
+```powershell
+curl -X POST -F "file=@C:\path\to\test.wav" http://localhost:8000/process/audio
+```
+
+정상이면 다음과 같은 응답이 나온다:
+
+```json
+{
+  "ai_detection": {
+    "model": "antideepfake",
+    "score": 0.xx
+  }
+}
+```
+
+**이 단계에서 주의:** 이 curl 호출이 실제로 작동하는 것이 매우 중요하다. 만약 에러가 나거나 score가 항상 0 또는 1처럼 이상하면, 다음 세 지점을 의심해야 한다:
+- fairseq의 frame stride 설정이 실제 체크포인트와 맞는가
+- AntiDeepfake 코드의 `FAKE_CLASS_INDEX` 값이 맞는가
+- `load_weights` 함수의 반환 방식이 예상대로 동작하는가
+
+자세한 내용은 프로젝트 문서의 음성 AI 판독 설계 섹션을 참고하고, 필요하면 추론 스크립트의 로그 출력을 추가해서 각 단계를 점검하자.
+
+---
+
 ## 로컬 개발 (테스트 실행)
 
 이 레포를 수정하는 개발 머신(이 컴퓨터)에서 테스트를 돌릴 때는 SPAI 없이도 가능하다 (테스트는 `run_spai_inference`를 mock 처리한다):
