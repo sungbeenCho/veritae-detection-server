@@ -40,7 +40,7 @@ class Settings:
         self.antideepfake_script = Path(
             os.environ.get(
                 "ANTIDEEPFAKE_SCRIPT",
-                str(Path(__file__).resolve().parent.parent.parent / "scripts" / "antideepfake_infer.py"),
+                str(Path(__file__).resolve().parent.parent / "scripts" / "antideepfake_infer.py"),
             )
         )
         self.antideepfake_checkpoint = Path(
