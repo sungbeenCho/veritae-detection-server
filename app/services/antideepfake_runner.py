@@ -45,6 +45,7 @@ def run_antideepfake_inference(audio_bytes: bytes, filename: str) -> AntiDeepfak
     try:
         result = subprocess.run(
             command,
+            cwd=settings.antideepfake_repo_dir,
             capture_output=True,
             text=True,
             timeout=settings.antideepfake_timeout_seconds,
