@@ -5,3 +5,4 @@ venv/
 tmp/
 .env
 .pytest_cache/
+.worktrees/
