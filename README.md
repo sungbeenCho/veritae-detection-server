@@ -270,12 +270,15 @@ curl -X POST -F "file=@C:\path\to\test.wav" http://localhost:8000/process/audio
 {
   "ai_detection": {
     "model": "antideepfake",
-    "score": 0.xx
+    "score": 0.xx,
+    "evidence": []
   }
 }
 ```
 
-**이 단계에서 주의:** 이 curl 호출이 실제로 작동하는 것이 매우 중요하다. 만약 에러가 나거나 score가 항상 0 또는 1처럼 이상하면, 다음 세 지점을 의심해야 한다:
+score가 높으면(AI 생성 확률이 높으면) `evidence` 배열에 탐지된 근거들(의심 구간의 시작/종료, 설명)이 채워진다.
+
+**이 단계에서 주의:** 이 curl 호출이 실제로 작동하는 것이 매우 중요하다. 추론 스크립트를 작성할 때는 실제 체크포인트 없이 소스코드만 읽고 다음 세 지점을 추정했기 때문에, 이것이 그 추정들을 실제로 검증하는 첫 번째 시험대다. 만약 에러가 나거나 score가 항상 0 또는 1처럼 이상하면, 다음 세 지점을 의심해야 한다:
 - fairseq의 frame stride 설정이 실제 체크포인트와 맞는가
 - AntiDeepfake 코드의 `FAKE_CLASS_INDEX` 값이 맞는가
 - `load_weights` 함수의 반환 방식이 예상대로 동작하는가
