@@ -66,7 +66,10 @@ def run_antideepfake_inference(audio_bytes: bytes, filename: str) -> AntiDeepfak
 
 
 def _parse_result(output_file: Path) -> AntiDeepfakeResult:
-    data = json.loads(output_file.read_text())
+    try:
+        data = json.loads(output_file.read_text())
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError) as e:
+        raise AntiDeepfakeInferenceError(f"AntiDeepfake output JSON을 읽거나 파싱할 수 없습니다: {output_file}") from e
     if "score" not in data:
         raise AntiDeepfakeInferenceError(f"AntiDeepfake output JSON missing 'score' field: {output_file}")
     return AntiDeepfakeResult(score=data["score"], evidence=data.get("evidence", []))

@@ -56,3 +56,11 @@ def test_parse_result_missing_score_raises(tmp_path):
 
     with pytest.raises(AntiDeepfakeInferenceError):
         _parse_result(output_file)
+
+
+def test_parse_result_corrupted_json_raises(tmp_path):
+    output_file = tmp_path / "result.json"
+    output_file.write_text("not valid json")
+
+    with pytest.raises(AntiDeepfakeInferenceError):
+        _parse_result(output_file)
