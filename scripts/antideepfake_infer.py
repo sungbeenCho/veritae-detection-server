@@ -25,9 +25,12 @@ SAMPLE_RATE = 16000
 FRAME_STRIDE_SECONDS = 0.02
 EVIDENCE_SCORE_THRESHOLD = 0.5
 MAX_EVIDENCE_COUNT = 3
-# forward_seg()가 반환하는 2-class logit 중 어느 인덱스가 "fake"인지 - AntiDeepfake
-# protocols(ASVspoof 계열 관례상 보통 1=spoof/fake)를 따랐으나 실제 체크포인트로 검증 필요.
-FAKE_CLASS_INDEX = 1
+# forward_seg()가 반환하는 2-class logit 중 어느 인덱스가 "fake"인지.
+# AntiDeepfake 공식 evaluation.py 독스트링에 명시: "[Score] is [Fake logits, Real logits],
+# [Label] is 0 for Groundtruth Fake and 1 for Groundtruth Real" - 즉 인덱스 0=fake, 1=real.
+# (데스크탑 실측 검증: 실제 사람 음성이 FAKE_CLASS_INDEX=1일 때 score 0.99+로 나와 반전돼있음을 확인,
+# 0으로 수정.)
+FAKE_CLASS_INDEX = 0
 
 
 def _safe_filename(filename: str) -> str:
