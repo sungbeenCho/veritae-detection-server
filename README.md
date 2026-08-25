@@ -169,7 +169,23 @@ detection.service.url=http://<위에서 확인한 IP>:8000
 
 이 서버는 이미지뿐만 아니라 음성 파일의 AI 생성(deepfake) 여부도 탐지할 수 있다. SPAI와 달리 AntiDeepfake는 CPU에서 충분히 빠르게 동작하므로, 별도의 GPU 설정 없이 설치할 수 있다.
 
+### 0. (필수) 사전 준비 두 가지 — 안 하면 다음 단계에서 반드시 에러난다
+
+fairseq는 C 확장 모듈을 포함하고 있어서 컴파일러가 필요하고, 설치 스크립트가 심볼릭 링크도 만든다. 아래 둘을 먼저 해두지 않으면 2번 단계(`pip install -e .`)에서 100% 에러난다.
+
+**a. Visual C++ Build Tools 설치** (없으면 `Microsoft Visual C++ 14.0 or greater is required` 에러):
+
+```powershell
+winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+```
+
+몇 GB 다운로드라 시간이 걸린다(회선에 따라 10~20분+). 설치 후 아래 b로.
+
+**b. 이 섹션의 모든 명령은 관리자 권한 PowerShell에서 실행한다** — fairseq 설치 스크립트가 심볼릭 링크를 만드는데, 일반 권한으로 실행하면 `WinError 1314: 클라이언트가 필요한 권한을 가지고 있지 않습니다` 에러가 난다. 시작 메뉴에서 PowerShell 우클릭 → "관리자 권한으로 실행"으로 새 창을 연다.
+
 ### 1. `antideepfake` conda 환경 구성
+
+(관리자 권한 PowerShell에서 계속)
 
 ```powershell
 conda create -n antideepfake python==3.9.0 -y
@@ -188,8 +204,11 @@ cd C:\ai
 git clone https://github.com/pytorch/fairseq.git
 cd fairseq
 git checkout 862efab86f649c04ea31545ce28d13c59560113d
+python -m pip install "pip<24.1"
 pip install -e .
 ```
+
+**`pip<24.1`이 왜 필요한가:** fairseq가 요구하는 구버전 `omegaconf`(2.0.x)의 패키지 메타데이터가 최신 pip(24.1 이상)에서는 `invalid metadata` 에러로 거부된다. pip을 24.1 미만으로 내려야 설치가 된다 — 이 변경은 `antideepfake` conda 환경 안에서만 적용되고 다른 env(`spai`, `detection-api`)에는 영향 없다.
 
 ### 3. 나머지 패키지 설치
 
