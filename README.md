@@ -181,11 +181,9 @@ winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--quie
 
 몇 GB 다운로드라 시간이 걸린다(회선에 따라 10~20분+). 설치 후 아래 b로.
 
-**b. 이 섹션의 모든 명령은 관리자 권한 PowerShell에서 실행한다** — fairseq 설치 스크립트가 심볼릭 링크를 만드는데, 일반 권한으로 실행하면 `WinError 1314: 클라이언트가 필요한 권한을 가지고 있지 않습니다` 에러가 난다. 시작 메뉴에서 PowerShell 우클릭 → "관리자 권한으로 실행"으로 새 창을 연다.
+**b. 2번 단계(`pip install -e .`)는 관리자 권한 PowerShell에서 실행한다** — fairseq 설치 스크립트가 심볼릭 링크를 만드는데, 일반 권한으로 실행하면 `WinError 1314: 클라이언트가 필요한 권한을 가지고 있지 않습니다` 에러가 난다. 시작 메뉴에서 PowerShell 우클릭 → "관리자 권한으로 실행"으로 새 창을 연다. **관리자 권한이 필요한 건 이 한 단계뿐** — 1번(conda 환경 구성)과 3번 이후(나머지 패키지, AntiDeepfake clone, 체크포인트 다운로드, 서버 실행)는 전부 일반 권한으로 하면 된다. SPAI 셋업에 이 단계가 없었던 이유도 SPAI는 심볼릭 링크를 만들지 않기 때문이다.
 
 ### 1. `antideepfake` conda 환경 구성
-
-(관리자 권한 PowerShell에서 계속)
 
 ```powershell
 conda create -n antideepfake python==3.9.0 -y
@@ -198,6 +196,8 @@ pip install torch==2.6.0 torchaudio==2.6.0
 시간이 꽤 걸린다 (PyTorch 다운로드).
 
 ### 2. fairseq 특정 커밋 체크아웃 및 editable 설치
+
+**여기서부터는 관리자 권한 PowerShell로** (0-b 참고). `conda activate antideepfake`도 이 창에서 다시 해야 한다 — 환경변수는 PowerShell 창마다 따로다.
 
 ```powershell
 cd C:\ai
