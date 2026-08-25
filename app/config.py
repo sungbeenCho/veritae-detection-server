@@ -46,7 +46,9 @@ class Settings:
         self.antideepfake_checkpoint = Path(
             os.environ.get("ANTIDEEPFAKE_CHECKPOINT", "./downloads/mms_300m.ckpt")
         )
-        self.antideepfake_timeout_seconds = int(os.environ.get("ANTIDEEPFAKE_TIMEOUT_SECONDS", "120"))
+        # 2.6분짜리 mp3가 실측 89초 걸림(2026-08-25) - 스펙 최대 길이(5분)까지 가면 120s를
+        # 넘을 수 있어 300s로 늘림. Spring 쪽 detection.read-timeout도 같이 늘려야 함.
+        self.antideepfake_timeout_seconds = int(os.environ.get("ANTIDEEPFAKE_TIMEOUT_SECONDS", "300"))
         self.antideepfake_work_dir = Path(os.environ.get("ANTIDEEPFAKE_WORK_DIR", "./tmp")).resolve()
         self.antideepfake_work_dir.mkdir(parents=True, exist_ok=True)
 
