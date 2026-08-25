@@ -13,6 +13,7 @@ docs(veritae-server 레포): docs/superpowers/specs/2026-08-18-audio-ai-detectio
 """
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -55,7 +56,28 @@ def load_model(repo_dir: Path, checkpoint_path: Path) -> torch.nn.Module:
     return model
 
 
+def _decode_to_wav_if_needed(audio_path: Path) -> Path:
+    """torchaudio(soundfile 백엔드)는 비압축 포맷(wav/flac/ogg)만 읽을 수 있다.
+    폰 녹음은 보통 압축 포맷(m4a/mp4/mp3/aac)이라 실측(2026-08-25, 실제 카카오톡
+    녹음 파일)에서 soundfile.LibsndfileError로 실패하는 걸 확인했다 - ffmpeg로 먼저
+    wav로 변환한다. ffmpeg가 PATH에 있어야 한다(README 사전 준비 참고)."""
+    if audio_path.suffix.lower() in {".wav", ".flac", ".ogg"}:
+        return audio_path
+    converted_path = audio_path.with_name(audio_path.stem + "_converted.wav")
+    result = subprocess.run(
+        ["ffmpeg", "-y", "-i", str(audio_path), str(converted_path)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"ffmpeg으로 오디오 변환 실패({audio_path.suffix}): {result.stderr[-1000:]}"
+        )
+    return converted_path
+
+
 def run_inference(model: torch.nn.Module, audio_path: Path) -> dict:
+    audio_path = _decode_to_wav_if_needed(audio_path)
     waveform, sr = torchaudio.load(str(audio_path))
     if sr != SAMPLE_RATE:
         waveform = torchaudio.functional.resample(waveform, sr, SAMPLE_RATE)

@@ -169,9 +169,9 @@ detection.service.url=http://<위에서 확인한 IP>:8000
 
 이 서버는 이미지뿐만 아니라 음성 파일의 AI 생성(deepfake) 여부도 탐지할 수 있다. SPAI와 달리 AntiDeepfake는 CPU에서 충분히 빠르게 동작하므로, 별도의 GPU 설정 없이 설치할 수 있다.
 
-### 0. (필수) 사전 준비 두 가지 — 안 하면 다음 단계에서 반드시 에러난다
+### 0. (필수) 사전 준비 세 가지 — 안 하면 다음 단계 또는 실제 추론에서 에러난다
 
-fairseq는 C 확장 모듈을 포함하고 있어서 컴파일러가 필요하고, 설치 스크립트가 심볼릭 링크도 만든다. 아래 둘을 먼저 해두지 않으면 2번 단계(`pip install -e .`)에서 100% 에러난다.
+fairseq는 C 확장 모듈을 포함하고 있어서 컴파일러가 필요하고, 설치 스크립트가 심볼릭 링크도 만든다. 아래 a, b를 먼저 해두지 않으면 2번 단계(`pip install -e .`)에서 100% 에러난다. c(ffmpeg)는 설치 자체엔 필요 없지만, 폰 녹음 파일(m4a/mp4 등 압축 포맷)로 실제 추론할 때 필요하다 — 없으면 `soundfile.LibsndfileError: Format not recognised`로 실패한다(실측 확인됨, wav/flac은 ffmpeg 없이도 됨).
 
 **a. Visual C++ Build Tools 설치** (없으면 `Microsoft Visual C++ 14.0 or greater is required` 에러):
 
@@ -182,6 +182,14 @@ winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--quie
 몇 GB 다운로드라 시간이 걸린다(회선에 따라 10~20분+). 설치 후 아래 b로.
 
 **b. 2번 단계(`pip install -e .`)는 관리자 권한 PowerShell에서 실행한다** — fairseq 설치 스크립트가 심볼릭 링크를 만드는데, 일반 권한으로 실행하면 `WinError 1314: 클라이언트가 필요한 권한을 가지고 있지 않습니다` 에러가 난다. 시작 메뉴에서 PowerShell 우클릭 → "관리자 권한으로 실행"으로 새 창을 연다. **관리자 권한이 필요한 건 이 한 단계뿐** — 1번(conda 환경 구성)과 3번 이후(나머지 패키지, AntiDeepfake clone, 체크포인트 다운로드, 서버 실행)는 전부 일반 권한으로 하면 된다. SPAI 셋업에 이 단계가 없었던 이유도 SPAI는 심볼릭 링크를 만들지 않기 때문이다.
+
+**c. ffmpeg 설치** (m4a/mp4 등 압축 오디오 파일을 처리하려면 필요, wav/flac만 쓸 거면 생략 가능):
+
+```powershell
+winget install ffmpeg
+```
+
+설치 후 새 PowerShell 창 열기 (PATH 반영을 위해 필수). `scripts/antideepfake_infer.py`가 압축 포맷이 들어오면 자동으로 이 ffmpeg를 호출해서 wav로 변환한 뒤 추론한다 — 별도 수동 변환 필요 없다.
 
 ### 1. `antideepfake` conda 환경 구성
 
