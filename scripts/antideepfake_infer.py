@@ -68,6 +68,8 @@ def _decode_to_wav_if_needed(audio_path: Path) -> Path:
         ["ffmpeg", "-y", "-i", str(audio_path), str(converted_path)],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     if result.returncode != 0:
         raise RuntimeError(
