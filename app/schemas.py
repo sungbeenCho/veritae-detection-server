@@ -26,3 +26,14 @@ class AudioDetectionResult(BaseModel):
 
 class AudioAnalysisResponse(BaseModel):
     ai_detection: AudioDetectionResult
+
+
+class VideoDetectionResult(BaseModel):
+    model: str
+    score: float
+    evidence: list[Evidence]
+    evidence_image: str | None = None
+
+
+class VideoAnalysisResponse(BaseModel):
+    ai_detection: VideoDetectionResult

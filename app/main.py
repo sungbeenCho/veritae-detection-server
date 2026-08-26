@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 
-from app.routers import audio, image
+from app.routers import audio, image, video
 
 app = FastAPI(title="Veritae Detection Server")
 
 app.include_router(image.router)
 app.include_router(audio.router)
+app.include_router(video.router)
 
 
 @app.get("/health")
