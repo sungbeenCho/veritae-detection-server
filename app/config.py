@@ -52,6 +52,37 @@ class Settings:
         self.antideepfake_work_dir = Path(os.environ.get("ANTIDEEPFAKE_WORK_DIR", "./tmp")).resolve()
         self.antideepfake_work_dir.mkdir(parents=True, exist_ok=True)
 
+        # --- selimsef/dfdc_deepfake_challenge(영상, 얼굴조작 딥페이크) 설정. SPAI/AntiDeepfake와
+        # 마찬가지로 무거운 의존성(opencv-python, facenet-pytorch 등)은 별도 conda env(dfdc)에
+        # 격리하고, 여기(detection-api env)는 subprocess로만 부른다.
+        dfdc_repo_dir = os.environ.get("DFDC_REPO_DIR")
+        if not dfdc_repo_dir:
+            raise RuntimeError(
+                "DFDC_REPO_DIR environment variable is required "
+                "(absolute path to the cloned selimsef/dfdc_deepfake_challenge repo)"
+            )
+        self.dfdc_repo_dir = Path(dfdc_repo_dir)
+        self.dfdc_python = os.environ.get("DFDC_PYTHON", "python")
+        self.dfdc_script = Path(
+            os.environ.get(
+                "DFDC_SCRIPT",
+                str(Path(__file__).resolve().parent.parent / "scripts" / "dfdc_infer.py"),
+            )
+        )
+        # 저장소가 배포하는 7개 체크포인트 앙상블 중 하나만 쓴다(§3, 8GB GPU 고려) - 필요하면
+        # env var로 다른 체크포인트로 바꿀 수 있다.
+        self.dfdc_checkpoint = Path(
+            os.environ.get(
+                "DFDC_CHECKPOINT",
+                "./weights/final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19",
+            )
+        )
+        # 얼굴검출+CNN추론이 여러 프레임에 걸쳐 겹쳐 오디오(300s)보다 오래 걸릴 걸로 예상되나
+        # 실측 데이터 없음(2026-08-26 기준) - 넉넉하게 잡고 실측 후 조정.
+        self.dfdc_timeout_seconds = int(os.environ.get("DFDC_TIMEOUT_SECONDS", "600"))
+        self.dfdc_work_dir = Path(os.environ.get("DFDC_WORK_DIR", "./tmp")).resolve()
+        self.dfdc_work_dir.mkdir(parents=True, exist_ok=True)
+
 
 @lru_cache
 def get_settings() -> Settings:

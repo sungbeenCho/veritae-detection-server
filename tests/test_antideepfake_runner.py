@@ -78,6 +78,7 @@ def test_run_antideepfake_inference_passes_repo_dir_as_cwd(monkeypatch, tmp_path
     monkeypatch.setenv("SPAI_REPO_DIR", str(tmp_path / "spai"))
     monkeypatch.setenv("ANTIDEEPFAKE_REPO_DIR", str(tmp_path / "antideepfake"))
     monkeypatch.setenv("ANTIDEEPFAKE_WORK_DIR", str(tmp_path / "work"))
+    monkeypatch.setenv("DFDC_REPO_DIR", str(tmp_path / "dfdc"))
     get_settings.cache_clear()
     settings = get_settings()
 
