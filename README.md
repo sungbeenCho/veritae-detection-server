@@ -314,6 +314,126 @@ score가 높으면(AI 생성 확률이 높으면) `evidence` 배열에 탐지된
 
 ---
 
+## 영상(dfdc) 셋업
+
+이 서버는 이미지, 음성뿐만 아니라 영상 파일의 얼굴 조작(딥페이크) 여부도 탐지할 수 있다. `selimsef/dfdc_deepfake_challenge`(Kaggle DFDC 대회 1위 솔루션)의 얼굴 검출(facenet-pytorch MTCNN) + CNN 분류(EfficientNet) 파이프라인을 그대로 재사용한다. SPAI/AntiDeepfake와 마찬가지로 무거운 의존성은 별도 conda env(`dfdc`)에 격리하고, `detection-api` env는 subprocess로만 부른다.
+
+**중요:** `app/config.py`의 `Settings`는 이미지(SPAI)/음성(AntiDeepfake)/영상(dfdc) 세 모델의 설정을 한 클래스에 다 넣고 있고, `DFDC_REPO_DIR`이 없으면 `Settings()` 생성 자체가 `RuntimeError`로 실패한다. 이 `Settings` 객체는 `get_settings()`로 **모든 라우터(이미지/음성/영상)가 공유**하므로, `DFDC_REPO_DIR`을 설정하지 않고 서버를 켜면 (영상 기능을 안 쓰더라도) **이미지·음성 엔드포인트까지 전부 500**이 된다. `git pull`로 이 셋업 섹션이 추가된 코드를 받았다면, 아래 환경변수 설정(8번)까지 반드시 같이 해야 한다.
+
+### 1. `dfdc` conda 환경 구성
+
+```powershell
+conda create -n dfdc python=3.9 -y
+conda activate dfdc
+conda install pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia -y
+```
+
+시간이 꽤 걸린다 (PyTorch + CUDA 다운로드, SPAI 셋업 5번과 동일).
+
+### 2. 나머지 패키지 설치
+
+```powershell
+pip install opencv-python facenet-pytorch pytorch-grad-cam timm albumentations
+```
+
+- `opencv-python`: 프레임 추출(`kernel_utils.VideoReader`)
+- `facenet-pytorch`: 얼굴 검출(MTCNN, `kernel_utils.FaceExtractor`)
+- `pytorch-grad-cam`: 얼굴 히트맵(Grad-CAM, best-effort 기능)
+- `timm`: EfficientNet 인코더(`training.zoo.classifiers.DeepFakeClassifier`가 내부적으로 사용)
+- `albumentations`: selimsef 저장소의 `kernel_utils.py`/`training/` 모듈 import 시 필요(직접 호출하진 않지만 import 체인에 걸림)
+
+### 3. dfdc_deepfake_challenge 저장소 클론
+
+```powershell
+cd C:\ai
+git clone https://github.com/selimsef/dfdc_deepfake_challenge.git
+```
+
+### 4. 모델 체크포인트 다운로드
+
+저장소는 7개 체크포인트 앙상블을 배포하지만, 이 서버는 8GB급 GPU를 고려해 그중 하나만 쓴다 (`tf_efficientnet_b7_ns` 계열, `final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19`). 저장소가 제공하는 `download_weights.sh`는 7개를 전부 받으므로, 필요한 것만 받으려면 저장소 README의 다운로드 링크에서 해당 파일 하나만 받는 게 낫다.
+
+```powershell
+mkdir C:\ai\dfdc_deepfake_challenge\weights
+cd C:\ai\dfdc_deepfake_challenge\weights
+# 저장소 README(https://github.com/selimsef/dfdc_deepfake_challenge#test)의 weights 다운로드 링크에서
+# final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19 파일 하나만 받아 이 폴더에 넣는다.
+# 전체 7개 앙상블을 다 받고 싶다면 저장소 루트의 download_weights.sh를 대신 실행해도 된다:
+#   cd C:\ai\dfdc_deepfake_challenge
+#   bash download_weights.sh
+```
+
+파일명은 `final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19`로 맞추면 아래 `DFDC_CHECKPOINT` 기본값과 그대로 맞는다.
+
+### 5. `dfdc` 환경의 python.exe 절대경로 확인
+
+아래 환경변수 설정에 필요하다.
+
+```powershell
+conda activate dfdc
+(Get-Command python).Source
+```
+
+출력된 경로를 메모해둔다 (예: `C:\Users\<user>\miniconda3\envs\dfdc\python.exe`).
+
+### 6. veritae-detection-server 최신 코드 적용
+
+```powershell
+cd C:\ai\veritae-detection-server
+git pull origin main
+```
+
+### 7. 환경변수 설정
+
+이 서버가 dfdc를 어디서 어떻게 실행할지 알려주는 값들이다. `DFDC_REPO_DIR`은 **필수**(없으면 위에서 설명한 대로 서버 전체가 500이 된다) — 나머지는 선택이고 `app/config.py`에 기본값이 있다. PowerShell 세션마다 설정해야 하니, 매번 치기 귀찮으면 아래를 `C:\ai\veritae-detection-server\run.ps1` 같은 스크립트에 추가해서 실행하면 편하다.
+
+```powershell
+$env:DFDC_REPO_DIR = "C:\ai\dfdc_deepfake_challenge"   # 필수
+$env:DFDC_PYTHON    = "C:\Users\<user>\miniconda3\envs\dfdc\python.exe"   # 5번에서 확인한 경로 (기본값: "python")
+$env:DFDC_CHECKPOINT = "./weights/final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19"   # 기본값이 이미 이 값 - 4번에서 저장소 안에 받았다면 생략 가능
+$env:DFDC_TIMEOUT_SECONDS = "600"   # 기본값 600s. 얼굴검출+CNN추론이 여러 프레임에 걸쳐 오디오(300s)보다 오래 걸릴 걸로 예상되나 실측 전이라 넉넉하게 잡음
+$env:DFDC_WORK_DIR = "./tmp"   # 기본값 ./tmp (SPAI/AntiDeepfake와 동일)
+```
+
+### 8. 서버 실행 (또는 재시작)
+
+이미 detection-api 서버가 켜져 있다면, 환경변수가 적용되도록 다시 시작해야 한다.
+
+```powershell
+conda activate detection-api
+cd C:\ai\veritae-detection-server
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### 9. 정상 동작 확인
+
+새 PowerShell 창을 열고 (서버는 8번에서 계속 켜둔 채로):
+
+```powershell
+curl -X POST -F "file=@C:\path\to\test.mp4;type=video/mp4" http://localhost:8000/process/video
+```
+
+정상이면 다음과 같은 응답이 나온다:
+
+```json
+{
+  "ai_detection": {
+    "model": "dfdc",
+    "score": 0.xx,
+    "evidence": [],
+    "evidence_image": null
+  }
+}
+```
+
+score가 높으면(얼굴 조작 확률이 높으면) `evidence` 배열에 탐지된 시간 구간이, `evidence_image`에 Grad-CAM 히트맵(base64 PNG)이 채워질 수 있다(둘 다 best-effort — 실패해도 전체 분석은 성공한다).
+
+**이 단계에서 주의:** `scripts/dfdc_infer.py`는 실제 GPU/체크포인트 없이 소스코드만 읽고 작성되어 이번이 첫 실환경 검증이다. 특히 아래 두 지점은 미검증 상태이니, 에러가 나거나 결과가 이상하면 먼저 의심해야 한다:
+- Grad-CAM의 `target_layer`(`model.encoder.conv_head`)가 실제 `DeepFakeClassifier` 객체 구조와 맞는지 — 안 맞으면 `evidence_image`가 계속 `null`로만 나온다(예외를 삼키므로 서버 에러는 안 남).
+- 히트맵 배경 이미지의 RGB 색공간이 실제로 맞는지 — 코드 리뷰로 selimsef의 `VideoReader`가 프레임을 이미 BGR→RGB 변환한다는 것까지는 소스에서 확인했지만, 실제로 렌더링된 PNG를 육안으로 봐야 최종 확인이 된다.
+
+---
+
 ## 로컬 개발 (테스트 실행)
 
 이 레포를 수정하는 개발 머신(이 컴퓨터)에서 테스트를 돌릴 때는 SPAI 없이도 가능하다 (테스트는 `run_spai_inference`를 mock 처리한다):
