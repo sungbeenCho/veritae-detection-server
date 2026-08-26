@@ -1,9 +1,12 @@
 import json
 import subprocess
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.config import get_settings
 from app.services.dfdc_runner import DfdcInferenceError, _parse_result, _safe_filename
 
 
@@ -125,3 +128,36 @@ def test_run_dfdc_inference_timeout_raises(mock_get_settings, mock_run, tmp_path
 
     with pytest.raises(DfdcInferenceError, match="timed out"):
         run_dfdc_inference(b"fake-video-bytes", "test.mp4")
+
+
+def test_run_dfdc_inference_passes_repo_dir_as_cwd(monkeypatch, tmp_path):
+    # Regression test: DFDC_CHECKPOINT의 기본값이 상대경로(./weights/...)라서, subprocess
+    # 호출 시 cwd=settings.dfdc_repo_dir가 반드시 지정돼야 체크포인트를 찾을 수 있다.
+    # test_antideepfake_runner.py의 test_run_antideepfake_inference_passes_repo_dir_as_cwd와
+    # 동일한 패턴 - antideepfake_runner.py/spai_runner.py도 같은 방식으로 cwd를 설정한다.
+    monkeypatch.setenv("SPAI_REPO_DIR", str(tmp_path / "spai"))
+    monkeypatch.setenv("ANTIDEEPFAKE_REPO_DIR", str(tmp_path / "antideepfake"))
+    monkeypatch.setenv("DFDC_REPO_DIR", str(tmp_path / "dfdc"))
+    monkeypatch.setenv("DFDC_WORK_DIR", str(tmp_path / "work"))
+    get_settings.cache_clear()
+    settings = get_settings()
+
+    captured_kwargs = {}
+
+    def fake_run(command, **kwargs):
+        captured_kwargs.update(kwargs)
+        output_file = Path(command[command.index("--output") + 1])
+        output_file.write_text(json.dumps({"score": 0.42, "evidence": [], "evidence_image": None}))
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr("app.services.dfdc_runner.subprocess.run", fake_run)
+
+    from app.services.dfdc_runner import run_dfdc_inference
+
+    try:
+        result = run_dfdc_inference(b"fake-video-bytes", "test.mp4")
+    finally:
+        get_settings.cache_clear()
+
+    assert result.score == 0.42
+    assert captured_kwargs.get("cwd") == settings.dfdc_repo_dir

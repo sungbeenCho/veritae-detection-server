@@ -13,9 +13,10 @@ selimsef 저장소는 프레임 추출에 ffmpeg가 아니라 OpenCV(cv2.VideoCa
 (kernel_utils.VideoReader) - 얼굴 검출은 facenet-pytorch의 MTCNN
 (kernel_utils.FaceExtractor). 이 스크립트는 그 두 클래스를 그대로 재사용한다.
 
-원본 predict_on_video()(kernel_utils.py)는 프레임별 점수를 평균 내서(np.mean) 값 하나만
-반환하고 프레임별 점수는 버린다 - 시간 구간 evidence를 만들려면 평균 내기 전 값이 필요해서
-그 로직을 그대로 못 쓰고 이 파일에서 재구현했다
+원본 predict_on_video()(kernel_utils.py)는 프레임별 점수를 strategy 함수(predict_folder.py가
+넘기는 confident_strategy)로 집계한 값 하나만 반환하고 프레임별 점수는 버린다 - 시간 구간
+evidence를 만들려면 집계 전 값이 필요해서 그 로직을 그대로 못 쓰고 이 파일에서 재구현했다.
+최종 overall_score는 원본과 동일하게 confident_strategy로 집계한다(단순 np.mean이 아님)
 (docs(veritae-server 레포): docs/superpowers/specs/2026-08-26-video-ai-detection-design.md §3, §4).
 
 ⚠️ Grad-CAM(공간적 근거) 부분은 아직 데스크탑에서 검증 안 됨 - selimsef가 순수 CNN
@@ -38,6 +39,11 @@ MAX_EVIDENCE_COUNT = 3
 FRAMES_PER_VIDEO = 32
 INPUT_SIZE = 380
 DEFAULT_FPS = 30.0  # cv2가 fps를 못 읽을 때의 추정치 - 실측 필요
+# 검출된 얼굴 수만큼 배치 텐서를 무제한 할당하면(np.zeros((len(faces), ...)))
+# 다인물 영상에서 8GB GPU가 OOM 날 수 있다. selimsef 원본(kernel_utils.predict_on_video)도
+# batch_size*4개로 상한을 두고 그 이상은 조용히 버리는데, 여기서도 같은 방어를 최소 형태로 둔다
+# (인물별 분리 등 정교한 처리는 이번 스코프 밖).
+MAX_FACES = 32
 
 
 def _safe_filename(filename: str) -> str:
@@ -70,7 +76,14 @@ def run_inference(model, repo_dir: Path, video_path: Path) -> dict:
     """selimsef 저장소의 VideoReader/FaceExtractor를 그대로 재사용해 얼굴 프레임을 뽑고,
     predict_on_video()가 버리는 프레임별 점수(평균 내기 전 값)를 직접 계산한다."""
     sys.path.insert(0, str(repo_dir))
-    from kernel_utils import FaceExtractor, VideoReader, isotropically_resize_image, normalize_transform, put_to_center
+    from kernel_utils import (
+        FaceExtractor,
+        VideoReader,
+        confident_strategy,
+        isotropically_resize_image,
+        normalize_transform,
+        put_to_center,
+    )
 
     video_reader = VideoReader()
     video_read_fn = lambda x: video_reader.read_frames(x, num_frames=FRAMES_PER_VIDEO)
@@ -85,6 +98,11 @@ def run_inference(model, repo_dir: Path, video_path: Path) -> dict:
 
     if not faces_by_frame_idx:
         raise RuntimeError("얼굴을 찾을 수 없습니다.")
+
+    # 다인물 영상 등 얼굴이 과도하게 많이 검출된 경우 배치 크기가 무제한으로 커지는 걸 막는다.
+    # 같은 frame_idx에 여러 얼굴이 잡혀도 그대로 병합되므로(인물 분리는 하지 않음) 정교하진
+    # 않지만, 최소한 OOM은 방지한다.
+    faces_by_frame_idx = faces_by_frame_idx[:MAX_FACES]
 
     fps = get_fps(video_path)
     frame_idxs = [idx for idx, _ in faces_by_frame_idx]
@@ -105,7 +123,12 @@ def run_inference(model, repo_dir: Path, video_path: Path) -> dict:
     if frame_scores.ndim == 0:
         frame_scores = np.array([frame_scores.item()])
 
-    overall_score = float(np.mean(frame_scores))
+    # selimsef 원본(predict_folder.py)은 프레임별 점수를 단순 평균하지 않고 confident_strategy로
+    # 집계한다 - 고신뢰 fake 프레임이 충분히 많으면 그 프레임들만 평균, 거의 전부 real이면 그쪽만
+    # 평균, 아니면 전체 평균. 단순 평균은 영상 일부만 조작된 경우 진짜 프레임이 가짜 프레임 점수를
+    # 희석시켜 점수가 체계적으로 낮게 나온다. frame_scores(구간 evidence 계산용)는 그대로 두고
+    # overall_score(최종 대표 점수)만 이 전략으로 계산한다.
+    overall_score = float(confident_strategy(frame_scores))
     worst_idx = int(np.argmax(frame_scores))
 
     return {
@@ -113,7 +136,9 @@ def run_inference(model, repo_dir: Path, video_path: Path) -> dict:
         "frame_idxs": frame_idxs,
         "frame_scores": frame_scores.tolist(),
         "fps": fps,
-        "worst_frame_bgr": faces_by_frame_idx[worst_idx][1],
+        # CAM은 전처리된(레터박스 padding 포함) 380x380 텐서로 계산되므로, 히트맵 배경도
+        # 전처리 전 원본 크롭이 아니라 이 배열(x[worst_idx])을 써야 좌표계가 일치한다.
+        "worst_frame_preprocessed": x[worst_idx],
         "worst_frame_tensor": x_tensor[worst_idx],
         "model_ref": model,
     }
@@ -159,11 +184,20 @@ def build_evidence(frame_idxs: list[int], frame_scores: list[float], fps: float)
     return evidence
 
 
-def try_generate_heatmap(model, face_tensor, face_bgr) -> str | None:
+def try_generate_heatmap(model, face_tensor, face_preprocessed_rgb) -> str | None:
     """가장 의심스러운 프레임에 Grad-CAM을 적용해 base64 PNG를 반환한다. 실패하면 조용히
     None을 반환한다(전체 분석 실패로 이어지면 안 되므로 여기서 예외를 삼킨다) - 설계 §4 fallback.
     target_layer(model.encoder.conv_head)는 timm의 EfficientNet 구조를 근거로 추정한 것으로,
-    실제 클래스 속성명이 다르면 데스크탑에서 실제 model 객체를 찍어보고 수정해야 한다."""
+    실제 클래스 속성명이 다르면 데스크탑에서 실제 model 객체를 찍어보고 수정해야 한다.
+
+    face_preprocessed_rgb는 run_inference가 만든 전처리된 배열(x[worst_idx], INPUT_SIZE 크기로
+    isotropically_resize_image+put_to_center 레터박스 처리됨)이어야 한다 - CAM(face_tensor에서
+    계산됨)과 좌표계가 정확히 일치하는 배경 이미지는 이것뿐이다. 원본 크롭(전처리 전, 크기도 다름)을
+    쓰면 히트맵이 얼굴의 엉뚱한 위치를 가리킬 수 있다.
+
+    selimsef의 VideoReader._postprocess_frame()이 프레임을 읽을 때 이미 cv2.COLOR_BGR2RGB를
+    적용한다(kernel_utils.py 확인됨) - 즉 face_preprocessed_rgb는 이미 RGB다. 여기서 다시
+    BGR2RGB 변환을 하면 R/B 채널이 재반전되어 히트맵 배경이 파랗게 뜨므로 변환하지 않는다."""
     try:
         from pytorch_grad_cam import GradCAM
         from pytorch_grad_cam.utils.image import show_cam_on_image
@@ -173,7 +207,7 @@ def try_generate_heatmap(model, face_tensor, face_bgr) -> str | None:
         input_tensor = face_tensor.unsqueeze(0).float()
         grayscale_cam = cam(input_tensor=input_tensor)[0]
 
-        rgb_face = cv2.cvtColor(face_bgr, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+        rgb_face = face_preprocessed_rgb.astype(np.float32) / 255.0
         rgb_face = cv2.resize(rgb_face, (grayscale_cam.shape[1], grayscale_cam.shape[0]))
         overlay = show_cam_on_image(rgb_face, grayscale_cam, use_rgb=True)
 
@@ -193,8 +227,16 @@ def main() -> None:
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
 
-    model = load_model(args.repo_dir, args.checkpoint)
-    result = run_inference(model, args.repo_dir, args.input)
+    try:
+        model = load_model(args.repo_dir, args.checkpoint)
+        result = run_inference(model, args.repo_dir, args.input)
+    except RuntimeError as e:
+        # run_inference가 얼굴 미검출 시 던지는 RuntimeError(한국어 메시지)는 여기서 잡아서
+        # 메시지만 stderr에 출력한다. 안 잡으면 파이썬이 전체 traceback을 stderr에 쏟아내고,
+        # dfdc_runner.py가 stderr의 마지막 2000자만 잘라 전달하는 과정에서 정작 중요한
+        # 한국어 메시지(traceback 앞부분)가 잘려나갈 위험이 있다.
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
 
     score = result["overall_score"]
     evidence = []
@@ -202,7 +244,7 @@ def main() -> None:
     if score >= EVIDENCE_SCORE_THRESHOLD:
         evidence = build_evidence(result["frame_idxs"], result["frame_scores"], result["fps"])
         evidence_image = try_generate_heatmap(
-            result["model_ref"], result["worst_frame_tensor"], result["worst_frame_bgr"]
+            result["model_ref"], result["worst_frame_tensor"], result["worst_frame_preprocessed"]
         )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
