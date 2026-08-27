@@ -355,12 +355,31 @@ git clone https://github.com/selimsef/dfdc_deepfake_challenge.git
 
 저장소가 배포하는 7개 체크포인트(`tf_efficientnet_b7_ns` 계열, `predict_submission.sh`가 쓰는 실제 우승 앙상블 구성) 전부를 받는다. (예전엔 8GB GPU를 이유로 1개만 쓰는 걸로 축소했었는데, 그 GPU 메모리 근거가 실제로는 이 저장소 README에 없는 걸로 확인돼 2026-08-27 원복했다 — README에 나오는 유일한 GPU 메모리 수치인 "12gb+"는 4-GPU **학습(training)** 요구사항이지 추론 요구사항이 아니다.)
 
+저장소가 제공하는 `download_weights.sh`는 bash 스크립트라 Windows PowerShell에서 그대로 실행 안 된다 - 같은 URL/파일명을 PowerShell로 옮긴 버전을 쓴다:
+
 ```powershell
 cd C:\ai\dfdc_deepfake_challenge
-bash download_weights.sh
+mkdir weights -Force | Out-Null
+
+$tag = "0.0.1"
+$files = @(
+    "final_111_DeepFakeClassifier_tf_efficientnet_b7_ns_0_36",
+    "final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19",
+    "final_777_DeepFakeClassifier_tf_efficientnet_b7_ns_0_29",
+    "final_777_DeepFakeClassifier_tf_efficientnet_b7_ns_0_31",
+    "final_888_DeepFakeClassifier_tf_efficientnet_b7_ns_0_37",
+    "final_888_DeepFakeClassifier_tf_efficientnet_b7_ns_0_40",
+    "final_999_DeepFakeClassifier_tf_efficientnet_b7_ns_0_23"
+)
+
+foreach ($f in $files) {
+    $url = "https://github.com/selimsef/dfdc_deepfake_challenge/releases/download/$tag/$f"
+    Write-Host "Downloading $f..."
+    Invoke-WebRequest -Uri $url -OutFile "weights\$f"
+}
 ```
 
-`weights/` 폴더에 7개 파일이 받아지면 아래 `DFDC_CHECKPOINTS` 기본값과 파일명이 그대로 맞는다.
+7개 합쳐 약 1.87GB. `weights/` 폴더에 7개 파일이 받아지면 아래 `DFDC_CHECKPOINTS` 기본값과 파일명이 그대로 맞는다.
 
 ### 5. `dfdc` 환경의 python.exe 절대경로 확인
 
