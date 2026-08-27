@@ -26,6 +26,11 @@ evidence를 만들려면 집계 전 값이 필요해서 그 로직을 그대로 
 (EfficientNet)이라 적용 가능성은 높다고 판단했지만 실제로 말이 되는 히트맵이 나오는지는
 미확인이다. best-effort로 시도하고 실패하면 evidence_image를 null로 둔다(설계 §4 fallback).
 """
+from __future__ import annotations  # dfdc conda env는 Python 3.9라 `str | None`(PEP 604) 같은
+# 유니온 문법이 함수 정의 시점에 즉시 평가되면 TypeError가 남 - 이 import로 어노테이션 평가를
+# 지연시켜야 함(2026-08-27, 데스크탑 첫 실행에서 실제로 발견된 버그. python=3.9로 만들도록
+# README에 이미 명시돼 있던 제약을 코드 작성 시 확인 안 하고 넘어간 것이 원인).
+
 import argparse
 import base64
 import json
