@@ -333,12 +333,14 @@ conda install pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvi
 ### 2. 나머지 패키지 설치
 
 ```powershell
-pip install opencv-python facenet-pytorch pytorch-grad-cam timm albumentations
+pip install opencv-python facenet-pytorch grad-cam timm albumentations
 ```
 
 - `opencv-python`: 프레임 추출(`kernel_utils.VideoReader`)
 - `facenet-pytorch`: 얼굴 검출(MTCNN, `kernel_utils.FaceExtractor`)
-- `pytorch-grad-cam`: 얼굴 히트맵(Grad-CAM, best-effort 기능)
+- `grad-cam`: 얼굴 히트맵(Grad-CAM, best-effort 기능). PyPI 배포 패키지명은 `grad-cam`이지만
+  import 시 모듈명은 여전히 `pytorch_grad_cam`이다(GitHub 저장소 이름은 `pytorch-grad-cam`이라
+  헷갈리기 쉬움 - `pip install pytorch-grad-cam`으로는 설치 안 됨).
 - `timm`: EfficientNet 인코더(`training.zoo.classifiers.DeepFakeClassifier`가 내부적으로 사용)
 - `albumentations`: selimsef 저장소의 `kernel_utils.py`/`training/` 모듈 import 시 필요(직접 호출하진 않지만 import 체인에 걸림)
 

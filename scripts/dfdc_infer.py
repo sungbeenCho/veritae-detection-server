@@ -5,7 +5,7 @@ selimsef/dfdc_deepfake_challenge(단일 체크포인트, tf_efficientnet_b7_ns)�
 추론해서, 전체 score와 시간 구간별(frame-level) evidence, (best-effort) 얼굴 히트맵
 이미지를 JSON으로 저장한다.
 
-`dfdc` conda env(opencv-python, facenet-pytorch, pytorch-grad-cam 등 설치됨)에서
+`dfdc` conda env(opencv-python, facenet-pytorch, grad-cam 등 설치됨)에서
 실행되어야 한다. veritae-detection-server(FastAPI, detection-api env)는 이 스크립트를
 subprocess로 호출하고 --output 경로의 JSON만 읽는다 - SPAI/AntiDeepfake 연동과 동일한 패턴.
 
