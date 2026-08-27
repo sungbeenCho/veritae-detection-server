@@ -1,7 +1,7 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.schemas import Evidence, VideoAnalysisResponse, VideoDetectionResult
-from app.services.dfdc_runner import DfdcInferenceError, run_dfdc_inference
+from app.services.dfdc_runner import DfdcInferenceError, NoFaceDetectedError, run_dfdc_inference
 
 router = APIRouter()
 
@@ -21,6 +21,8 @@ async def process_video(file: UploadFile = File(...)) -> VideoAnalysisResponse:
 
     try:
         result = run_dfdc_inference(video_bytes, file.filename or "input.mp4")
+    except NoFaceDetectedError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
     except DfdcInferenceError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
 

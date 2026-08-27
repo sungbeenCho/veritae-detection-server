@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.routers import video as video_router
-from app.services.dfdc_runner import DfdcInferenceError, DfdcResult
+from app.services.dfdc_runner import DfdcInferenceError, DfdcResult, NoFaceDetectedError
 
 client = TestClient(app)
 
@@ -87,3 +87,18 @@ def test_process_video_returns_502_on_inference_failure(monkeypatch):
     )
 
     assert response.status_code == 502
+
+
+def test_process_video_returns_422_when_no_face_detected(monkeypatch):
+    def raise_no_face(data, filename):
+        raise NoFaceDetectedError("얼굴을 찾을 수 없습니다.")
+
+    monkeypatch.setattr(video_router, "run_dfdc_inference", raise_no_face)
+
+    response = client.post(
+        "/process/video",
+        files={"file": ("test.mp4", io.BytesIO(b"fake-video-bytes"), "video/mp4")},
+    )
+
+    assert response.status_code == 422
+    assert "얼굴을 찾을 수 없습니다" in response.json()["detail"]

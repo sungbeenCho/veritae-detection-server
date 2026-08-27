@@ -42,10 +42,25 @@ import cv2
 import numpy as np
 import torch
 
+# Windows에서 이 스크립트는 콘솔이 아니라 파이프(subprocess)로 실행되므로, stderr에 한글을
+# print()하면 시스템 기본 코드페이지(한글 Windows면 cp949)로 인코딩된다. 받는 쪽
+# (dfdc_runner.py)은 항상 UTF-8로 디코딩해서, cp949 바이트를 UTF-8로 잘못 해석해 한글이
+# 깨진 채로 클라이언트까지 전달되는 문제가 있었다(2026-08-27, 데스크탑에서 실제로 발견 -
+# "얼굴을 찾을 수 없습니다"가 "���� ..."로 깨져서 나옴). 코드페이지가
+# 뭐든 상관없이 이 스크립트의 stderr 출력을 UTF-8로 고정한다.
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 EVIDENCE_SCORE_THRESHOLD = 0.5
 MAX_EVIDENCE_COUNT = 3
 FRAMES_PER_VIDEO = 32
 INPUT_SIZE = 380
+
+
+class NoFaceDetectedError(Exception):
+    """영상에서 얼굴을 하나도 못 찾은 경우 전용 예외. 일반 RuntimeError로 던지면 torch가
+    CUDA 메모리 부족 등 진짜 서버 장애도 RuntimeError로 던지는 경우와 구분이 안 돼서,
+    "정상적인 사용자 케이스(얼굴 없는 영상)"와 "진짜 오류"를 dfdc_runner.py/video.py가
+    각각 다른 방식으로 처리할 수 있도록 전용 타입으로 분리했다(2026-08-27)."""
 DEFAULT_FPS = 30.0  # cv2가 fps를 못 읽을 때의 추정치 - 실측 필요
 # 검출된 얼굴 수만큼 배치 텐서를 무제한 할당하면(np.zeros((len(faces), ...)))
 # 다인물 영상에서 8GB GPU가 OOM 날 수 있다. selimsef 원본(kernel_utils.predict_on_video)도
@@ -110,7 +125,7 @@ def run_inference(models: list, repo_dir: Path, video_path: Path) -> dict:
             faces_by_frame_idx.append((frame_data["frame_idx"], face))
 
     if not faces_by_frame_idx:
-        raise RuntimeError("얼굴을 찾을 수 없습니다.")
+        raise NoFaceDetectedError("얼굴을 찾을 수 없습니다.")
 
     # 다인물 영상 등 얼굴이 과도하게 많이 검출된 경우 배치 크기가 무제한으로 커지는 걸 막는다.
     # 같은 frame_idx에 여러 얼굴이 잡혀도 그대로 병합되므로(인물 분리는 하지 않음) 정교하진
@@ -256,11 +271,16 @@ def main() -> None:
     try:
         models = load_models(args.repo_dir, args.checkpoints)
         result = run_inference(models, args.repo_dir, args.input)
+    except NoFaceDetectedError as e:
+        # 얼굴 없음은 "정상적인 사용자 케이스"라 종료 코드를 2로 따로 둬서, dfdc_runner.py가
+        # 진짜 오류(exit 1)와 구분해 다르게 처리할 수 있게 한다(2026-08-27).
+        print(str(e), file=sys.stderr)
+        sys.exit(2)
     except RuntimeError as e:
-        # run_inference가 얼굴 미검출 시 던지는 RuntimeError(한국어 메시지)는 여기서 잡아서
+        # 그 외 RuntimeError(예: torch의 CUDA 메모리 부족 등 진짜 오류)는 여기서 잡아서
         # 메시지만 stderr에 출력한다. 안 잡으면 파이썬이 전체 traceback을 stderr에 쏟아내고,
         # dfdc_runner.py가 stderr의 마지막 2000자만 잘라 전달하는 과정에서 정작 중요한
-        # 한국어 메시지(traceback 앞부분)가 잘려나갈 위험이 있다.
+        # 메시지(traceback 앞부분)가 잘려나갈 위험이 있다.
         print(str(e), file=sys.stderr)
         sys.exit(1)
 

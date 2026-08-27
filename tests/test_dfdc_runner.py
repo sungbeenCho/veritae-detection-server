@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.config import get_settings
-from app.services.dfdc_runner import DfdcInferenceError, _parse_result, _safe_filename
+from app.services.dfdc_runner import DfdcInferenceError, NoFaceDetectedError, _parse_result, _safe_filename
 
 
 @pytest.mark.parametrize(
@@ -145,6 +145,28 @@ def test_run_dfdc_inference_nonzero_exit_raises(mock_get_settings, mock_run, tmp
     mock_run.return_value = MagicMock(returncode=1, stderr="CUDA out of memory")
 
     with pytest.raises(DfdcInferenceError, match="CUDA out of memory"):
+        run_dfdc_inference(b"fake-video-bytes", "test.mp4")
+
+
+@patch("app.services.dfdc_runner.subprocess.run")
+@patch("app.services.dfdc_runner.get_settings")
+def test_run_dfdc_inference_exit_code_2_raises_no_face_detected(mock_get_settings, mock_run, tmp_path):
+    # Regression test: dfdc_infer.py는 얼굴을 못 찾으면 종료 코드 2로 끝난다(다른 실패는 1) -
+    # video.py가 422(사용자 케이스)와 502(서버 장애)를 구분해 응답할 수 있어야 하므로,
+    # 이 신호가 여기서 NoFaceDetectedError로 정확히 갈라져야 한다(2026-08-27).
+    from app.services.dfdc_runner import run_dfdc_inference
+
+    settings = MagicMock()
+    settings.dfdc_work_dir = tmp_path
+    settings.dfdc_python = "python"
+    settings.dfdc_script = tmp_path / "dfdc_infer.py"
+    settings.dfdc_repo_dir = tmp_path
+    settings.dfdc_checkpoints = [tmp_path / "checkpoint1", tmp_path / "checkpoint2"]
+    settings.dfdc_timeout_seconds = 600
+    mock_get_settings.return_value = settings
+    mock_run.return_value = MagicMock(returncode=2, stderr="얼굴을 찾을 수 없습니다.")
+
+    with pytest.raises(NoFaceDetectedError, match="얼굴을 찾을 수 없습니다"):
         run_dfdc_inference(b"fake-video-bytes", "test.mp4")
 
 
