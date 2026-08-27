@@ -253,7 +253,11 @@ def try_generate_heatmap(model, face_tensor, face_preprocessed_rgb) -> str | Non
         target_layer = model.encoder.conv_head
         cam = GradCAM(model=model, target_layers=[target_layer])
         input_tensor = face_tensor.unsqueeze(0).float()
-        grayscale_cam = cam(input_tensor=input_tensor)[0]
+        # 2026-08-27: 설치된 pytorch_grad_cam 버전은 __call__(input_tensor, targets, ...)의
+        # targets에 기본값이 없어(base_cam.py 확인) targets 생략 시 TypeError가 났다.
+        # targets=None을 명시하면 내부 forward()가 출력값 argmax로 자동 타깃을 잡는데,
+        # 이 모델은 출력이 1개(이진 sigmoid)뿐이라 그 하나가 그대로 타깃이 된다.
+        grayscale_cam = cam(input_tensor=input_tensor, targets=None)[0]
 
         rgb_face = face_preprocessed_rgb.astype(np.float32) / 255.0
         rgb_face = cv2.resize(rgb_face, (grayscale_cam.shape[1], grayscale_cam.shape[0]))
