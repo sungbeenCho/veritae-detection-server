@@ -264,6 +264,12 @@ def try_generate_heatmap(model, face_tensor, face_preprocessed_rgb) -> str | Non
             return None
         return base64.b64encode(buf.tobytes()).decode("ascii")
     except Exception:
+        # 2026-08-27: dtype 수정 이후에도 계속 null이 나와서, 원인을 숨기지 않고 실제
+        # traceback을 stderr에 남기도록 임시로 바꿈(진짜 원인 확인 전까지 유지 - 원인
+        # 확정되면 다시 조용히 삼키는 형태로 되돌릴 것). 이 print는 stderr로만 가서
+        # main()의 최종 리턴값(JSON)에는 안 섞인다.
+        import traceback
+        traceback.print_exc(file=sys.stderr)
         return None
 
 

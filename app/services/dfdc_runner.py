@@ -59,6 +59,12 @@ def run_dfdc_inference(video_bytes: bytes, filename: str) -> DfdcResult:
             timeout=settings.dfdc_timeout_seconds,
         )
 
+        # 2026-08-27 임시 진단용: evidenceImage가 계속 null로만 나오는 원인(Grad-CAM
+        # try/except가 삼키는 예외)을 실제로 보려고 returncode 상관없이 stderr를 콘솔에
+        # 찍는다 - 원인 확정되면 이 print는 제거할 것.
+        if result.stderr:
+            print(f"[dfdc_infer stderr]\n{result.stderr}")
+
         if result.returncode == 2:
             raise NoFaceDetectedError(result.stderr[-2000:])
 
