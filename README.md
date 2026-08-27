@@ -333,7 +333,7 @@ conda install pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvi
 ### 2. 나머지 패키지 설치
 
 ```powershell
-pip install opencv-python facenet-pytorch grad-cam timm albumentations
+pip install opencv-python facenet-pytorch grad-cam timm albumentations==1.3.1
 ```
 
 - `opencv-python`: 프레임 추출(`kernel_utils.VideoReader`)
@@ -342,7 +342,12 @@ pip install opencv-python facenet-pytorch grad-cam timm albumentations
   import 시 모듈명은 여전히 `pytorch_grad_cam`이다(GitHub 저장소 이름은 `pytorch-grad-cam`이라
   헷갈리기 쉬움 - `pip install pytorch-grad-cam`으로는 설치 안 됨).
 - `timm`: EfficientNet 인코더(`training.zoo.classifiers.DeepFakeClassifier`가 내부적으로 사용)
-- `albumentations`: selimsef 저장소의 `kernel_utils.py`/`training/` 모듈 import 시 필요(직접 호출하진 않지만 import 체인에 걸림)
+- `albumentations==1.3.1`: **버전 고정 필수** - `kernel_utils.py`가 옛날 경로
+  (`albumentations.augmentations.functional.image_compression`)로 import하는데, 최신
+  albumentations(1.4.0+)는 내부 구조가 재편되면서 그 경로에서 함수가 빠져
+  `ModuleNotFoundError`가 난다(2026-08-27, 데스크탑 실제 실행에서 발견). GitHub으로 버전별
+  소스 대조 결과 1.3.1까지는 그 경로에 함수가 그대로 있음 - 버전 안 박고 설치하면 최신이
+  깔려서 깨진다.
 
 ### 3. dfdc_deepfake_challenge 저장소 클론
 
