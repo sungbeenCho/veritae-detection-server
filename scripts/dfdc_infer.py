@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 """dfdc_infer.py
 
-selimsef/dfdc_deepfake_challenge(단일 체크포인트, tf_efficientnet_b7_ns)로 영상 파일 하나를
-추론해서, 전체 score와 시간 구간별(frame-level) evidence, (best-effort) 얼굴 히트맵
-이미지를 JSON으로 저장한다.
+selimsef/dfdc_deepfake_challenge(7개 체크포인트 풀 앙상블, tf_efficientnet_b7_ns)로 영상
+파일 하나를 추론해서, 전체 score와 시간 구간별(frame-level) evidence, (best-effort) 얼굴
+히트맵 이미지를 JSON으로 저장한다. 앙상블 구성은 predict_submission.sh/download_weights.sh와
+동일 - kernel_utils.predict_on_video()의 방식(모델별로 먼저 confident_strategy 집계 후 그
+집계값들을 모델 간 단순 평균)을 그대로 재현한다(2026-08-27, 예전엔 GPU 메모리를 이유로
+1개만 썼었는데 그 근거가 실제로는 잘못된 것으로 확인돼 원복 - config.py 주석 참고).
 
 `dfdc` conda env(opencv-python, facenet-pytorch, grad-cam 등 설치됨)에서
 실행되어야 한다. veritae-detection-server(FastAPI, detection-api env)는 이 스크립트를
@@ -53,16 +56,19 @@ def _safe_filename(filename: str) -> str:
     return name if name and name not in (".", "..") else "upload"
 
 
-def load_model(repo_dir: Path, checkpoint_path: Path):
+def load_models(repo_dir: Path, checkpoint_paths: list[Path]) -> list:
     sys.path.insert(0, str(repo_dir))
     from training.zoo.classifiers import DeepFakeClassifier  # selimsef 저장소 코드
 
-    model = DeepFakeClassifier(encoder="tf_efficientnet_b7_ns").to("cuda")
-    checkpoint = torch.load(str(checkpoint_path), map_location="cpu")
-    state_dict = checkpoint.get("state_dict", checkpoint)
-    model.load_state_dict({re.sub("^module.", "", k): v for k, v in state_dict.items()}, strict=True)
-    model.eval()
-    return model.half()
+    models = []
+    for checkpoint_path in checkpoint_paths:
+        model = DeepFakeClassifier(encoder="tf_efficientnet_b7_ns").to("cuda")
+        checkpoint = torch.load(str(checkpoint_path), map_location="cpu")
+        state_dict = checkpoint.get("state_dict", checkpoint)
+        model.load_state_dict({re.sub("^module.", "", k): v for k, v in state_dict.items()}, strict=True)
+        model.eval()
+        models.append(model.half())
+    return models
 
 
 def get_fps(video_path: Path) -> float:
@@ -72,9 +78,11 @@ def get_fps(video_path: Path) -> float:
     return fps if fps and fps > 0 else DEFAULT_FPS
 
 
-def run_inference(model, repo_dir: Path, video_path: Path) -> dict:
+def run_inference(models: list, repo_dir: Path, video_path: Path) -> dict:
     """selimsef 저장소의 VideoReader/FaceExtractor를 그대로 재사용해 얼굴 프레임을 뽑고,
-    predict_on_video()가 버리는 프레임별 점수(평균 내기 전 값)를 직접 계산한다."""
+    predict_on_video()가 버리는 프레임별 점수(평균 내기 전 값)를 직접 계산한다. models는
+    앙상블 구성 체크포인트 전부(보통 7개) - 얼굴 검출/전처리는 한 번만 하고 같은 입력
+    텐서를 모델마다 돌린다."""
     sys.path.insert(0, str(repo_dir))
     from kernel_utils import (
         FaceExtractor,
@@ -118,17 +126,26 @@ def run_inference(model, repo_dir: Path, video_path: Path) -> dict:
         x_tensor[i] = normalize_transform(x_tensor[i] / 255.0)
 
     with torch.no_grad():
-        y_pred = model(x_tensor.half())
-        frame_scores = torch.sigmoid(y_pred.squeeze()).float().cpu().numpy()
-    if frame_scores.ndim == 0:
-        frame_scores = np.array([frame_scores.item()])
+        per_model_frame_scores = []
+        for model in models:
+            y_pred = model(x_tensor.half())
+            scores = torch.sigmoid(y_pred.squeeze()).float().cpu().numpy()
+            if scores.ndim == 0:
+                scores = np.array([scores.item()])
+            per_model_frame_scores.append(scores)
 
-    # selimsef 원본(predict_folder.py)은 프레임별 점수를 단순 평균하지 않고 confident_strategy로
-    # 집계한다 - 고신뢰 fake 프레임이 충분히 많으면 그 프레임들만 평균, 거의 전부 real이면 그쪽만
-    # 평균, 아니면 전체 평균. 단순 평균은 영상 일부만 조작된 경우 진짜 프레임이 가짜 프레임 점수를
-    # 희석시켜 점수가 체계적으로 낮게 나온다. frame_scores(구간 evidence 계산용)는 그대로 두고
-    # overall_score(최종 대표 점수)만 이 전략으로 계산한다.
-    overall_score = float(confident_strategy(frame_scores))
+    # selimsef 원본(kernel_utils.predict_on_video)의 앙상블 방식을 그대로 재현: 프레임별
+    # 점수를 단순 평균하지 않고, 모델마다 먼저 confident_strategy로 집계한 뒤(고신뢰 fake
+    # 프레임이 충분히 많으면 그 프레임들만 평균, 거의 전부 real이면 그쪽만 평균, 아니면 전체
+    # 평균) 그 7개 집계값을 모델 간 단순 평균한다(np.mean(preds), kernel_utils.py 참고).
+    per_model_overall_scores = [confident_strategy(scores) for scores in per_model_frame_scores]
+    overall_score = float(np.mean(per_model_overall_scores))
+
+    # 시간 구간 evidence는 selimsef 원본에 없는 우리 자체 기능이라 원본이 참고할 방법이
+    # 없다 - 프레임별로 7개 모델 점수를 평균한 곡선을 구간 추출에 쓴다(overall_score 산식과
+    # 완전히 같지는 않지만(위는 모델별 집계 후 평균, 이건 프레임별 평균), "어느 구간이
+    # 의심스러운가"를 보여주는 목적에는 프레임 단위 정보가 필요해 이쪽이 더 맞다).
+    frame_scores = np.mean(per_model_frame_scores, axis=0)
     worst_idx = int(np.argmax(frame_scores))
 
     return {
@@ -140,7 +157,11 @@ def run_inference(model, repo_dir: Path, video_path: Path) -> dict:
         # 전처리 전 원본 크롭이 아니라 이 배열(x[worst_idx])을 써야 좌표계가 일치한다.
         "worst_frame_preprocessed": x[worst_idx],
         "worst_frame_tensor": x_tensor[worst_idx],
-        "model_ref": model,
+        # Grad-CAM을 7개 모델 전부에 대해 계산해 합치는 표준적인 방법이 없고(모델마다
+        # activation 스케일이 달라 CAM을 평균/합성하는 게 의미적으로 애매함), best-effort
+        # 기능에 그 정도 복잡도를 들일 이유가 약해 첫 번째 체크포인트로만 계산한다 -
+        # 실패해도 시간 구간 evidence(모델 7개 평균 기반)는 항상 나온다.
+        "model_ref": models[0],
     }
 
 
@@ -222,14 +243,14 @@ def try_generate_heatmap(model, face_tensor, face_preprocessed_rgb) -> str | Non
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-dir", required=True, type=Path)
-    parser.add_argument("--checkpoint", required=True, type=Path)
+    parser.add_argument("--checkpoints", required=True, type=Path, nargs="+")
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
 
     try:
-        model = load_model(args.repo_dir, args.checkpoint)
-        result = run_inference(model, args.repo_dir, args.input)
+        models = load_models(args.repo_dir, args.checkpoints)
+        result = run_inference(models, args.repo_dir, args.input)
     except RuntimeError as e:
         # run_inference가 얼굴 미검출 시 던지는 RuntimeError(한국어 메시지)는 여기서 잡아서
         # 메시지만 stderr에 출력한다. 안 잡으면 파이썬이 전체 traceback을 stderr에 쏟아내고,

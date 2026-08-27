@@ -38,7 +38,7 @@ def run_dfdc_inference(video_bytes: bytes, filename: str) -> DfdcResult:
         settings.dfdc_python,
         str(settings.dfdc_script),
         "--repo-dir", str(settings.dfdc_repo_dir),
-        "--checkpoint", str(settings.dfdc_checkpoint),
+        "--checkpoints", *(str(c) for c in settings.dfdc_checkpoints),
         "--input", str(input_file),
         "--output", str(output_file),
     ]

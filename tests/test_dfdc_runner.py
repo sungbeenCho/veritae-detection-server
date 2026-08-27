@@ -75,7 +75,7 @@ def test_run_dfdc_inference_success(mock_get_settings, mock_run, tmp_path):
     settings.dfdc_python = "python"
     settings.dfdc_script = tmp_path / "dfdc_infer.py"
     settings.dfdc_repo_dir = tmp_path
-    settings.dfdc_checkpoint = tmp_path / "checkpoint"
+    settings.dfdc_checkpoints = [tmp_path / "checkpoint1", tmp_path / "checkpoint2"]
     settings.dfdc_timeout_seconds = 600
     mock_get_settings.return_value = settings
 
@@ -94,6 +94,43 @@ def test_run_dfdc_inference_success(mock_get_settings, mock_run, tmp_path):
 
 @patch("app.services.dfdc_runner.subprocess.run")
 @patch("app.services.dfdc_runner.get_settings")
+def test_run_dfdc_inference_passes_all_checkpoints_to_script(mock_get_settings, mock_run, tmp_path):
+    # Regression test: 7개 체크포인트 앙상블 전부가 --checkpoints 뒤에 개별 인자로 붙어야
+    # dfdc_infer.py의 argparse(nargs="+")가 전부 받는다 - 예전에 단일 체크포인트로 축소했다가
+    # 근거 없는 GPU 메모리 우려 때문이었던 걸로 밝혀져 원복(config.py 참고).
+    from app.services.dfdc_runner import run_dfdc_inference
+
+    settings = MagicMock()
+    settings.dfdc_work_dir = tmp_path
+    settings.dfdc_python = "python"
+    settings.dfdc_script = tmp_path / "dfdc_infer.py"
+    settings.dfdc_repo_dir = tmp_path
+    settings.dfdc_checkpoints = [tmp_path / f"checkpoint{i}" for i in range(7)]
+    settings.dfdc_timeout_seconds = 600
+    mock_get_settings.return_value = settings
+
+    captured_command = {}
+
+    def fake_run(command, **kwargs):
+        captured_command["value"] = command
+        output_path = command[command.index("--output") + 1]
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump({"score": 0.91, "evidence": [], "evidence_image": None}, f)
+        return MagicMock(returncode=0, stderr="")
+
+    mock_run.side_effect = fake_run
+
+    run_dfdc_inference(b"fake-video-bytes", "test.mp4")
+
+    command = captured_command["value"]
+    checkpoints_idx = command.index("--checkpoints")
+    input_idx = command.index("--input")
+    passed_checkpoints = command[checkpoints_idx + 1:input_idx]
+    assert passed_checkpoints == [str(c) for c in settings.dfdc_checkpoints]
+
+
+@patch("app.services.dfdc_runner.subprocess.run")
+@patch("app.services.dfdc_runner.get_settings")
 def test_run_dfdc_inference_nonzero_exit_raises(mock_get_settings, mock_run, tmp_path):
     from app.services.dfdc_runner import run_dfdc_inference
 
@@ -102,7 +139,7 @@ def test_run_dfdc_inference_nonzero_exit_raises(mock_get_settings, mock_run, tmp
     settings.dfdc_python = "python"
     settings.dfdc_script = tmp_path / "dfdc_infer.py"
     settings.dfdc_repo_dir = tmp_path
-    settings.dfdc_checkpoint = tmp_path / "checkpoint"
+    settings.dfdc_checkpoints = [tmp_path / "checkpoint1", tmp_path / "checkpoint2"]
     settings.dfdc_timeout_seconds = 600
     mock_get_settings.return_value = settings
     mock_run.return_value = MagicMock(returncode=1, stderr="CUDA out of memory")
@@ -121,7 +158,7 @@ def test_run_dfdc_inference_timeout_raises(mock_get_settings, mock_run, tmp_path
     settings.dfdc_python = "python"
     settings.dfdc_script = tmp_path / "dfdc_infer.py"
     settings.dfdc_repo_dir = tmp_path
-    settings.dfdc_checkpoint = tmp_path / "checkpoint"
+    settings.dfdc_checkpoints = [tmp_path / "checkpoint1", tmp_path / "checkpoint2"]
     settings.dfdc_timeout_seconds = 600
     mock_get_settings.return_value = settings
     mock_run.side_effect = subprocess.TimeoutExpired(cmd="dfdc_infer.py", timeout=600)

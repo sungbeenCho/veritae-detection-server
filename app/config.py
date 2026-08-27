@@ -69,14 +69,26 @@ class Settings:
                 str(Path(__file__).resolve().parent.parent / "scripts" / "dfdc_infer.py"),
             )
         )
-        # 저장소가 배포하는 7개 체크포인트 앙상블 중 하나만 쓴다(§3, 8GB GPU 고려) - 필요하면
-        # env var로 다른 체크포인트로 바꿀 수 있다.
-        self.dfdc_checkpoint = Path(
-            os.environ.get(
-                "DFDC_CHECKPOINT",
-                "./weights/final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19",
-            )
-        )
+        # selimsef 원본이 실제로 우승할 때 쓴 7개 체크포인트 풀 앙상블(predict_submission.sh/
+        # download_weights.sh와 동일한 파일명) - 예전엔 "8GB GPU라 1개만" 이라는 이유로 하나만
+        # 썼었는데, 그 GPU 메모리 근거가 실제로는 selimsef README에 없는 걸로 확인돼(README에
+        # 있는 "12gb+"는 4-GPU 학습 요구사항이지 추론 요구사항이 아님) 2026-08-27 원복함.
+        # DFDC_CHECKPOINTS는 쉼표로 구분한 경로 목록(기본값은 전부 ./weights/ 밑, 상대경로는
+        # subprocess cwd=dfdc_repo_dir 기준으로 풀림 - dfdc_runner.py 참고).
+        _default_dfdc_checkpoint_names = [
+            "final_111_DeepFakeClassifier_tf_efficientnet_b7_ns_0_36",
+            "final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19",
+            "final_777_DeepFakeClassifier_tf_efficientnet_b7_ns_0_29",
+            "final_777_DeepFakeClassifier_tf_efficientnet_b7_ns_0_31",
+            "final_888_DeepFakeClassifier_tf_efficientnet_b7_ns_0_37",
+            "final_888_DeepFakeClassifier_tf_efficientnet_b7_ns_0_40",
+            "final_999_DeepFakeClassifier_tf_efficientnet_b7_ns_0_23",
+        ]
+        default_dfdc_checkpoints = ",".join(f"./weights/{name}" for name in _default_dfdc_checkpoint_names)
+        self.dfdc_checkpoints = [
+            Path(p.strip())
+            for p in os.environ.get("DFDC_CHECKPOINTS", default_dfdc_checkpoints).split(",")
+        ]
         # 얼굴검출+CNN추론이 여러 프레임에 걸쳐 겹쳐 오디오(300s)보다 오래 걸릴 걸로 예상되나
         # 실측 데이터 없음(2026-08-26 기준) - 넉넉하게 잡고 실측 후 조정.
         self.dfdc_timeout_seconds = int(os.environ.get("DFDC_TIMEOUT_SECONDS", "600"))

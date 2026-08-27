@@ -353,19 +353,14 @@ git clone https://github.com/selimsef/dfdc_deepfake_challenge.git
 
 ### 4. 모델 체크포인트 다운로드
 
-저장소는 7개 체크포인트 앙상블을 배포하지만, 이 서버는 8GB급 GPU를 고려해 그중 하나만 쓴다 (`tf_efficientnet_b7_ns` 계열, `final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19`). 저장소가 제공하는 `download_weights.sh`는 7개를 전부 받으므로, 필요한 것만 받으려면 저장소 README의 다운로드 링크에서 해당 파일 하나만 받는 게 낫다.
+저장소가 배포하는 7개 체크포인트(`tf_efficientnet_b7_ns` 계열, `predict_submission.sh`가 쓰는 실제 우승 앙상블 구성) 전부를 받는다. (예전엔 8GB GPU를 이유로 1개만 쓰는 걸로 축소했었는데, 그 GPU 메모리 근거가 실제로는 이 저장소 README에 없는 걸로 확인돼 2026-08-27 원복했다 — README에 나오는 유일한 GPU 메모리 수치인 "12gb+"는 4-GPU **학습(training)** 요구사항이지 추론 요구사항이 아니다.)
 
 ```powershell
-mkdir C:\ai\dfdc_deepfake_challenge\weights
-cd C:\ai\dfdc_deepfake_challenge\weights
-# 저장소 README(https://github.com/selimsef/dfdc_deepfake_challenge#test)의 weights 다운로드 링크에서
-# final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19 파일 하나만 받아 이 폴더에 넣는다.
-# 전체 7개 앙상블을 다 받고 싶다면 저장소 루트의 download_weights.sh를 대신 실행해도 된다:
-#   cd C:\ai\dfdc_deepfake_challenge
-#   bash download_weights.sh
+cd C:\ai\dfdc_deepfake_challenge
+bash download_weights.sh
 ```
 
-파일명은 `final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19`로 맞추면 아래 `DFDC_CHECKPOINT` 기본값과 그대로 맞는다.
+`weights/` 폴더에 7개 파일이 받아지면 아래 `DFDC_CHECKPOINTS` 기본값과 파일명이 그대로 맞는다.
 
 ### 5. `dfdc` 환경의 python.exe 절대경로 확인
 
@@ -392,7 +387,7 @@ git pull origin main
 ```powershell
 $env:DFDC_REPO_DIR = "C:\ai\dfdc_deepfake_challenge"   # 필수
 $env:DFDC_PYTHON    = "C:\Users\<user>\miniconda3\envs\dfdc\python.exe"   # 5번에서 확인한 경로 (기본값: "python")
-$env:DFDC_CHECKPOINT = "./weights/final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19"   # 기본값이 이미 이 값 - 4번에서 저장소 안에 받았다면 생략 가능
+$env:DFDC_CHECKPOINTS = "./weights/final_111_DeepFakeClassifier_tf_efficientnet_b7_ns_0_36,./weights/final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19,./weights/final_777_DeepFakeClassifier_tf_efficientnet_b7_ns_0_29,./weights/final_777_DeepFakeClassifier_tf_efficientnet_b7_ns_0_31,./weights/final_888_DeepFakeClassifier_tf_efficientnet_b7_ns_0_37,./weights/final_888_DeepFakeClassifier_tf_efficientnet_b7_ns_0_40,./weights/final_999_DeepFakeClassifier_tf_efficientnet_b7_ns_0_23"   # 기본값이 이미 이 값(7개 풀 앙상블) - 4번에서 download_weights.sh로 전부 받았다면 생략 가능
 $env:DFDC_TIMEOUT_SECONDS = "600"   # 기본값 600s. 얼굴검출+CNN추론이 여러 프레임에 걸쳐 오디오(300s)보다 오래 걸릴 걸로 예상되나 실측 전이라 넉넉하게 잡음
 $env:DFDC_WORK_DIR = "./tmp"   # 기본값 ./tmp (SPAI/AntiDeepfake와 동일)
 ```
