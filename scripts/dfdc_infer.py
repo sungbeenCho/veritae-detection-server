@@ -228,8 +228,14 @@ def build_evidence(frame_idxs: list[int], frame_scores: list[float], fps: float)
 def try_generate_heatmap(model, face_tensor, face_preprocessed_rgb) -> str | None:
     """가장 의심스러운 프레임에 Grad-CAM을 적용해 base64 PNG를 반환한다. 실패하면 조용히
     None을 반환한다(전체 분석 실패로 이어지면 안 되므로 여기서 예외를 삼킨다) - 설계 §4 fallback.
-    target_layer(model.encoder.conv_head)는 timm의 EfficientNet 구조를 근거로 추정한 것으로,
-    실제 클래스 속성명이 다르면 데스크탑에서 실제 model 객체를 찍어보고 수정해야 한다.
+    target_layer(model.encoder.conv_head)는 timm 소스(efficientnet.py) 직접 확인 완료 -
+    forward_features() 안에서 실제로 호출되는 실제 속성이 맞다(2026-08-27 재검증).
+
+    실제 원인이었던 버그(2026-08-27, 데스크탑 실측에서 evidenceImage가 계속 null로만 나와서
+    발견): model은 load_models()에서 .half()(fp16)로 만들어지는데, 여기 input_tensor는
+    .float()(fp32)로 넘어가 dtype 불일치 RuntimeError가 나고 위 except가 조용히 삼켜버렸다.
+    model.float()로 맞춰준다 - 이 함수 호출 이후 main()에서 이 model을 다시 안 쓰므로
+    안전하게 in-place로 바꿀 수 있다.
 
     face_preprocessed_rgb는 run_inference가 만든 전처리된 배열(x[worst_idx], INPUT_SIZE 크기로
     isotropically_resize_image+put_to_center 레터박스 처리됨)이어야 한다 - CAM(face_tensor에서
@@ -243,6 +249,7 @@ def try_generate_heatmap(model, face_tensor, face_preprocessed_rgb) -> str | Non
         from pytorch_grad_cam import GradCAM
         from pytorch_grad_cam.utils.image import show_cam_on_image
 
+        model.float()
         target_layer = model.encoder.conv_head
         cam = GradCAM(model=model, target_layers=[target_layer])
         input_tensor = face_tensor.unsqueeze(0).float()
