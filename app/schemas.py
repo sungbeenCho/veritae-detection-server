@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class AIDetectionResult(BaseModel):
     model: str
     score: float
+    evidence_image: str | None = None
 
 
 class ImageAnalysisResponse(BaseModel):

@@ -20,10 +20,12 @@ async def process_image(file: UploadFile = File(...)) -> ImageAnalysisResponse:
         raise HTTPException(status_code=400, detail="empty file")
 
     try:
-        score = run_spai_inference(image_bytes, file.filename or "input.jpg")
+        result = run_spai_inference(image_bytes, file.filename or "input.jpg")
     except SpaiInferenceError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
 
     return ImageAnalysisResponse(
-        ai_detection=AIDetectionResult(model="spai", score=score)
+        ai_detection=AIDetectionResult(
+            model="spai", score=result.score, evidence_image=result.evidence_image
+        )
     )

@@ -4,13 +4,15 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.routers import image as image_router
-from app.services.spai_runner import SpaiInferenceError
+from app.services.spai_runner import SpaiInferenceError, SpaiResult
 
 client = TestClient(app)
 
 
 def test_process_image_returns_score(monkeypatch):
-    monkeypatch.setattr(image_router, "run_spai_inference", lambda data, filename: 0.87)
+    monkeypatch.setattr(
+        image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.87, None)
+    )
 
     response = client.post(
         "/process/image",
@@ -18,7 +20,23 @@ def test_process_image_returns_score(monkeypatch):
     )
 
     assert response.status_code == 200
-    assert response.json() == {"ai_detection": {"model": "spai", "score": 0.87}}
+    assert response.json() == {
+        "ai_detection": {"model": "spai", "score": 0.87, "evidence_image": None}
+    }
+
+
+def test_process_image_returns_evidence_image_when_present(monkeypatch):
+    monkeypatch.setattr(
+        image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.87, "base64data")
+    )
+
+    response = client.post(
+        "/process/image",
+        files={"file": ("test.jpg", io.BytesIO(b"fake-image-bytes"), "image/jpeg")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["ai_detection"]["evidence_image"] == "base64data"
 
 
 def test_process_image_rejects_unsupported_content_type():
