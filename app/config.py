@@ -95,6 +95,26 @@ class Settings:
         self.dfdc_work_dir = Path(os.environ.get("DFDC_WORK_DIR", "./tmp")).resolve()
         self.dfdc_work_dir.mkdir(parents=True, exist_ok=True)
 
+        # --- 사기 위험도 분석(fraud-risk) 설정. OCR(PaddleOCR)/STT(faster-whisper)/
+        # 문장분리(kss)/사기감지(Lilju/voicephishing_kobert)를 전부 별도 conda env
+        # (text-extraction)에 격리한다. GitHub repo clone이 필요 없는 pip 패키지들이라
+        # SPAI/AntiDeepfake/dfdc와 달리 REPO_DIR 필수 설정은 없다.
+        self.text_extraction_python = os.environ.get("TEXT_EXTRACTION_PYTHON", "python")
+        self.text_extraction_script = Path(
+            os.environ.get(
+                "TEXT_EXTRACTION_SCRIPT",
+                str(Path(__file__).resolve().parent.parent / "scripts" / "scam_infer.py"),
+            )
+        )
+        self.lilju_model_id = os.environ.get("LILJU_MODEL_ID", "Lilju/voicephishing_kobert")
+        self.paddleocr_lang = os.environ.get("PADDLEOCR_LANG", "korean")
+        self.whisper_model_size = os.environ.get("WHISPER_MODEL_SIZE", "large-v3")
+        # 실측 없음(2026-09-13 기준) - STT(faster-whisper)가 5분 길이 오디오에서 얼마나
+        # 걸릴지 알 수 없어 넉넉히 잡음. 데스크탑 실측 후 조정 필요(SPAI/AntiDeepfake/dfdc와 동일 패턴).
+        self.text_extraction_timeout_seconds = int(os.environ.get("TEXT_EXTRACTION_TIMEOUT_SECONDS", "300"))
+        self.text_extraction_work_dir = Path(os.environ.get("TEXT_EXTRACTION_WORK_DIR", "./tmp")).resolve()
+        self.text_extraction_work_dir.mkdir(parents=True, exist_ok=True)
+
 
 @lru_cache
 def get_settings() -> Settings:
