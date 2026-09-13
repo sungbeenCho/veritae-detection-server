@@ -483,3 +483,66 @@ score가 0.5 이상이면(AI 생성 의심이 높으면) `evidence_image`에 SPA
 **이 기능은 아직 실제 GPU/체크포인트로 검증 전이다(2026-09-12, 소스코드만 읽고 작성).** 특히 아래는 미검증 상태:
 - `TEST.EXPORT_IMAGE_PATCHES` 플래그를 켰을 때 실제로 `<output>/images/<idx>/patches_attn/attn_overlay_*.png` 파일이 생성되는지 (mever-team/spai 소스 확인은 했으나 실제 체크포인트로 실행한 적 없음)
 - 히트맵이 실제로 유의미한 영역을 가리키는지는 렌더링된 PNG를 육안으로 봐야 최종 확인됨
+
+---
+
+## 사기 위험도 분석(text-extraction) 설정
+
+OCR(PaddleOCR)/STT(faster-whisper)/문장분리(kss)/사기감지(Lilju/voicephishing_kobert)를 위한 새 conda env를 만든다. GitHub repo clone은 필요 없다(전부 pip 패키지).
+
+### 1. `text-extraction` conda 환경 구성
+
+```powershell
+conda create -n text-extraction python=3.10 -y
+conda activate text-extraction
+pip install paddlepaddle paddleocr faster-whisper transformers torch kss
+```
+
+### 2. ffmpeg 확인
+
+`ffmpeg`는 음성 판독(AntiDeepfake) 설정에서 이미 설치했다면 그대로 재사용한다(영상에서 오디오 트랙을 뽑을 때도 동일하게 사용). 아직 설치하지 않았다면:
+
+```powershell
+winget install ffmpeg
+```
+
+설치 후 새 PowerShell 창 열기 (PATH 반영을 위해 필수).
+
+### 3. `text-extraction` 환경의 python.exe 절대경로 확인
+
+아래 환경변수 설정에 필요하다.
+
+```powershell
+conda activate text-extraction
+(Get-Command python).Source
+```
+
+출력된 경로를 메모해둔다 (예: `C:\Users\<user>\miniconda3\envs\text-extraction\python.exe`).
+
+### 4. 환경변수 설정
+
+이 서버가 text-extraction을 어디서 어떻게 실행할지 알려주는 값들이다. 모두 기본값이 있어 필수는 아니지만, 필요에 따라 `setx`로 영구 설정할 수 있다. PowerShell 세션마다 설정해야 하니, 매번 치기 귀찮으면 아래를 `C:\ai\veritae-detection-server\run.ps1` 같은 스크립트에 추가해서 실행하면 편하다.
+
+```powershell
+$env:TEXT_EXTRACTION_PYTHON = "C:\Users\<user>\miniconda3\envs\text-extraction\python.exe"   # 3번에서 확인한 경로
+$env:LILJU_MODEL_ID = "Lilju/voicephishing_kobert"   # 기본값과 동일
+$env:PADDLEOCR_LANG = "korean"   # 기본값과 동일
+$env:WHISPER_MODEL_SIZE = "large-v3"   # 기본값과 동일
+$env:TEXT_EXTRACTION_TIMEOUT_SECONDS = "300"   # 기본값 300s - 실측 후 조정 필요
+```
+
+**HuggingFace 토큰:** 최초 실행 시 HuggingFace에서 Lilju 가중치(약 370MB)를 자동 다운로드한다. 비인증 요청은 rate limit이 있으므로 반복 실행이 많다면 `HF_TOKEN` 설정을 고려한다:
+
+```powershell
+$env:HF_TOKEN = "your_huggingface_token_here"   # 선택 - 반복 실행 시만 필요
+```
+
+### 5. 서버 실행 (또는 재시작)
+
+이미 detection-api 서버가 켜져 있다면, 환경변수가 적용되도록 다시 시작해야 한다.
+
+```powershell
+conda activate detection-api
+cd C:\ai\veritae-detection-server
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
