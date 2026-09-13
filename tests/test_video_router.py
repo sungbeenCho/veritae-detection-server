@@ -105,6 +105,9 @@ def test_process_video_returns_422_when_no_face_detected(monkeypatch):
         raise NoFaceDetectedError("얼굴을 찾을 수 없습니다.")
 
     monkeypatch.setattr(video_router, "run_dfdc_inference", raise_no_face)
+    monkeypatch.setattr(
+        video_router, "run_scam_inference_video", lambda data, filename: ScamResult(None, [])
+    )
 
     response = client.post(
         "/process/video",
