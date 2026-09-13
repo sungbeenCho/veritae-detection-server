@@ -455,37 +455,6 @@ score가 높으면(얼굴 조작 확률이 높으면) `evidence` 배열에 탐�
 
 ---
 
-## 로컬 개발 (테스트 실행)
-
-이 레포를 수정하는 개발 머신(이 컴퓨터)에서 테스트를 돌릴 때는 SPAI 없이도 가능하다 (테스트는 `run_spai_inference`를 mock 처리한다):
-
-```powershell
-pip install -r requirements-dev.txt
-pytest
-```
-
-## API
-
-### `GET /health`
-헬스체크. `{"status": "ok"}` 반환.
-
-### `POST /process/image`
-`multipart/form-data`로 이미지 파일(`file` 필드, jpeg/png/webp)을 받아 AI 생성 확률 점수를 반환.
-
-```json
-{
-  "ai_detection": { "model": "spai", "score": 0.87, "evidence_image": null }
-}
-```
-
-score가 0.5 이상이면(AI 생성 의심이 높으면) `evidence_image`에 SPAI의 attention 히트맵(원본 사진 위에 합성된 오버레이, base64 PNG)이 채워질 수 있다(best-effort — 실패해도 전체 분석은 성공하고 `null`이 된다). 0.5 미만이면 진짜 사진일 가능성이 높다고 보고 히트맵 자체를 만들지 않는다(음성/영상과 동일한 임계값, `scripts/antideepfake_infer.py`/`scripts/dfdc_infer.py`의 `EVIDENCE_SCORE_THRESHOLD`와 동일).
-
-**이 기능은 아직 실제 GPU/체크포인트로 검증 전이다(2026-09-12, 소스코드만 읽고 작성).** 특히 아래는 미검증 상태:
-- `TEST.EXPORT_IMAGE_PATCHES` 플래그를 켰을 때 실제로 `<output>/images/<idx>/patches_attn/attn_overlay_*.png` 파일이 생성되는지 (mever-team/spai 소스 확인은 했으나 실제 체크포인트로 실행한 적 없음)
-- 히트맵이 실제로 유의미한 영역을 가리키는지는 렌더링된 PNG를 육안으로 봐야 최종 확인됨
-
----
-
 ## 사기 위험도 분석(text-extraction) 설정
 
 OCR(PaddleOCR)/STT(faster-whisper)/문장분리(kss)/사기감지(Lilju/voicephishing_kobert)를 위한 새 conda env를 만든다. GitHub repo clone은 필요 없다(전부 pip 패키지).
@@ -546,3 +515,34 @@ conda activate detection-api
 cd C:\ai\veritae-detection-server
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
+
+---
+
+## 로컬 개발 (테스트 실행)
+
+이 레포를 수정하는 개발 머신(이 컴퓨터)에서 테스트를 돌릴 때는 SPAI 없이도 가능하다 (테스트는 `run_spai_inference`를 mock 처리한다):
+
+```powershell
+pip install -r requirements-dev.txt
+pytest
+```
+
+## API
+
+### `GET /health`
+헬스체크. `{"status": "ok"}` 반환.
+
+### `POST /process/image`
+`multipart/form-data`로 이미지 파일(`file` 필드, jpeg/png/webp)을 받아 AI 생성 확률 점수를 반환.
+
+```json
+{
+  "ai_detection": { "model": "spai", "score": 0.87, "evidence_image": null }
+}
+```
+
+score가 0.5 이상이면(AI 생성 의심이 높으면) `evidence_image`에 SPAI의 attention 히트맵(원본 사진 위에 합성된 오버레이, base64 PNG)이 채워질 수 있다(best-effort — 실패해도 전체 분석은 성공하고 `null`이 된다). 0.5 미만이면 진짜 사진일 가능성이 높다고 보고 히트맵 자체를 만들지 않는다(음성/영상과 동일한 임계값, `scripts/antideepfake_infer.py`/`scripts/dfdc_infer.py`의 `EVIDENCE_SCORE_THRESHOLD`와 동일).
+
+**이 기능은 아직 실제 GPU/체크포인트로 검증 전이다(2026-09-12, 소스코드만 읽고 작성).** 특히 아래는 미검증 상태:
+- `TEST.EXPORT_IMAGE_PATCHES` 플래그를 켰을 때 실제로 `<output>/images/<idx>/patches_attn/attn_overlay_*.png` 파일이 생성되는지 (mever-team/spai 소스 확인은 했으나 실제 체크포인트로 실행한 적 없음)
+- 히트맵이 실제로 유의미한 영역을 가리키는지는 렌더링된 PNG를 육안으로 봐야 최종 확인됨
