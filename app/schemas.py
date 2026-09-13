@@ -51,3 +51,4 @@ class VideoDetectionResult(BaseModel):
 
 class VideoAnalysisResponse(BaseModel):
     ai_detection: VideoDetectionResult
+    scam_detection: ScamDetectionResult | None = None
