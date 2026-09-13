@@ -39,6 +39,7 @@ class AudioDetectionResult(BaseModel):
 
 class AudioAnalysisResponse(BaseModel):
     ai_detection: AudioDetectionResult
+    scam_detection: ScamDetectionResult | None = None
 
 
 class VideoDetectionResult(BaseModel):
