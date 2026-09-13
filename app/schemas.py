@@ -1,6 +1,17 @@
 from pydantic import BaseModel
 
 
+class ScamEvidence(BaseModel):
+    sentence: str
+    score: float
+
+
+class ScamDetectionResult(BaseModel):
+    model: str
+    score: float
+    evidence: list[ScamEvidence]
+
+
 class AIDetectionResult(BaseModel):
     model: str
     score: float
@@ -9,6 +20,7 @@ class AIDetectionResult(BaseModel):
 
 class ImageAnalysisResponse(BaseModel):
     ai_detection: AIDetectionResult
+    scam_detection: ScamDetectionResult | None = None
 
 
 class Evidence(BaseModel):
