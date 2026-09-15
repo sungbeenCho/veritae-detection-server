@@ -1,10 +1,13 @@
 import asyncio
+import logging
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.schemas import Evidence, ScamDetectionResult, ScamEvidence, VideoAnalysisResponse, VideoDetectionResult
 from app.services.dfdc_runner import DfdcInferenceError, NoFaceDetectedError, run_dfdc_inference
 from app.services.scam_runner import ScamInferenceError, ScamResult, run_scam_inference_video
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -38,6 +41,7 @@ async def process_video(file: UploadFile = File(...)) -> VideoAnalysisResponse:
     try:
         scam_result = await scam_task
     except ScamInferenceError:
+        logger.exception("사기감지 파이프라인 실패 (best-effort, 요청은 계속 진행)")
         scam_result = ScamResult(None, [])
 
     evidence = [

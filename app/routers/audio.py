@@ -1,10 +1,13 @@
 import asyncio
+import logging
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.schemas import AudioAnalysisResponse, AudioDetectionResult, Evidence, ScamDetectionResult, ScamEvidence
 from app.services.antideepfake_runner import AntiDeepfakeInferenceError, run_antideepfake_inference
 from app.services.scam_runner import ScamInferenceError, ScamResult, run_scam_inference_audio
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -37,6 +40,7 @@ async def process_audio(file: UploadFile = File(...)) -> AudioAnalysisResponse:
     except ScamInferenceError:
         # 사기감지는 best-effort - AI판독(AntiDeepfake)이 성공했으면 사기감지 실패로
         # 전체 요청을 실패시키지 않는다(image.py와 동일 원칙, 2026-09-13 설계 확정).
+        logger.exception("사기감지 파이프라인 실패 (best-effort, 요청은 계속 진행)")
         scam_result = ScamResult(None, [])
 
     evidence = [
