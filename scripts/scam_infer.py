@@ -23,11 +23,14 @@ PHISHING_LABEL_INDEX = 1  # Lilju 모델카드 없음 - 2026-09-13 실측(9/10 �
 def extract_text_units_ocr(image_path: Path, lang: str) -> list[str]:
     from paddleocr import PaddleOCR
 
+    # PaddleOCR 3.x(PP-OCRv5)부터 .ocr(img, cls=True)가 deprecated -> .predict(img)로 교체.
+    # predict()는 결과 객체 리스트를 반환하고, 인식된 텍스트는 rec_texts 키에 담겨 나온다
+    # (2026-09-15, 3060Ti 실기에서 구버전 API 호출로 TypeError 발생해 확인 후 수정).
     ocr = PaddleOCR(use_angle_cls=True, lang=lang)
-    result = ocr.ocr(str(image_path), cls=True)
-    if not result or not result[0]:
+    result = ocr.predict(str(image_path))
+    if not result:
         return []
-    return [line[1][0] for line in result[0]]
+    return list(result[0]["rec_texts"])
 
 
 def extract_text_units_stt(audio_path: Path, model_size: str) -> list[str]:
