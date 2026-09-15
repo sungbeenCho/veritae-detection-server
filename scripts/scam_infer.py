@@ -116,6 +116,12 @@ def main() -> None:
 
     if args.mode == "ocr":
         text_units = extract_text_units_ocr(args.input, args.paddleocr_lang)
+        # PaddleOCR이 한 줄 단위를 넘어 단어/구 단위로도 잘게 쪼개 인식하는 경우가 많아
+        # (2026-09-15 3060Ti 실기 확인 - 2026-09-13 설계 당시 가정과 달랐음), 감지된 조각을
+        # kss에 각각 따로 넣으면 합칠 문장 자체가 없어 단어 단위로 그대로 나온다. 조각을
+        # 전부 하나로 합친 뒤 kss에 넣어야 문장부호 기준으로 실제 문장 단위가 복원된다.
+        # STT(음성) segment는 이미 발화 간 쉬는 구간 기준이라 문장에 가까워 그대로 둔다.
+        text_units = [" ".join(text_units)] if text_units else []
     else:
         text_units = extract_text_units_stt(args.input, args.whisper_model_size)
 
