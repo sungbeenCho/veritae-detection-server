@@ -32,7 +32,11 @@ def extract_text_units_ocr(image_path: Path, lang: str) -> list[str]:
     #   직접 비교해 실측 확인, EasyOCR 쪽이 명확히 더 정확했음.
     # gpu=False: 이 프로세스에서 GPU를 쓰면 faster-whisper의 cuDNN과 다시 충돌할 위험이
     # 있어, 이미지 한 장 처리라 속도 손해가 적은 CPU로 고정한다(PaddleOCR 때와 동일 판단).
-    reader = easyocr.Reader([lang, "en"], gpu=False)
+    # verbose=False: 모델 다운로드/인식 진행 상황을 stdout에 print하지 않게 한다 -
+    # subprocess 환경변수(PYTHONIOENCODING)로 인코딩 문제는 이미 막았지만, 불필요한
+    # 출력 자체를 줄여 이중으로 방지한다(2026-09-15, cp949 콘솔에서 진행률 표시줄의
+    # 유니코드 블록 문자 때문에 UnicodeEncodeError 발생 확인).
+    reader = easyocr.Reader([lang, "en"], gpu=False, verbose=False)
     return reader.readtext(str(image_path), detail=0)
 
 

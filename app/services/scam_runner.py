@@ -1,10 +1,17 @@
 import json
+import os
 import shutil
 import subprocess
 import uuid
 from pathlib import Path, PureWindowsPath
 
 from app.config import get_settings
+
+# EasyOCR이 모델을 처음 다운로드할 때 진행률 표시줄에 유니코드 블록 문자(█)를 print하는데,
+# Windows 콘솔 기본 코드페이지(cp949)로는 이 문자를 인코딩할 수 없어 자식 프로세스가
+# UnicodeEncodeError로 죽는다(3060Ti 실기 확인, 2026-09-15). 자식 파이썬 프로세스의
+# stdout/stderr 인코딩을 UTF-8로 강제해 방지한다.
+_SUBPROCESS_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
 
 class ScamInferenceError(RuntimeError):
@@ -51,6 +58,7 @@ def _run_scam_infer(mode: str, input_bytes: bytes, filename: str) -> ScamResult:
             encoding="utf-8",
             errors="replace",
             timeout=settings.text_extraction_timeout_seconds,
+            env=_SUBPROCESS_ENV,
         )
 
         if result.returncode != 0:
