@@ -15,6 +15,14 @@ import argparse
 import json
 from pathlib import Path
 
+# torch를 최상단(다른 무거운 ML 라이브러리보다 먼저)에서 import한다. PaddlePaddle과 torch가
+# 둘 다 자체 번들 MKL/OpenMP 런타임(libiomp5md.dll)을 갖고 있어, 한 프로세스에 같이 로드되면
+# 먼저 로드된 쪽 버전이 그 자리를 차지하고 나중 것이 깨진다(WinError 127, "procedure not
+# found"). 이미지 모드(extract_text_units_ocr이 paddleocr를 먼저 import)에서만 torch import가
+# 깨지고 음성 모드(faster-whisper만 씀, paddle 안 건드림)는 멀쩡했던 게 그 증거 - paddle보다
+# torch를 먼저 로드시켜 충돌을 피한다(2026-09-15, 3060Ti 실기 확인).
+import torch  # noqa: E402,F401
+
 EVIDENCE_SCORE_THRESHOLD = 0.5  # spai_runner.py/antideepfake_infer.py/dfdc_infer.py와 동일 임계값
 MAX_SENTENCE_LENGTH = 300  # Lilju 학습 시 입력 길이를 크게 벗어나는 극단값 방어용 - 실측 근거 없는 안전장치
 PHISHING_LABEL_INDEX = 1  # Lilju 모델카드 없음 - 2026-09-13 실측(9/10 정확도)으로 확인된 값
