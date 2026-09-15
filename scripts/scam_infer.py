@@ -23,25 +23,18 @@ PHISHING_LABEL_INDEX = 1  # Lilju 모델카드 없음 - 2026-09-13 실측(9/10 �
 def extract_text_units_ocr(image_path: Path, lang: str) -> list[str]:
     from paddleocr import PaddleOCR
 
-    # PaddleOCR 3.x(PP-OCRv5)부터 .ocr(img, cls=True)가 deprecated -> .predict(img)로 교체.
-    # predict()는 결과 객체 리스트를 반환하고, 인식된 텍스트는 rec_texts 키에 담겨 나온다
-    # (2026-09-15, 3060Ti 실기에서 구버전 API 호출로 TypeError 발생해 확인 후 수정).
-    # device="cpu": GPU(paddlepaddle-gpu, CUDA 13)로 시도했으나 faster-whisper가 쓰는
-    # CUDA 12용 cuDNN과 같은 conda env 안에서 충돌(둘 다 nvidia-cudnn-cu1x가 필요해
-    # 공존 불가). OCR은 이미지 한 장 처리라 CPU로도 충분히 빨라 CPU로 확정(2026-09-15).
-    #
-    # enable_mkldnn은 일부러 안 건드린다 - 처음엔 PIR/oneDNN 변환 크래시를 피하려고
-    # enable_mkldnn=False를 넣었었는데, 그 크래시는 당시 cuDNN 파일이 cu12/cu13 충돌로
-    # 꼬여있던 상태에서 난 것으로 보이고(재설치로 해결됨), enable_mkldnn=False로 둔
-    # 상태에서 OCR 인식 결과가 전부 깨져서 나오는 문제가 실기에서 확인됨. PaddleOCR
-    # 3.0.x~3.6.x 대에 enable_mkldnn 처리 자체에 알려진 회귀 버그가 있어
-    # (PaddlePaddle/PaddleOCR#15632, #15782) 이 옵션에 아무 값이나 강제하는 것보다
-    # 라이브러리 기본값에 맡기는 쪽이 안전하다고 판단(2026-09-15).
-    ocr = PaddleOCR(use_angle_cls=True, lang=lang, device="cpu")
-    result = ocr.predict(str(image_path))
-    if not result:
+    # PaddleOCR 3.x(PP-OCRv5)는 3060Ti 실기 검증에서 CPU 실행 시 PIR/oneDNN 변환
+    # 크래시(NotImplementedError)가 재현되고, enable_mkldnn=False로 그 크래시를
+    # 피하면 이번엔 한글 인식 결과 자체가 깨져서 나옴(2026-09-15 확인, 둘 다
+    # 새로 만든 깨끗한 env에서도 재현 - 파일 충돌 때문이 아니라 3.x 자체의
+    # 알려진 회귀 버그들로 판단, PaddlePaddle/PaddleOCR#15632/#15782 등 참고).
+    # 그래서 3.x를 포기하고 훨씬 오래 검증된 2.x(PP-OCRv3) API로 고정한다 -
+    # requirements: paddleocr==2.7.3, paddlepaddle==2.6.2 (README 참고).
+    ocr = PaddleOCR(use_angle_cls=True, lang=lang, show_log=False)
+    result = ocr.ocr(str(image_path), cls=True)
+    if not result or not result[0]:
         return []
-    return list(result[0]["rec_texts"])
+    return [line[1][0] for line in result[0]]
 
 
 def extract_text_units_stt(audio_path: Path, model_size: str) -> list[str]:

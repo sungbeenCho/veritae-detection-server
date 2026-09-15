@@ -459,7 +459,8 @@ score가 높으면(얼굴 조작 확률이 높으면) `evidence` 배열에 탐�
 
 OCR(PaddleOCR)/STT(faster-whisper)/문장분리(kss)/사기감지(Lilju/voicephishing_kobert)를 위한 새 conda env를 만든다. GitHub repo clone은 필요 없다(전부 pip 패키지).
 
-**중요 - GPU 관련 주의사항 (2026-09-15, 3060Ti 실기에서 확인):**
+**중요 - 실기 검증에서 확인된 주의사항 (2026-09-15, 3060Ti):**
+- **`paddleocr`/`paddlepaddle`은 반드시 버전을 고정해서 설치한다(아래 명령어 그대로).** 버전을 안 박고 최신(3.x)을 깔면, CPU 실행 시 PIR/oneDNN 변환 크래시가 나거나(`NotImplementedError`), 크래시를 피해도 한글 인식 결과가 전부 깨져서 나오는 등 알려진 회귀 버그가 많다. 2.x(PP-OCRv3)로 고정하면 이 문제가 없다.
 - **`paddlepaddle-gpu`는 설치하지 않는다.** 반드시 CPU용 `paddlepaddle`만 설치한다. `paddlepaddle-gpu`가 요구하는 CUDA 13용 cuDNN이, 아래에서 faster-whisper용으로 설치하는 CUDA 12용 cuDNN과 같은 env 안에서 파일 충돌을 일으켜 둘 다 깨진다(WinError 127). OCR은 이미지 한 장 처리라 CPU로도 속도 차이가 체감되지 않아 GPU를 쓸 이유가 없다.
 - faster-whisper(STT)는 GPU가 필요하다 — `large-v3` 모델은 CPU에서 너무 느리다. 이건 CUDA **12**용 cuBLAS/cuDNN을 pip로 따로 설치해서 쓴다(아래 3번).
 
@@ -468,7 +469,7 @@ OCR(PaddleOCR)/STT(faster-whisper)/문장분리(kss)/사기감지(Lilju/voicephi
 ```powershell
 conda create -n text-extraction python=3.10 -y
 conda activate text-extraction
-pip install paddlepaddle paddleocr faster-whisper transformers torch kss
+pip install paddlepaddle==2.6.2 paddleocr==2.7.3 faster-whisper transformers torch kss
 ```
 
 ### 2. ffmpeg 확인
