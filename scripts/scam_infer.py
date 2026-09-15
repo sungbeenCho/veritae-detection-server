@@ -26,9 +26,12 @@ def extract_text_units_ocr(image_path: Path, lang: str) -> list[str]:
     # PaddleOCR 3.x(PP-OCRv5)부터 .ocr(img, cls=True)가 deprecated -> .predict(img)로 교체.
     # predict()는 결과 객체 리스트를 반환하고, 인식된 텍스트는 rec_texts 키에 담겨 나온다
     # (2026-09-15, 3060Ti 실기에서 구버전 API 호출로 TypeError 발생해 확인 후 수정).
-    # device="gpu": CPU 실행 경로(oneDNN)에서 PIR 변환 버그(NotImplementedError)가 발생해
-    # GPU로 전환(2026-09-15, paddlepaddle-gpu 설치로 3060Ti 사용).
-    ocr = PaddleOCR(use_angle_cls=True, lang=lang, device="gpu")
+    # device="cpu": GPU(paddlepaddle-gpu, CUDA 13)로 시도했으나 faster-whisper가 쓰는
+    # CUDA 12용 cuDNN과 같은 conda env 안에서 충돌(둘 다 nvidia-cudnn-cu1x가 필요해
+    # 공존 불가). OCR은 이미지 한 장 처리라 CPU로도 충분히 빨라 CPU로 확정
+    # (2026-09-15). enable_mkldnn=False는 CPU 실행 경로의 PIR/oneDNN 변환 버그
+    # (NotImplementedError) 회피용 - 실기 미검증, 동작 안 하면 다른 방법 필요.
+    ocr = PaddleOCR(use_angle_cls=True, lang=lang, device="cpu", enable_mkldnn=False)
     result = ocr.predict(str(image_path))
     if not result:
         return []
