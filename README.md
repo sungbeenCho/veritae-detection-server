@@ -464,13 +464,14 @@ OCR(EasyOCR)/STT(faster-whisper)/문장분리(kss)/사기감지(Lilju/voicephish
 - **EasyOCR은 CPU로 고정한다(`gpu=False`).** GPU로 돌리면 아래 faster-whisper용으로 설치한 CUDA 12용 cuDNN과 같은 env 안에서 다시 충돌할 위험이 있다. 이미지 한 장 처리라 CPU로도 속도 차이는 체감되지 않는다.
 - **`PADDLEOCR_LANG` 환경변수 값이 `korean`에서 `ko`로 바뀌었다** (변수명 자체는 하위 호환을 위해 그대로 둠 - EasyOCR의 언어 코드 표기 방식이 다름). 새로 설정하는 경우 기본값(`ko`)을 그대로 쓰면 되고, 예전에 `korean`으로 이미 설정해뒀다면 `ko`로 바꿔야 한다.
 - faster-whisper(STT)는 GPU가 필요하다 — `large-v3` 모델은 CPU에서 너무 느리다. 이건 CUDA **12**용 cuBLAS/cuDNN을 pip로 따로 설치해서 쓴다(아래 3번).
+- **영상은 음성뿐 아니라 화면 텍스트(자막/문구)도 본다(2026-09-15 추가).** ffmpeg로 3초에 한 장씩 프레임을 뽑고, `imagehash`(perceptual hash)로 직전 프레임과 거의 같은 화면이면 건너뛴 뒤, 남은(변화가 있는) 프레임만 EasyOCR로 읽는다. 그래서 `imagehash` 패키지가 추가로 필요하다.
 
 ### 1. `text-extraction` conda 환경 구성
 
 ```powershell
 conda create -n text-extraction python=3.10 -y
 conda activate text-extraction
-pip install easyocr faster-whisper transformers torch kss
+pip install easyocr faster-whisper transformers torch kss imagehash
 ```
 
 ### 2. ffmpeg 확인

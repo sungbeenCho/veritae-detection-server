@@ -107,13 +107,16 @@ def test_run_scam_inference_raises_on_timeout(mock_get_settings, mock_run, tmp_p
 
 @patch("app.services.scam_runner.subprocess.run")
 @patch("app.services.scam_runner.get_settings")
-def test_run_scam_inference_video_extracts_audio_then_runs_stt(mock_get_settings, mock_run, tmp_path):
+def test_run_scam_inference_video_extracts_audio_and_frames_then_runs_video_mode(mock_get_settings, mock_run, tmp_path):
     mock_get_settings.return_value = _scam_settings(tmp_path)
 
     def fake_run(command, **kwargs):
-        if command[0] == "ffmpeg":
+        if command[0] == "ffmpeg" and "-acodec" in command:
             audio_path = Path(command[-1])
             audio_path.write_bytes(b"fake-wav-bytes")
+            return MagicMock(returncode=0, stderr="")
+        if command[0] == "ffmpeg":
+            # 프레임 추출 호출 - 실제 프레임 파일까지는 안 만들어도 이 테스트엔 지장 없음
             return MagicMock(returncode=0, stderr="")
         output_file = Path(command[command.index("--output") + 1])
         _write_result_json(output_file, 0.6, [{"sentence": "지금 바로 이체하세요", "score": 0.9}])
@@ -124,11 +127,44 @@ def test_run_scam_inference_video_extracts_audio_then_runs_stt(mock_get_settings
     result = run_scam_inference_video(b"fake-video-bytes", "test.mp4")
 
     assert result.score == 0.6
-    assert mock_run.call_count == 2
-    first_command = mock_run.call_args_list[0].args[0]
-    assert first_command[0] == "ffmpeg"
-    second_command = mock_run.call_args_list[1].args[0]
-    assert second_command[second_command.index("--mode") + 1] == "stt"
+    assert mock_run.call_count == 3
+    audio_command = mock_run.call_args_list[0].args[0]
+    assert audio_command[0] == "ffmpeg"
+    assert "-acodec" in audio_command
+    frame_command = mock_run.call_args_list[1].args[0]
+    assert frame_command[0] == "ffmpeg"
+    assert "-vf" in frame_command
+    infer_command = mock_run.call_args_list[2].args[0]
+    assert infer_command[infer_command.index("--mode") + 1] == "video"
+    assert "--frames-dir" in infer_command
+
+
+@patch("app.services.scam_runner.subprocess.run")
+@patch("app.services.scam_runner.get_settings")
+def test_run_scam_inference_video_omits_frames_dir_when_frame_extraction_fails(mock_get_settings, mock_run, tmp_path):
+    """프레임 추출이 실패해도 전체 요청은 실패시키지 않는다 - best-effort로 음성만
+    가지고 진행한다(scamDetection이 아예 null이 되는 것과는 다른 케이스: 이건 오디오
+    추출 자체는 성공했을 때의 얘기)."""
+    mock_get_settings.return_value = _scam_settings(tmp_path)
+
+    def fake_run(command, **kwargs):
+        if command[0] == "ffmpeg" and "-acodec" in command:
+            audio_path = Path(command[-1])
+            audio_path.write_bytes(b"fake-wav-bytes")
+            return MagicMock(returncode=0, stderr="")
+        if command[0] == "ffmpeg":
+            return MagicMock(returncode=1, stderr="frame extraction boom")
+        output_file = Path(command[command.index("--output") + 1])
+        _write_result_json(output_file, 0.6, [{"sentence": "지금 바로 이체하세요", "score": 0.9}])
+        return MagicMock(returncode=0, stderr="")
+
+    mock_run.side_effect = fake_run
+
+    result = run_scam_inference_video(b"fake-video-bytes", "test.mp4")
+
+    assert result.score == 0.6
+    infer_command = mock_run.call_args_list[2].args[0]
+    assert "--frames-dir" not in infer_command
 
 
 @patch("app.services.scam_runner.subprocess.run")

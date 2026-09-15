@@ -18,6 +18,8 @@ from pathlib import Path
 EVIDENCE_SCORE_THRESHOLD = 0.5  # spai_runner.py/antideepfake_infer.py/dfdc_infer.py와 동일 임계값
 MAX_SENTENCE_LENGTH = 300  # Lilju 학습 시 입력 길이를 크게 벗어나는 극단값 방어용 - 실측 근거 없는 안전장치
 PHISHING_LABEL_INDEX = 1  # Lilju 모델카드 없음 - 2026-09-13 실측(9/10 정확도)으로 확인된 값
+FRAME_HASH_DIFF_THRESHOLD = 5  # perceptual hash 차이가 이 값 이하면 "직전에 처리한 프레임과 사실상
+# 같은 화면"으로 보고 OCR을 건너뛴다 - 실측 근거 없는 초기값(2026-09-15), 데스크탑 실측 후 조정 필요
 
 
 def extract_text_units_ocr(image_path: Path, lang: str) -> list[str]:
@@ -38,6 +40,28 @@ def extract_text_units_ocr(image_path: Path, lang: str) -> list[str]:
     # 유니코드 블록 문자 때문에 UnicodeEncodeError 발생 확인).
     reader = easyocr.Reader([lang, "en"], gpu=False, verbose=False)
     return reader.readtext(str(image_path), detail=0)
+
+
+def extract_text_units_frames(frames_dir: Path, lang: str) -> list[str]:
+    """영상 프레임(ffmpeg로 일정 간격 추출된 정지 이미지들)에서 화면에 나온 텍스트(자막/
+    문구)를 뽑는다(2026-09-15 추가, 기존엔 영상에서 음성만 봤음). 연속된 프레임끼리
+    perceptual hash로 비교해, 직전에 처리한 프레임과 거의 같은 화면이면 건너뛴다 - 자막이
+    몇 초씩 떠 있으면 그 구간의 프레임들은 다 비슷하므로, 한 번만 OCR하면 충분하고 나머지는
+    낭비다. extract_text_units_ocr(위)을 프레임마다 그대로 재사용한다 - 기존 이미지 경로와
+    동일한 함수, 별도로 새로 만들지 않음."""
+    import imagehash
+    from PIL import Image
+
+    frame_paths = sorted(frames_dir.glob("*.png"))
+    texts: list[str] = []
+    last_hash = None
+    for frame_path in frame_paths:
+        current_hash = imagehash.phash(Image.open(frame_path))
+        if last_hash is not None and (current_hash - last_hash) <= FRAME_HASH_DIFF_THRESHOLD:
+            continue
+        last_hash = current_hash
+        texts.extend(extract_text_units_ocr(frame_path, lang))
+    return texts
 
 
 def extract_text_units_stt(audio_path: Path, model_size: str) -> list[str]:
@@ -99,25 +123,42 @@ def build_evidence(sentences: list[str], scores: list[float]) -> list[dict]:
     ]
 
 
+def _join_ocr_fragments(fragments: list[str]) -> list[str]:
+    """OCR 엔진(PaddleOCR/EasyOCR 공통)이 한 줄 단위를 넘어 단어/구 단위로도 잘게 쪼개
+    인식하는 경우가 많아(2026-09-15 3060Ti 실기 확인 - 2026-09-13 설계 당시 가정과
+    달랐음), 감지된 조각을 kss에 각각 따로 넣으면 합칠 문장 자체가 없어 단어 단위로
+    그대로 나온다. 조각을 전부 하나로 합친 뒤 kss에 넣어야 문장부호 기준으로 실제
+    문장 단위가 복원된다. STT(음성) segment는 이미 발화 간 쉬는 구간 기준이라 문장에
+    가까워 이 처리를 거치지 않는다."""
+    return [" ".join(fragments)] if fragments else []
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", required=True, choices=["ocr", "stt"])
+    parser.add_argument("--mode", required=True, choices=["ocr", "stt", "video"])
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--lilju-model-id", required=True)
     parser.add_argument("--paddleocr-lang", required=True)
     parser.add_argument("--whisper-model-size", required=True)
+    parser.add_argument(
+        "--frames-dir", type=Path, default=None,
+        help="video 모드 전용 - 영상에서 추출한 프레임 이미지들이 담긴 폴더. 없으면 "
+             "화면 텍스트 없이 음성만으로 best-effort 진행(2026-09-15)."
+    )
     args = parser.parse_args()
 
     if args.mode == "ocr":
-        text_units = extract_text_units_ocr(args.input, args.paddleocr_lang)
-        # OCR 엔진(PaddleOCR/EasyOCR 공통)이 한 줄 단위를 넘어 단어/구 단위로도 잘게
-        # 쪼개 인식하는 경우가 많아(2026-09-15 3060Ti 실기 확인 - 2026-09-13 설계 당시
-        # 가정과 달랐음), 감지된 조각을 kss에 각각 따로 넣으면 합칠 문장 자체가 없어
-        # 단어 단위로 그대로 나온다. 조각을 전부 하나로 합친 뒤 kss에 넣어야 문장부호
-        # 기준으로 실제 문장 단위가 복원된다.
-        # STT(음성) segment는 이미 발화 간 쉬는 구간 기준이라 문장에 가까워 그대로 둔다.
-        text_units = [" ".join(text_units)] if text_units else []
+        text_units = _join_ocr_fragments(extract_text_units_ocr(args.input, args.paddleocr_lang))
+    elif args.mode == "video":
+        # --input은 video 모드에서 "영상에서 미리 뽑아둔 오디오 파일"을 가리킨다(음성
+        # 전용 stt 모드와 동일한 의미로 재사용). 화면 텍스트(--frames-dir)는 음성과 별개
+        # 추출원이라 각자 처리한 뒤 하나의 text_units 목록으로 합쳐서 이후 로직(문장분리
+        # 부터)은 완전히 동일하게 태운다 - 어디서 나온 문장인지 구분하지 않는다
+        # (2026-09-15 설계, 사용자 확인).
+        audio_units = extract_text_units_stt(args.input, args.whisper_model_size)
+        frame_fragments = extract_text_units_frames(args.frames_dir, args.paddleocr_lang) if args.frames_dir else []
+        text_units = audio_units + _join_ocr_fragments(frame_fragments)
     else:
         text_units = extract_text_units_stt(args.input, args.whisper_model_size)
 
