@@ -459,6 +459,10 @@ score가 높으면(얼굴 조작 확률이 높으면) `evidence` 배열에 탐�
 
 OCR(PaddleOCR)/STT(faster-whisper)/문장분리(kss)/사기감지(Lilju/voicephishing_kobert)를 위한 새 conda env를 만든다. GitHub repo clone은 필요 없다(전부 pip 패키지).
 
+**중요 - GPU 관련 주의사항 (2026-09-15, 3060Ti 실기에서 확인):**
+- **`paddlepaddle-gpu`는 설치하지 않는다.** 반드시 CPU용 `paddlepaddle`만 설치한다. `paddlepaddle-gpu`가 요구하는 CUDA 13용 cuDNN이, 아래에서 faster-whisper용으로 설치하는 CUDA 12용 cuDNN과 같은 env 안에서 파일 충돌을 일으켜 둘 다 깨진다(WinError 127). OCR은 이미지 한 장 처리라 CPU로도 속도 차이가 체감되지 않아 GPU를 쓸 이유가 없다.
+- faster-whisper(STT)는 GPU가 필요하다 — `large-v3` 모델은 CPU에서 너무 느리다. 이건 CUDA **12**용 cuBLAS/cuDNN을 pip로 따로 설치해서 쓴다(아래 3번).
+
 ### 1. `text-extraction` conda 환경 구성
 
 ```powershell
@@ -477,7 +481,33 @@ winget install ffmpeg
 
 설치 후 새 PowerShell 창 열기 (PATH 반영을 위해 필수).
 
-### 3. `text-extraction` 환경의 python.exe 절대경로 확인
+### 3. faster-whisper GPU 활성화 (cuBLAS/cuDNN 설치 + PATH 등록)
+
+faster-whisper(STT)가 GPU를 쓰려면 CUDA 12용 cuBLAS/cuDNN 런타임 DLL이 필요하다. 이게 없으면 `Library cublas64_12.dll is not found or cannot be loaded` 에러가 난다.
+
+```powershell
+conda activate text-extraction
+pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
+```
+
+설치된 DLL이 있는 폴더를 PATH에 **영구** 등록한다. **`setx PATH ...`는 절대 쓰지 않는다** — PATH는 이미 길어서 `setx`의 1024자 제한에 걸려 잘려나갈 위험이 있다. 대신 아래처럼 .NET API로 등록한다(길이 제한 없음):
+
+```powershell
+$cublasPath = "$env:USERPROFILE\miniconda3\envs\text-extraction\lib\site-packages\nvidia\cublas\bin"
+$cudnnPath = "$env:USERPROFILE\miniconda3\envs\text-extraction\lib\site-packages\nvidia\cudnn\bin"
+
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+[Environment]::SetEnvironmentVariable("Path", "$currentPath;$cublasPath;$cudnnPath", "User")
+```
+
+**등록 후 새 PowerShell 창을 열어야 적용된다** (지금 열려 있는 창엔 반영 안 됨). 새 창에서 확인:
+
+```powershell
+Test-Path "$env:USERPROFILE\miniconda3\envs\text-extraction\lib\site-packages\nvidia\cublas\bin\cublas64_12.dll"
+```
+`True`가 나오면 정상이다.
+
+### 4. `text-extraction` 환경의 python.exe 절대경로 확인
 
 아래 환경변수 설정에 필요하다.
 
@@ -488,27 +518,27 @@ conda activate text-extraction
 
 출력된 경로를 메모해둔다 (예: `C:\Users\<user>\miniconda3\envs\text-extraction\python.exe`).
 
-### 4. 환경변수 설정
+### 5. 환경변수 설정 (영구)
 
-이 서버가 text-extraction을 어디서 어떻게 실행할지 알려주는 값들이다. 모두 기본값이 있어 필수는 아니지만, 필요에 따라 `setx`로 영구 설정할 수 있다. PowerShell 세션마다 설정해야 하니, 매번 치기 귀찮으면 아래를 `C:\ai\veritae-detection-server\run.ps1` 같은 스크립트에 추가해서 실행하면 편하다.
-
-```powershell
-$env:TEXT_EXTRACTION_PYTHON = "C:\Users\<user>\miniconda3\envs\text-extraction\python.exe"   # 3번에서 확인한 경로
-$env:LILJU_MODEL_ID = "Lilju/voicephishing_kobert"   # 기본값과 동일
-$env:PADDLEOCR_LANG = "korean"   # 기본값과 동일
-$env:WHISPER_MODEL_SIZE = "large-v3"   # 기본값과 동일
-$env:TEXT_EXTRACTION_TIMEOUT_SECONDS = "300"   # 기본값 300s - 실측 후 조정 필요
-```
-
-**HuggingFace 토큰:** 최초 실행 시 HuggingFace에서 Lilju 가중치(약 370MB)를 자동 다운로드한다. 비인증 요청은 rate limit이 있으므로 반복 실행이 많다면 `HF_TOKEN` 설정을 고려한다:
+이 서버가 text-extraction을 어디서 어떻게 실행할지 알려주는 값들이다. 모두 기본값이 있어 필수는 아니다. 이 값들은(PATH와 달리) 짧은 단일 값이라 `setx`로 영구 저장해도 안전하다.
 
 ```powershell
-$env:HF_TOKEN = "your_huggingface_token_here"   # 선택 - 반복 실행 시만 필요
+setx TEXT_EXTRACTION_PYTHON "C:\Users\<user>\miniconda3\envs\text-extraction\python.exe"
+setx LILJU_MODEL_ID "Lilju/voicephishing_kobert"
+setx PADDLEOCR_LANG "korean"
+setx WHISPER_MODEL_SIZE "large-v3"
+setx TEXT_EXTRACTION_TIMEOUT_SECONDS "300"
 ```
 
-### 5. 서버 실행 (또는 재시작)
+**HuggingFace 토큰:** 최초 실행 시 HuggingFace에서 Lilju 가중치(약 370MB)를 자동 다운로드한다. 이후로는 로컬에 캐시되어 다시 안 받으므로, 보통은 설정 안 해도 된다. 반복 실행이 많아 rate limit 에러를 실제로 만났을 때만 설정:
 
-이미 detection-api 서버가 켜져 있다면, 환경변수가 적용되도록 다시 시작해야 한다.
+```powershell
+setx HF_TOKEN "your_huggingface_token_here"
+```
+
+### 6. 서버 실행 (또는 재시작)
+
+`setx`로 등록한 환경변수는 **새 PowerShell 창부터** 적용된다. 이미 detection-api 서버가 켜져 있다면, 새 창에서 다시 시작해야 한다.
 
 ```powershell
 conda activate detection-api
