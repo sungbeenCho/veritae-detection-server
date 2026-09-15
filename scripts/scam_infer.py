@@ -28,10 +28,16 @@ def extract_text_units_ocr(image_path: Path, lang: str) -> list[str]:
     # (2026-09-15, 3060Ti 실기에서 구버전 API 호출로 TypeError 발생해 확인 후 수정).
     # device="cpu": GPU(paddlepaddle-gpu, CUDA 13)로 시도했으나 faster-whisper가 쓰는
     # CUDA 12용 cuDNN과 같은 conda env 안에서 충돌(둘 다 nvidia-cudnn-cu1x가 필요해
-    # 공존 불가). OCR은 이미지 한 장 처리라 CPU로도 충분히 빨라 CPU로 확정
-    # (2026-09-15). enable_mkldnn=False는 CPU 실행 경로의 PIR/oneDNN 변환 버그
-    # (NotImplementedError) 회피용 - 실기 미검증, 동작 안 하면 다른 방법 필요.
-    ocr = PaddleOCR(use_angle_cls=True, lang=lang, device="cpu", enable_mkldnn=False)
+    # 공존 불가). OCR은 이미지 한 장 처리라 CPU로도 충분히 빨라 CPU로 확정(2026-09-15).
+    #
+    # enable_mkldnn은 일부러 안 건드린다 - 처음엔 PIR/oneDNN 변환 크래시를 피하려고
+    # enable_mkldnn=False를 넣었었는데, 그 크래시는 당시 cuDNN 파일이 cu12/cu13 충돌로
+    # 꼬여있던 상태에서 난 것으로 보이고(재설치로 해결됨), enable_mkldnn=False로 둔
+    # 상태에서 OCR 인식 결과가 전부 깨져서 나오는 문제가 실기에서 확인됨. PaddleOCR
+    # 3.0.x~3.6.x 대에 enable_mkldnn 처리 자체에 알려진 회귀 버그가 있어
+    # (PaddlePaddle/PaddleOCR#15632, #15782) 이 옵션에 아무 값이나 강제하는 것보다
+    # 라이브러리 기본값에 맡기는 쪽이 안전하다고 판단(2026-09-15).
+    ocr = PaddleOCR(use_angle_cls=True, lang=lang, device="cpu")
     result = ocr.predict(str(image_path))
     if not result:
         return []
