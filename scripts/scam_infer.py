@@ -15,34 +15,25 @@ import argparse
 import json
 from pathlib import Path
 
-# torch를 최상단(다른 무거운 ML 라이브러리보다 먼저)에서 import한다. PaddlePaddle과 torch가
-# 둘 다 자체 번들 MKL/OpenMP 런타임(libiomp5md.dll)을 갖고 있어, 한 프로세스에 같이 로드되면
-# 먼저 로드된 쪽 버전이 그 자리를 차지하고 나중 것이 깨진다(WinError 127, "procedure not
-# found"). 이미지 모드(extract_text_units_ocr이 paddleocr를 먼저 import)에서만 torch import가
-# 깨지고 음성 모드(faster-whisper만 씀, paddle 안 건드림)는 멀쩡했던 게 그 증거 - paddle보다
-# torch를 먼저 로드시켜 충돌을 피한다(2026-09-15, 3060Ti 실기 확인).
-import torch  # noqa: E402,F401
-
 EVIDENCE_SCORE_THRESHOLD = 0.5  # spai_runner.py/antideepfake_infer.py/dfdc_infer.py와 동일 임계값
 MAX_SENTENCE_LENGTH = 300  # Lilju 학습 시 입력 길이를 크게 벗어나는 극단값 방어용 - 실측 근거 없는 안전장치
 PHISHING_LABEL_INDEX = 1  # Lilju 모델카드 없음 - 2026-09-13 실측(9/10 정확도)으로 확인된 값
 
 
 def extract_text_units_ocr(image_path: Path, lang: str) -> list[str]:
-    from paddleocr import PaddleOCR
+    import easyocr
 
-    # PaddleOCR 3.x(PP-OCRv5)는 3060Ti 실기 검증에서 CPU 실행 시 PIR/oneDNN 변환
-    # 크래시(NotImplementedError)가 재현되고, enable_mkldnn=False로 그 크래시를
-    # 피하면 이번엔 한글 인식 결과 자체가 깨져서 나옴(2026-09-15 확인, 둘 다
-    # 새로 만든 깨끗한 env에서도 재현 - 파일 충돌 때문이 아니라 3.x 자체의
-    # 알려진 회귀 버그들로 판단, PaddlePaddle/PaddleOCR#15632/#15782 등 참고).
-    # 그래서 3.x를 포기하고 훨씬 오래 검증된 2.x(PP-OCRv3) API로 고정한다 -
-    # requirements: paddleocr==2.7.3, paddlepaddle==2.6.2 (README 참고).
-    ocr = PaddleOCR(use_angle_cls=True, lang=lang, show_log=False)
-    result = ocr.ocr(str(image_path), cls=True)
-    if not result or not result[0]:
-        return []
-    return [line[1][0] for line in result[0]]
+    # PaddleOCR(PP-OCRv3/v5 둘 다)에서 3060Ti 실기 검증 중 심각한 문제들이 발견돼
+    # EasyOCR로 교체했다(2026-09-15):
+    # - PP-OCRv5(3.x): CPU 실행 시 PIR/oneDNN 크래시, GPU는 faster-whisper용 cuDNN과
+    #   버전 충돌(같은 conda env 안에 CUDA 12/13용 cuDNN이 공존 불가).
+    # - PP-OCRv3(2.x, 안정성 위해 다운그레이드): 크래시는 없지만 "국민은행" 같은 특정
+    #   단어를 일관되게 다른 글자로 잘못 인식(예: "우긍금논") - 같은 이미지로 EasyOCR과
+    #   직접 비교해 실측 확인, EasyOCR 쪽이 명확히 더 정확했음.
+    # gpu=False: 이 프로세스에서 GPU를 쓰면 faster-whisper의 cuDNN과 다시 충돌할 위험이
+    # 있어, 이미지 한 장 처리라 속도 손해가 적은 CPU로 고정한다(PaddleOCR 때와 동일 판단).
+    reader = easyocr.Reader([lang, "en"], gpu=False)
+    return reader.readtext(str(image_path), detail=0)
 
 
 def extract_text_units_stt(audio_path: Path, model_size: str) -> list[str]:
@@ -116,10 +107,11 @@ def main() -> None:
 
     if args.mode == "ocr":
         text_units = extract_text_units_ocr(args.input, args.paddleocr_lang)
-        # PaddleOCR이 한 줄 단위를 넘어 단어/구 단위로도 잘게 쪼개 인식하는 경우가 많아
-        # (2026-09-15 3060Ti 실기 확인 - 2026-09-13 설계 당시 가정과 달랐음), 감지된 조각을
-        # kss에 각각 따로 넣으면 합칠 문장 자체가 없어 단어 단위로 그대로 나온다. 조각을
-        # 전부 하나로 합친 뒤 kss에 넣어야 문장부호 기준으로 실제 문장 단위가 복원된다.
+        # OCR 엔진(PaddleOCR/EasyOCR 공통)이 한 줄 단위를 넘어 단어/구 단위로도 잘게
+        # 쪼개 인식하는 경우가 많아(2026-09-15 3060Ti 실기 확인 - 2026-09-13 설계 당시
+        # 가정과 달랐음), 감지된 조각을 kss에 각각 따로 넣으면 합칠 문장 자체가 없어
+        # 단어 단위로 그대로 나온다. 조각을 전부 하나로 합친 뒤 kss에 넣어야 문장부호
+        # 기준으로 실제 문장 단위가 복원된다.
         # STT(음성) segment는 이미 발화 간 쉬는 구간 기준이라 문장에 가까워 그대로 둔다.
         text_units = [" ".join(text_units)] if text_units else []
     else:

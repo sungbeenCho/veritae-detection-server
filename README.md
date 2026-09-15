@@ -457,12 +457,12 @@ score가 높으면(얼굴 조작 확률이 높으면) `evidence` 배열에 탐�
 
 ## 사기 위험도 분석(text-extraction) 설정
 
-OCR(PaddleOCR)/STT(faster-whisper)/문장분리(kss)/사기감지(Lilju/voicephishing_kobert)를 위한 새 conda env를 만든다. GitHub repo clone은 필요 없다(전부 pip 패키지).
+OCR(EasyOCR)/STT(faster-whisper)/문장분리(kss)/사기감지(Lilju/voicephishing_kobert)를 위한 새 conda env를 만든다. GitHub repo clone은 필요 없다(전부 pip 패키지).
 
 **중요 - 실기 검증에서 확인된 주의사항 (2026-09-15, 3060Ti):**
-- **`paddleocr`/`paddlepaddle`은 반드시 버전을 고정해서 설치한다(아래 명령어 그대로).** 버전을 안 박고 최신(3.x)을 깔면, CPU 실행 시 PIR/oneDNN 변환 크래시가 나거나(`NotImplementedError`), 크래시를 피해도 한글 인식 결과가 전부 깨져서 나오는 등 알려진 회귀 버그가 많다. 2.x(PP-OCRv3)로 고정하면 이 문제가 없다.
-- **`numpy`/`opencv-python-headless`도 반드시 버전을 고정한다.** `paddlepaddle==2.6.2`는 numpy 1.x가 필요한데, 버전을 안 박으면 pip가 numpy 2.x와 opencv-python-headless 4.12.0.88+(이 버전부터 numpy 2.x 요구)를 같이 끌고 와서 서로 충돌한다(`RuntimeError: module compiled against ABI version ...`, `ImportError: numpy.core.multiarray failed to import`).
-- **`paddlepaddle-gpu`는 설치하지 않는다.** 반드시 CPU용 `paddlepaddle`만 설치한다. `paddlepaddle-gpu`가 요구하는 CUDA 13용 cuDNN이, 아래에서 faster-whisper용으로 설치하는 CUDA 12용 cuDNN과 같은 env 안에서 파일 충돌을 일으켜 둘 다 깨진다(WinError 127). OCR은 이미지 한 장 처리라 CPU로도 속도 차이가 체감되지 않아 GPU를 쓸 이유가 없다.
+- **OCR은 PaddleOCR이 아니라 EasyOCR을 쓴다.** PaddleOCR은 최신(3.x)에서 CPU 크래시/GPU cuDNN 버전 충돌이 있었고, 안정판(2.x)으로 내려도 "국민은행" 같은 특정 단어를 일관되게 잘못 인식하는 문제가 있었다. 같은 이미지로 EasyOCR과 직접 비교해 EasyOCR이 명확히 더 정확함을 확인하고 교체했다.
+- **EasyOCR은 CPU로 고정한다(`gpu=False`).** GPU로 돌리면 아래 faster-whisper용으로 설치한 CUDA 12용 cuDNN과 같은 env 안에서 다시 충돌할 위험이 있다. 이미지 한 장 처리라 CPU로도 속도 차이는 체감되지 않는다.
+- **`PADDLEOCR_LANG` 환경변수 값이 `korean`에서 `ko`로 바뀌었다** (변수명 자체는 하위 호환을 위해 그대로 둠 - EasyOCR의 언어 코드 표기 방식이 다름). 새로 설정하는 경우 기본값(`ko`)을 그대로 쓰면 되고, 예전에 `korean`으로 이미 설정해뒀다면 `ko`로 바꿔야 한다.
 - faster-whisper(STT)는 GPU가 필요하다 — `large-v3` 모델은 CPU에서 너무 느리다. 이건 CUDA **12**용 cuBLAS/cuDNN을 pip로 따로 설치해서 쓴다(아래 3번).
 
 ### 1. `text-extraction` conda 환경 구성
@@ -470,7 +470,7 @@ OCR(PaddleOCR)/STT(faster-whisper)/문장분리(kss)/사기감지(Lilju/voicephi
 ```powershell
 conda create -n text-extraction python=3.10 -y
 conda activate text-extraction
-pip install paddlepaddle==2.6.2 paddleocr==2.7.3 numpy==1.26.4 "opencv-python-headless<4.12.0.88" faster-whisper transformers torch kss
+pip install easyocr faster-whisper transformers torch kss
 ```
 
 ### 2. ffmpeg 확인

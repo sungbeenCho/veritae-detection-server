@@ -107,7 +107,10 @@ class Settings:
             )
         )
         self.lilju_model_id = os.environ.get("LILJU_MODEL_ID", "Lilju/voicephishing_kobert")
-        self.paddleocr_lang = os.environ.get("PADDLEOCR_LANG", "korean")
+        # 변수명은 PaddleOCR 시절 그대로 남아있지만(호환성 유지), 값은 EasyOCR 언어 코드다
+        # (2026-09-15, OCR 엔진을 PaddleOCR에서 EasyOCR로 교체 - 실기에서 EasyOCR이
+        # 한글 인식 정확도가 더 높게 나옴).
+        self.paddleocr_lang = os.environ.get("PADDLEOCR_LANG", "ko")
         self.whisper_model_size = os.environ.get("WHISPER_MODEL_SIZE", "large-v3")
         # 실측 없음(2026-09-13 기준) - STT(faster-whisper)가 5분 길이 오디오에서 얼마나
         # 걸릴지 알 수 없어 넉넉히 잡음. 데스크탑 실측 후 조정 필요(SPAI/AntiDeepfake/dfdc와 동일 패턴).
