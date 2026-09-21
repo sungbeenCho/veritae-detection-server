@@ -29,31 +29,25 @@ async def process_video(file: UploadFile = File(...)) -> VideoAnalysisResponse:
     ai_task = asyncio.create_task(asyncio.to_thread(run_dfdc_inference, video_bytes, filename))
     scam_task = asyncio.create_task(asyncio.to_thread(run_scam_inference_video, video_bytes, filename))
 
+    error_code = None
     try:
         ai_result = await ai_task
-    except NoFaceDetectedError as e:
-        scam_task.cancel()
-        raise HTTPException(status_code=422, detail=str(e)) from e
+    except NoFaceDetectedError:
+        # 얼굴 없음은 정상적인 한계지 장애가 아니다(2026-09-21) - 사기감지는 얼굴 유무와
+        # 무관하게 독립적으로 계산 가능하므로, 예전처럼 같이 취소하지 않고 끝까지 기다린다.
+        ai_result = None
+        error_code = "NO_FACE_DETECTED"
     except DfdcInferenceError as e:
         scam_task.cancel()
         raise HTTPException(status_code=502, detail=str(e)) from e
 
     try:
         scam_result = await scam_task
-    except ScamInferenceError:
-        logger.exception("사기감지 파이프라인 실패 (best-effort, 요청은 계속 진행)")
-        scam_result = ScamResult(None, [])
+    except ScamInferenceError as e:
+        # 텍스트가 원래 없어서가 아니라 파이프라인 자체가 죽은 경우다. 이걸 조용히 null로
+        # 감추면 "사기 아님"으로 오인될 위험이 있어(2026-09-21), 전체 요청을 실패시킨다.
+        raise HTTPException(status_code=502, detail="사기감지 처리 중 오류가 발생했습니다.") from e
 
-    evidence = [
-        Evidence(
-            title=e["title"],
-            description=e["description"],
-            tags=e["tags"],
-            start_sec=e["start_sec"],
-            end_sec=e["end_sec"],
-        )
-        for e in ai_result.evidence
-    ]
     scam_detection = (
         ScamDetectionResult(
             model="lilju",
@@ -64,9 +58,24 @@ async def process_video(file: UploadFile = File(...)) -> VideoAnalysisResponse:
         else None
     )
 
-    return VideoAnalysisResponse(
-        ai_detection=VideoDetectionResult(
+    ai_detection = None
+    if ai_result is not None:
+        evidence = [
+            Evidence(
+                title=e["title"],
+                description=e["description"],
+                tags=e["tags"],
+                start_sec=e["start_sec"],
+                end_sec=e["end_sec"],
+            )
+            for e in ai_result.evidence
+        ]
+        ai_detection = VideoDetectionResult(
             model="dfdc", score=ai_result.score, evidence=evidence, evidence_image=ai_result.evidence_image
-        ),
+        )
+
+    return VideoAnalysisResponse(
+        ai_detection=ai_detection,
         scam_detection=scam_detection,
+        error_code=error_code,
     )

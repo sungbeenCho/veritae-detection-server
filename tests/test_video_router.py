@@ -100,7 +100,7 @@ def test_process_video_returns_502_on_inference_failure(monkeypatch):
     assert response.status_code == 502
 
 
-def test_process_video_returns_422_when_no_face_detected(monkeypatch):
+def test_process_video_returns_200_with_error_code_when_no_face_detected_and_no_scam_text(monkeypatch):
     def raise_no_face(data, filename):
         raise NoFaceDetectedError("얼굴을 찾을 수 없습니다.")
 
@@ -114,8 +114,40 @@ def test_process_video_returns_422_when_no_face_detected(monkeypatch):
         files={"file": ("test.mp4", io.BytesIO(b"fake-video-bytes"), "video/mp4")},
     )
 
-    assert response.status_code == 422
-    assert "얼굴을 찾을 수 없습니다" in response.json()["detail"]
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ai_detection"] is None
+    assert body["scam_detection"] is None
+    assert body["error_code"] == "NO_FACE_DETECTED"
+
+
+def test_process_video_keeps_scam_detection_when_no_face_detected(monkeypatch):
+    # 얼굴이 없어 AI판독은 못 해도, 별개로 돌아가는 사기감지 결과는 버리지 않고
+    # 살려서 보여준다(2026-09-21) - 이번 수정의 핵심 케이스.
+    def raise_no_face(data, filename):
+        raise NoFaceDetectedError("얼굴을 찾을 수 없습니다.")
+
+    monkeypatch.setattr(video_router, "run_dfdc_inference", raise_no_face)
+    monkeypatch.setattr(
+        video_router,
+        "run_scam_inference_video",
+        lambda data, filename: ScamResult(0.82, [{"sentence": "계좌번호를 알려주세요", "score": 0.95}]),
+    )
+
+    response = client.post(
+        "/process/video",
+        files={"file": ("test.mp4", io.BytesIO(b"fake-video-bytes"), "video/mp4")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ai_detection"] is None
+    assert body["error_code"] == "NO_FACE_DETECTED"
+    assert body["scam_detection"] == {
+        "model": "lilju",
+        "score": 0.82,
+        "evidence": [{"sentence": "계좌번호를 알려주세요", "score": 0.95}],
+    }
 
 
 def test_process_video_returns_scam_detection_when_present(monkeypatch):
@@ -161,7 +193,9 @@ def test_process_video_omits_scam_detection_when_no_text(monkeypatch):
     assert response.json()["scam_detection"] is None
 
 
-def test_process_video_ignores_scam_inference_failure(monkeypatch):
+def test_process_video_returns_502_when_scam_inference_fails(monkeypatch):
+    # 텍스트가 없어서가 아니라 사기감지 파이프라인 자체가 죽은 경우, null로 조용히
+    # 감추면 "사기 아님"으로 오인될 위험이 있어(2026-09-21) 전체 요청을 실패시킨다.
     monkeypatch.setattr(
         video_router,
         "run_dfdc_inference",
@@ -178,5 +212,4 @@ def test_process_video_ignores_scam_inference_failure(monkeypatch):
         files={"file": ("test.mp4", io.BytesIO(b"fake-video-bytes"), "video/mp4")},
     )
 
-    assert response.status_code == 200
-    assert response.json()["scam_detection"] is None
+    assert response.status_code == 502

@@ -50,5 +50,8 @@ class VideoDetectionResult(BaseModel):
 
 
 class VideoAnalysisResponse(BaseModel):
-    ai_detection: VideoDetectionResult
+    # ai_detection은 얼굴을 못 찾으면 null일 수 있다(정상적인 한계, 에러 아님) - 이때
+    # error_code가 이유를 알려준다. ai_detection이 있으면 error_code는 항상 null이다.
+    ai_detection: VideoDetectionResult | None
     scam_detection: ScamDetectionResult | None = None
+    error_code: str | None = None
