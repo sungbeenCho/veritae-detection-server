@@ -76,11 +76,12 @@ def _run_scam_infer(mode: str, input_bytes: bytes, filename: str) -> ScamResult:
         shutil.rmtree(job_dir, ignore_errors=True)
 
 
-def _run_scam_infer_video(job_dir: Path, audio_file: Path, frames_dir: Path | None) -> ScamResult:
+def _run_scam_infer_video(job_dir: Path, audio_file: Path | None, frames_dir: Path | None) -> ScamResult:
     """`_run_scam_infer`와 달리 자기 자신의 job_dir을 새로 만들지 않는다 - 호출자
     (run_scam_inference_video)가 이미 만들어둔 job_dir 안에 audio_file/frames_dir이
     준비되어 있다고 가정하고, 그 경로들을 그대로 scam_infer.py --mode video에 넘긴다
-    (2026-09-15 추가, 영상 화면 텍스트 인식용)."""
+    (2026-09-15 추가, 영상 화면 텍스트 인식용). audio_file은 음성 트랙이 없는 영상이면
+    None일 수 있다(2026-09-22) - 그 경우 --input을 생략하고 화면 텍스트만으로 진행한다."""
     settings = get_settings()
     output_file = job_dir / "result.json"
 
@@ -88,12 +89,13 @@ def _run_scam_infer_video(job_dir: Path, audio_file: Path, frames_dir: Path | No
         settings.text_extraction_python,
         str(settings.text_extraction_script),
         "--mode", "video",
-        "--input", str(audio_file),
         "--output", str(output_file),
         "--lilju-model-id", settings.lilju_model_id,
         "--paddleocr-lang", settings.paddleocr_lang,
         "--whisper-model-size", settings.whisper_model_size,
     ]
+    if audio_file is not None:
+        command += ["--input", str(audio_file)]
     if frames_dir is not None:
         command += ["--frames-dir", str(frames_dir)]
 
@@ -159,8 +161,11 @@ def run_scam_inference_video(video_bytes: bytes, filename: str) -> ScamResult:
             errors="replace",
             timeout=settings.text_extraction_timeout_seconds,
         )
-        if ffmpeg_result.returncode != 0:
-            raise ScamInferenceError(f"영상에서 오디오 트랙 추출 실패: {ffmpeg_result.stderr[-2000:]}")
+        # 음성 트랙이 아예 없는 영상(무음 데모/샘플 영상 등)은 정상적인 케이스지 장애가
+        # 아니다(2026-09-22 - 예전엔 이것도 무조건 ScamInferenceError였는데, 얼굴없음과
+        # 똑같은 종류의 문제로 실기에서 발견됨). 프레임 추출 실패 처리와 동일하게, 실패해도
+        # 전체를 실패시키지 않고 화면 텍스트만으로 best-effort 진행한다.
+        audio_file_arg = audio_file if ffmpeg_result.returncode == 0 else None
 
         # 화면 텍스트 인식용 프레임 추출(3초에 한 장, 보수적 샘플링 - 실측 근거 없는
         # 초기값, 2026-09-15). 실패해도 전체를 실패시키지 않는다 - 음성만으로도
@@ -176,6 +181,6 @@ def run_scam_inference_video(video_bytes: bytes, filename: str) -> ScamResult:
         )
         frames_dir_arg = frames_dir if frame_extract_result.returncode == 0 else None
 
-        return _run_scam_infer_video(job_dir, audio_file, frames_dir_arg)
+        return _run_scam_infer_video(job_dir, audio_file_arg, frames_dir_arg)
     finally:
         shutil.rmtree(job_dir, ignore_errors=True)

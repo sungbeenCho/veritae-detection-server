@@ -136,7 +136,11 @@ def _join_ocr_fragments(fragments: list[str]) -> list[str]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", required=True, choices=["ocr", "stt", "video"])
-    parser.add_argument("--input", required=True, type=Path)
+    parser.add_argument(
+        "--input", required=False, default=None, type=Path,
+        help="ocr/stt 모드는 필수. video 모드는 음성 트랙이 없으면 생략 가능(2026-09-22) - "
+             "그 경우 화면 텍스트(--frames-dir)만으로 진행한다."
+    )
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--lilju-model-id", required=True)
     parser.add_argument("--paddleocr-lang", required=True)
@@ -147,16 +151,19 @@ def main() -> None:
              "화면 텍스트 없이 음성만으로 best-effort 진행(2026-09-15)."
     )
     args = parser.parse_args()
+    if args.mode in ("ocr", "stt") and args.input is None:
+        parser.error("--input은 ocr/stt 모드에서 필수입니다")
 
     if args.mode == "ocr":
         text_units = _join_ocr_fragments(extract_text_units_ocr(args.input, args.paddleocr_lang))
     elif args.mode == "video":
         # --input은 video 모드에서 "영상에서 미리 뽑아둔 오디오 파일"을 가리킨다(음성
-        # 전용 stt 모드와 동일한 의미로 재사용). 화면 텍스트(--frames-dir)는 음성과 별개
-        # 추출원이라 각자 처리한 뒤 하나의 text_units 목록으로 합쳐서 이후 로직(문장분리
-        # 부터)은 완전히 동일하게 태운다 - 어디서 나온 문장인지 구분하지 않는다
-        # (2026-09-15 설계, 사용자 확인).
-        audio_units = extract_text_units_stt(args.input, args.whisper_model_size)
+        # 전용 stt 모드와 동일한 의미로 재사용). 음성 트랙이 없는 영상이면 None일 수
+        # 있다(2026-09-22) - 그 경우 화면 텍스트만으로 best-effort 진행. 화면
+        # 텍스트(--frames-dir)는 음성과 별개 추출원이라 각자 처리한 뒤 하나의 text_units
+        # 목록으로 합쳐서 이후 로직(문장분리부터)은 완전히 동일하게 태운다 - 어디서 나온
+        # 문장인지 구분하지 않는다(2026-09-15 설계, 사용자 확인).
+        audio_units = extract_text_units_stt(args.input, args.whisper_model_size) if args.input else []
         frame_fragments = extract_text_units_frames(args.frames_dir, args.paddleocr_lang) if args.frames_dir else []
         text_units = audio_units + _join_ocr_fragments(frame_fragments)
     else:

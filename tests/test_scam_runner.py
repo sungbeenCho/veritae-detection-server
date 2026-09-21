@@ -169,9 +169,75 @@ def test_run_scam_inference_video_omits_frames_dir_when_frame_extraction_fails(m
 
 @patch("app.services.scam_runner.subprocess.run")
 @patch("app.services.scam_runner.get_settings")
-def test_run_scam_inference_video_raises_when_ffmpeg_fails(mock_get_settings, mock_run, tmp_path):
+def test_run_scam_inference_video_omits_audio_when_no_audio_track(mock_get_settings, mock_run, tmp_path):
+    """음성 트랙이 없는 영상(무음 데모/샘플 영상 등)은 정상적인 케이스지 장애가 아니다 -
+    프레임 추출 실패 처리와 동일하게, 음성 추출이 실패해도 화면 텍스트만으로 best-effort
+    진행한다(2026-09-22, 3060Ti 실기에서 발견된 버그 - sample_deepfake.mp4가 무음이라
+    이전엔 전체 요청이 502로 실패했었음)."""
     mock_get_settings.return_value = _scam_settings(tmp_path)
-    mock_run.return_value = MagicMock(returncode=1, stderr="ffmpeg boom")
+
+    def fake_run(command, **kwargs):
+        if command[0] == "ffmpeg" and "-acodec" in command:
+            return MagicMock(returncode=1, stderr="Output file does not contain any stream")
+        if command[0] == "ffmpeg":
+            return MagicMock(returncode=0, stderr="")
+        output_file = Path(command[command.index("--output") + 1])
+        _write_result_json(output_file, 0.6, [{"sentence": "지금 바로 이체하세요", "score": 0.9}])
+        return MagicMock(returncode=0, stderr="")
+
+    mock_run.side_effect = fake_run
+
+    result = run_scam_inference_video(b"fake-video-bytes", "test.mp4")
+
+    assert result.score == 0.6
+    infer_command = mock_run.call_args_list[-1].args[0]
+    assert "--input" not in infer_command
+    assert "--frames-dir" in infer_command
+
+
+@patch("app.services.scam_runner.subprocess.run")
+@patch("app.services.scam_runner.get_settings")
+def test_run_scam_inference_video_returns_empty_when_audio_and_frames_both_unavailable(
+    mock_get_settings, mock_run, tmp_path
+):
+    """음성도 화면 텍스트도 둘 다 추출 실패해도 예외가 아니라 결과없음(null)으로 끝난다 -
+    실제로 분석할 게 없는 것뿐이지 파이프라인 장애가 아니다."""
+    mock_get_settings.return_value = _scam_settings(tmp_path)
+
+    def fake_run(command, **kwargs):
+        if command[0] == "ffmpeg":
+            return MagicMock(returncode=1, stderr="boom")
+        output_file = Path(command[command.index("--output") + 1])
+        _write_result_json(output_file, None, [])
+        return MagicMock(returncode=0, stderr="")
+
+    mock_run.side_effect = fake_run
+
+    result = run_scam_inference_video(b"fake-video-bytes", "test.mp4")
+
+    assert result.score is None
+    infer_command = mock_run.call_args_list[-1].args[0]
+    assert "--input" not in infer_command
+    assert "--frames-dir" not in infer_command
+
+
+@patch("app.services.scam_runner.subprocess.run")
+@patch("app.services.scam_runner.get_settings")
+def test_run_scam_inference_video_raises_when_inference_itself_fails(mock_get_settings, mock_run, tmp_path):
+    """ffmpeg 추출(음성/프레임)이 아니라 실제 추론 스크립트(scam_infer.py) 자체가 실패하면
+    이건 진짜 장애라 여전히 예외를 던져야 한다."""
+    mock_get_settings.return_value = _scam_settings(tmp_path)
+
+    def fake_run(command, **kwargs):
+        if command[0] == "ffmpeg" and "-acodec" in command:
+            audio_path = Path(command[-1])
+            audio_path.write_bytes(b"fake-wav-bytes")
+            return MagicMock(returncode=0, stderr="")
+        if command[0] == "ffmpeg":
+            return MagicMock(returncode=0, stderr="")
+        return MagicMock(returncode=1, stderr="inference boom")
+
+    mock_run.side_effect = fake_run
 
     with pytest.raises(ScamInferenceError):
         run_scam_inference_video(b"fake-video-bytes", "test.mp4")

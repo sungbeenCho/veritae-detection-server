@@ -46,6 +46,8 @@ async def process_video(file: UploadFile = File(...)) -> VideoAnalysisResponse:
     except ScamInferenceError as e:
         # 텍스트가 원래 없어서가 아니라 파이프라인 자체가 죽은 경우다. 이걸 조용히 null로
         # 감추면 "사기 아님"으로 오인될 위험이 있어(2026-09-21), 전체 요청을 실패시킨다.
+        # 클라이언트에는 일반화된 메시지만 주고, 실제 원인은 서버 로그에만 남긴다.
+        logger.exception("사기감지 파이프라인 실패")
         raise HTTPException(status_code=502, detail="사기감지 처리 중 오류가 발생했습니다.") from e
 
     scam_detection = (
