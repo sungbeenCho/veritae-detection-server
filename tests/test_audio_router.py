@@ -123,7 +123,9 @@ def test_process_audio_omits_scam_detection_when_no_text(monkeypatch):
     assert response.json()["scam_detection"] is None
 
 
-def test_process_audio_ignores_scam_inference_failure(monkeypatch):
+def test_process_audio_returns_502_when_scam_inference_fails(monkeypatch):
+    # 텍스트가 없어서가 아니라 사기감지 파이프라인 자체가 죽은 경우, null로 조용히
+    # 감추면 "사기 아님"으로 오인될 위험이 있어(2026-09-21) 전체 요청을 실패시킨다.
     monkeypatch.setattr(
         audio_router,
         "run_antideepfake_inference",
@@ -140,5 +142,4 @@ def test_process_audio_ignores_scam_inference_failure(monkeypatch):
         files={"file": ("test.wav", io.BytesIO(b"fake-audio-bytes"), "audio/wav")},
     )
 
-    assert response.status_code == 200
-    assert response.json()["scam_detection"] is None
+    assert response.status_code == 502
