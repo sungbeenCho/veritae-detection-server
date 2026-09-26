@@ -5,6 +5,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.schemas import AudioAnalysisResponse, AudioDetectionResult, Evidence, ScamDetectionResult, ScamEvidence
 from app.services.antideepfake_runner import AntiDeepfakeInferenceError, run_antideepfake_inference
+from app.services.media_probe import probe_audio_duration_seconds
 from app.services.scam_runner import ScamInferenceError, run_scam_inference_audio
 
 logger = logging.getLogger(__name__)
@@ -12,6 +13,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 ALLOWED_CONTENT_TYPES = {"audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp4", "audio/aac"}
+MAX_AUDIO_DURATION_SECONDS = 300.0
 
 
 @router.post("/process/audio", response_model=AudioAnalysisResponse)
@@ -26,6 +28,14 @@ async def process_audio(file: UploadFile = File(...)) -> AudioAnalysisResponse:
         raise HTTPException(status_code=400, detail="empty file")
 
     filename = file.filename or "input.wav"
+
+    duration_seconds = await asyncio.to_thread(probe_audio_duration_seconds, audio_bytes, filename)
+    if duration_seconds is not None and duration_seconds > MAX_AUDIO_DURATION_SECONDS:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "AUDIO_TOO_LONG", "message": "음성 길이가 5분을 초과합니다."},
+        )
+
     ai_task = asyncio.create_task(asyncio.to_thread(run_antideepfake_inference, audio_bytes, filename))
     scam_task = asyncio.create_task(asyncio.to_thread(run_scam_inference_audio, audio_bytes, filename))
 

@@ -123,6 +123,65 @@ def test_process_audio_omits_scam_detection_when_no_text(monkeypatch):
     assert response.json()["scam_detection"] is None
 
 
+def test_process_audio_rejects_when_over_5_minutes(monkeypatch):
+    monkeypatch.setattr(audio_router, "probe_audio_duration_seconds", lambda data, filename: 301.0)
+
+    def fail_if_called(data, filename):
+        raise AssertionError("길이 초과 시 모델 러너가 호출되면 안 된다")
+
+    monkeypatch.setattr(audio_router, "run_antideepfake_inference", fail_if_called)
+    monkeypatch.setattr(audio_router, "run_scam_inference_audio", fail_if_called)
+
+    response = client.post(
+        "/process/audio",
+        files={"file": ("test.wav", io.BytesIO(b"fake-audio-bytes"), "audio/wav")},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == {
+        "code": "AUDIO_TOO_LONG",
+        "message": "음성 길이가 5분을 초과합니다.",
+    }
+
+
+def test_process_audio_allows_exactly_300_seconds(monkeypatch):
+    monkeypatch.setattr(audio_router, "probe_audio_duration_seconds", lambda data, filename: 300.0)
+    monkeypatch.setattr(
+        audio_router,
+        "run_antideepfake_inference",
+        lambda data, filename: AntiDeepfakeResult(score=0.87, evidence=[]),
+    )
+    monkeypatch.setattr(
+        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [])
+    )
+
+    response = client.post(
+        "/process/audio",
+        files={"file": ("test.wav", io.BytesIO(b"fake-audio-bytes"), "audio/wav")},
+    )
+
+    assert response.status_code == 200
+
+
+def test_process_audio_proceeds_when_duration_unknown(monkeypatch):
+    monkeypatch.setattr(audio_router, "probe_audio_duration_seconds", lambda data, filename: None)
+    monkeypatch.setattr(
+        audio_router,
+        "run_antideepfake_inference",
+        lambda data, filename: AntiDeepfakeResult(score=0.87, evidence=[]),
+    )
+    monkeypatch.setattr(
+        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [])
+    )
+
+    response = client.post(
+        "/process/audio",
+        files={"file": ("test.wav", io.BytesIO(b"fake-audio-bytes"), "audio/wav")},
+    )
+
+    assert response.status_code == 200
+
+
 def test_process_audio_returns_502_when_scam_inference_fails(monkeypatch):
     # 텍스트가 없어서가 아니라 사기감지 파이프라인 자체가 죽은 경우, null로 조용히
     # 감추면 "사기 아님"으로 오인될 위험이 있어(2026-09-21) 전체 요청을 실패시킨다.
