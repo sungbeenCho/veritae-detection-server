@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 
-from .wiki_index import wiki_url
+from wiki_index import wiki_url
 
 VALID_LABELS = {"지지", "반박", "판단불가"}
 
@@ -34,6 +34,8 @@ def parse_llm_response(raw_response: str) -> dict | None:
     try:
         data = json.loads(raw_response)
     except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(data, dict):
         return None
     label = data.get("label")
     reason = data.get("reason")
