@@ -11,6 +11,7 @@ import urllib.parse
 from pathlib import Path
 
 import mwparserfromhell
+from kiwipiepy import Kiwi
 
 _DROP_TAGS = {"ref", "gallery", "math", "timeline", "score"}
 _DROP_LINE = re.compile(r"^\s*(분류:|파일:|File:|Category:|thumb\||섬네일\|)", re.IGNORECASE)
@@ -49,6 +50,14 @@ def split_into_chunks(text: str, target_chars: int = 200) -> list[str]:
     if current:
         chunks.append(current)
     return chunks
+
+
+def extract_keywords(kiwi: Kiwi, text: str) -> str:
+    # 조사/어미를 떼고 의미 있는 형태소(명사/동사/형용사)만 남겨 검색 정확도를 높인다
+    # ("만리장성은"으로 검색해도 "만리장성" 문서를 찾도록 - 2026-09-29 실측으로 확인된 필요성).
+    keep_tags = {"NNG", "NNP", "VV", "VA", "SL", "SN"}
+    tokens = [t.form for t in kiwi.tokenize(text) if t.tag in keep_tags]
+    return " ".join(tokens)
 
 
 def wiki_url(title: str) -> str:

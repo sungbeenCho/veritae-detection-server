@@ -12,7 +12,7 @@ from pathlib import Path
 
 from kiwipiepy import Kiwi
 
-from wiki_index import add_chunk, create_index, split_into_chunks, strip_wiki_markup
+from wiki_index import add_chunk, create_index, extract_keywords, split_into_chunks, strip_wiki_markup
 
 
 def iter_pages(dump_path: Path, limit: int):
@@ -34,14 +34,6 @@ def iter_pages(dump_path: Path, limit: int):
                     elem.clear()
                     return
             elem.clear()
-
-
-def extract_keywords(kiwi: Kiwi, text: str) -> str:
-    # 조사/어미를 떼고 의미 있는 형태소(명사/동사/형용사)만 남겨 검색 정확도를 높인다
-    # ("만리장성은"으로 검색해도 "만리장성" 문서를 찾도록 - 2026-09-29 실측으로 확인된 필요성).
-    keep_tags = {"NNG", "NNP", "VV", "VA", "SL", "SN"}
-    tokens = [t.form for t in kiwi.tokenize(text) if t.tag in keep_tags]
-    return " ".join(tokens)
 
 
 def main() -> None:

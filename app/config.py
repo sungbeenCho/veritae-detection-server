@@ -127,6 +127,16 @@ class Settings:
         # --- 가짜정보탐지(misinformation) 설정. 위키 인덱스는 build_wiki_index.py로 미리
         # 만들어둔 SQLite FTS5 파일(RAM에 안 올림) - 자동 갱신 없음, 필요할 때 재구축(2026-09-29 결정).
         self.wiki_index_path = Path(os.environ.get("WIKI_INDEX_PATH", "./data/wiki_index.sqlite3"))
+        self.misinfo_script = Path(
+            os.environ.get(
+                "MISINFO_SCRIPT",
+                str(Path(__file__).resolve().parent.parent / "scripts" / "misinfo_infer.py"),
+            )
+        )
+        self.ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+        self.ollama_model = os.environ.get("OLLAMA_MODEL", "qwen3.5:4b")
+        self.misinfo_evidence_chunk_count = int(os.environ.get("MISINFO_EVIDENCE_CHUNK_COUNT", "5"))
+        self.misinfo_timeout_seconds = int(os.environ.get("MISINFO_TIMEOUT_SECONDS", "300"))
 
 
 @lru_cache
