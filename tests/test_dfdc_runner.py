@@ -10,6 +10,22 @@ from app.config import get_settings
 from app.services.dfdc_runner import DfdcInferenceError, NoFaceDetectedError, _parse_result, _safe_filename
 
 
+@pytest.fixture(autouse=True)
+def _stub_gpu_queue(monkeypatch):
+    # test_spai_runner.py의 _stub_gpu_queue와 동일한 이유 - run_dfdc_inference가
+    # get_gpu_queue().acquire(...)를 거치게 되면서, 큐 자체를 검증하지 않는 기존 테스트들이
+    # 실제 get_settings()(환경변수 미설정)로 깨지지 않도록 기본값을 깔아준다. nullcontext를
+    # 쓰는 이유도 동일 - MagicMock 컨텍스트 매니저는 __exit__이 기본 truthy라 with 블록 안의
+    # TimeoutExpired 등을 조용히 삼켜버린다.
+    from contextlib import nullcontext
+
+    class _NoopGpuQueue:
+        def acquire(self, label):
+            return nullcontext()
+
+    monkeypatch.setattr("app.services.dfdc_runner.get_gpu_queue", lambda: _NoopGpuQueue())
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
@@ -220,3 +236,46 @@ def test_run_dfdc_inference_passes_repo_dir_as_cwd(monkeypatch, tmp_path):
 
     assert result.score == 0.42
     assert captured_kwargs.get("cwd") == settings.dfdc_repo_dir
+
+
+@patch("app.services.dfdc_runner.subprocess.run")
+@patch("app.services.dfdc_runner.get_settings")
+def test_run_dfdc_inference_uses_gpu_queue(mock_get_settings, mock_run, monkeypatch, tmp_path):
+    # test_spai_runner.py의 test_run_spai_inference_uses_gpu_queue와 동일한 패턴.
+    calls = []
+
+    class FakeQueue:
+        def acquire(self, label):
+            calls.append(label)
+            from contextlib import contextmanager
+
+            @contextmanager
+            def cm():
+                yield
+
+            return cm()
+
+    monkeypatch.setattr("app.services.dfdc_runner.get_gpu_queue", lambda: FakeQueue())
+
+    settings = MagicMock()
+    settings.dfdc_work_dir = tmp_path
+    settings.dfdc_python = "python"
+    settings.dfdc_script = tmp_path / "dfdc_infer.py"
+    settings.dfdc_repo_dir = tmp_path
+    settings.dfdc_checkpoints = [tmp_path / "checkpoint1", tmp_path / "checkpoint2"]
+    settings.dfdc_timeout_seconds = 600
+    mock_get_settings.return_value = settings
+
+    def fake_run(command, **kwargs):
+        output_path = command[command.index("--output") + 1]
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump({"score": 0.91, "evidence": [], "evidence_image": None}, f)
+        return MagicMock(returncode=0, stderr="")
+
+    mock_run.side_effect = fake_run
+
+    from app.services.dfdc_runner import run_dfdc_inference
+
+    run_dfdc_inference(b"fake-video-bytes", "test.mp4")
+
+    assert calls == ["dfdc"]

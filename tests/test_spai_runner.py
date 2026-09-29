@@ -8,6 +8,24 @@ import pytest
 from app.services.spai_runner import _find_and_encode_overlay, _safe_filename
 
 
+@pytest.fixture(autouse=True)
+def _stub_gpu_queue(monkeypatch):
+    # run_spai_inference가 이제 get_gpu_queue().acquire(...)를 거친다. 실제
+    # get_gpu_queue()는 app.config.get_settings()를 호출하는데, 이 테스트 파일의 기존
+    # 테스트들은 spai_runner.get_settings만 목킹하고 gpu_queue 쪽 설정은 세팅하지 않으므로
+    # 그대로 두면 환경변수 미설정 RuntimeError로 깨진다. 큐 동작 자체를 검증하는
+    # test_run_spai_inference_uses_gpu_queue는 이 기본값을 자기 안에서 다시 덮어쓴다.
+    # nullcontext를 쓰는 이유: MagicMock을 컨텍스트 매니저로 그냥 쓰면 __exit__이 기본적으로
+    # truthy를 반환해 with 블록 안에서 난 예외(TimeoutExpired 등)를 조용히 삼켜버린다.
+    from contextlib import nullcontext
+
+    class _NoopGpuQueue:
+        def acquire(self, label):
+            return nullcontext()
+
+    monkeypatch.setattr("app.services.spai_runner.get_gpu_queue", lambda: _NoopGpuQueue())
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
@@ -184,3 +202,41 @@ def test_run_spai_inference_passes_export_image_patches_opt(mock_get_settings, m
     opt_idx = command.index("--opt")
     assert command[opt_idx + 1] == "TEST.EXPORT_IMAGE_PATCHES"
     assert command[opt_idx + 2] == "True"
+
+
+@patch("app.services.spai_runner.subprocess.run")
+@patch("app.services.spai_runner.get_settings")
+def test_run_spai_inference_uses_gpu_queue(mock_get_settings, mock_run, monkeypatch, tmp_path):
+    calls = []
+
+    class FakeQueue:
+        def acquire(self, label):
+            calls.append(label)
+            from contextlib import contextmanager
+
+            @contextmanager
+            def cm():
+                yield
+
+            return cm()
+
+    # gpu_queue_module.get_gpu_queue가 아니라 spai_runner가 직접 import해서 쓰는 이름을
+    # 패치한다 - spai_runner.py는 `from app.services.gpu_queue import get_gpu_queue`로
+    # 가져다 쓰므로(다른 테스트가 get_settings를 패치하는 것과 동일한 이유), 소스 모듈 쪽을
+    # 패치하면 이미 바인딩된 spai_runner.get_gpu_queue에는 반영되지 않는다.
+    monkeypatch.setattr("app.services.spai_runner.get_gpu_queue", lambda: FakeQueue())
+
+    mock_get_settings.return_value = _spai_settings(tmp_path)
+
+    def fake_run(command, **kwargs):
+        output_dir = Path(command[command.index("--output") + 1])
+        _write_score_csv(output_dir, "0.5")
+        return MagicMock(returncode=0, stderr="")
+
+    mock_run.side_effect = fake_run
+
+    from app.services.spai_runner import run_spai_inference
+
+    run_spai_inference(b"fake", "test.jpg")
+
+    assert calls == ["spai"]

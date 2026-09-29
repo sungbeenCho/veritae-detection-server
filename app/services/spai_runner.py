@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path, PureWindowsPath
 
 from app.config import get_settings
+from app.services.gpu_queue import get_gpu_queue
 
 SPAI_SCORE_TAG = "spai"
 # antideepfake_infer.py/dfdc_infer.py와 동일한 임계값 - score가 이 미만이면(진짜 사진일
@@ -72,13 +73,14 @@ def run_spai_inference(image_bytes: bytes, filename: str) -> SpaiResult:
     ]
 
     try:
-        result = subprocess.run(
-            command,
-            cwd=settings.spai_repo_dir,
-            capture_output=True,
-            text=True,
-            timeout=settings.spai_timeout_seconds,
-        )
+        with get_gpu_queue().acquire("spai"):
+            result = subprocess.run(
+                command,
+                cwd=settings.spai_repo_dir,
+                capture_output=True,
+                text=True,
+                timeout=settings.spai_timeout_seconds,
+            )
 
         if result.returncode != 0:
             raise SpaiInferenceError(f"SPAI inference failed: {result.stderr[-2000:]}")
