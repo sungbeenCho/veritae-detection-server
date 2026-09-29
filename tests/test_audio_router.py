@@ -28,7 +28,7 @@ def test_process_audio_returns_score_and_evidence(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [])
+        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [], [])
     )
 
     response = client.post(
@@ -69,7 +69,7 @@ def test_process_audio_returns_502_on_inference_failure(monkeypatch):
 
     monkeypatch.setattr(audio_router, "run_antideepfake_inference", raise_error)
     monkeypatch.setattr(
-        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [])
+        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [], [])
     )
 
     response = client.post(
@@ -89,7 +89,7 @@ def test_process_audio_returns_scam_detection_when_present(monkeypatch):
     monkeypatch.setattr(
         audio_router,
         "run_scam_inference_audio",
-        lambda data, filename: ScamResult(0.82, [{"sentence": "계좌번호를 알려주세요", "score": 0.95}]),
+        lambda data, filename: ScamResult(0.82, [{"sentence": "계좌번호를 알려주세요", "score": 0.95}], ["계좌번호를 알려주세요"]),
     )
 
     response = client.post(
@@ -112,7 +112,7 @@ def test_process_audio_omits_scam_detection_when_no_text(monkeypatch):
         lambda data, filename: AntiDeepfakeResult(score=0.87, evidence=[]),
     )
     monkeypatch.setattr(
-        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [])
+        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [], [])
     )
 
     response = client.post(
@@ -152,7 +152,7 @@ def test_process_audio_allows_exactly_300_seconds(monkeypatch):
         lambda data, filename: AntiDeepfakeResult(score=0.87, evidence=[]),
     )
     monkeypatch.setattr(
-        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [])
+        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [], [])
     )
 
     response = client.post(
@@ -171,7 +171,7 @@ def test_process_audio_proceeds_when_duration_unknown(monkeypatch):
         lambda data, filename: AntiDeepfakeResult(score=0.87, evidence=[]),
     )
     monkeypatch.setattr(
-        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [])
+        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [], [])
     )
 
     response = client.post(

@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path, PureWindowsPath
 
 from app.config import get_settings
+from app.services.gpu_queue import get_gpu_queue
 
 # EasyOCR이 모델을 처음 다운로드할 때 진행률 표시줄에 유니코드 블록 문자(█)를 print하는데,
 # Windows 콘솔 기본 코드페이지(cp949)로는 이 문자를 인코딩할 수 없어 자식 프로세스가
@@ -19,9 +20,10 @@ class ScamInferenceError(RuntimeError):
 
 
 class ScamResult:
-    def __init__(self, score: float | None, evidence: list[dict]):
+    def __init__(self, score: float | None, evidence: list[dict], sentences: list[str]):
         self.score = score
         self.evidence = evidence
+        self.sentences = sentences
 
 
 def _safe_filename(filename: str) -> str:
@@ -51,15 +53,27 @@ def _run_scam_infer(mode: str, input_bytes: bytes, filename: str) -> ScamResult:
     ]
 
     try:
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=settings.text_extraction_timeout_seconds,
-            env=_SUBPROCESS_ENV,
-        )
+        if mode == "ocr":
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=settings.text_extraction_timeout_seconds,
+                env=_SUBPROCESS_ENV,
+            )
+        else:
+            with get_gpu_queue().acquire(f"scam_infer:{mode}"):
+                result = subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=settings.text_extraction_timeout_seconds,
+                    env=_SUBPROCESS_ENV,
+                )
 
         if result.returncode != 0:
             raise ScamInferenceError(f"사기감지 추론 실패: {result.stderr[-2000:]}")
@@ -100,15 +114,16 @@ def _run_scam_infer_video(job_dir: Path, audio_file: Path | None, frames_dir: Pa
         command += ["--frames-dir", str(frames_dir)]
 
     try:
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=settings.text_extraction_timeout_seconds,
-            env=_SUBPROCESS_ENV,
-        )
+        with get_gpu_queue().acquire("scam_infer:video"):
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=settings.text_extraction_timeout_seconds,
+                env=_SUBPROCESS_ENV,
+            )
 
         if result.returncode != 0:
             raise ScamInferenceError(f"사기감지 추론 실패: {result.stderr[-2000:]}")
@@ -128,7 +143,9 @@ def _parse_result(output_file: Path) -> ScamResult:
         data = json.loads(output_file.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError, OSError) as e:
         raise ScamInferenceError(f"사기감지 output JSON을 읽거나 파싱할 수 없습니다: {output_file}") from e
-    return ScamResult(score=data.get("score"), evidence=data.get("evidence", []))
+    return ScamResult(
+        score=data.get("score"), evidence=data.get("evidence", []), sentences=data.get("sentences", [])
+    )
 
 
 def run_scam_inference_image(image_bytes: bytes, filename: str) -> ScamResult:

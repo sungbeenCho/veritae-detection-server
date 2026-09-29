@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.routers import image as image_router
+from app.services.gpu_queue import GpuQueueFullError
 from app.services.scam_runner import ScamInferenceError, ScamResult
 from app.services.spai_runner import SpaiInferenceError, SpaiResult
 
@@ -15,7 +16,7 @@ def test_process_image_returns_score(monkeypatch):
         image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.87, None)
     )
     monkeypatch.setattr(
-        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [])
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], [])
     )
 
     response = client.post(
@@ -35,7 +36,7 @@ def test_process_image_returns_evidence_image_when_present(monkeypatch):
         image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.87, "base64data")
     )
     monkeypatch.setattr(
-        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [])
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], [])
     )
 
     response = client.post(
@@ -71,7 +72,7 @@ def test_process_image_returns_502_on_spai_failure(monkeypatch):
 
     monkeypatch.setattr(image_router, "run_spai_inference", raise_error)
     monkeypatch.setattr(
-        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [])
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], [])
     )
 
     response = client.post(
@@ -89,7 +90,7 @@ def test_process_image_returns_scam_detection_when_present(monkeypatch):
     monkeypatch.setattr(
         image_router,
         "run_scam_inference_image",
-        lambda data, filename: ScamResult(0.82, [{"sentence": "계좌번호를 알려주세요", "score": 0.95}]),
+        lambda data, filename: ScamResult(0.82, [{"sentence": "계좌번호를 알려주세요", "score": 0.95}], ["계좌번호를 알려주세요"]),
     )
 
     response = client.post(
@@ -110,7 +111,7 @@ def test_process_image_omits_scam_detection_when_no_text(monkeypatch):
         image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.87, None)
     )
     monkeypatch.setattr(
-        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [])
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], [])
     )
 
     response = client.post(
@@ -139,3 +140,20 @@ def test_process_image_returns_502_when_scam_inference_fails(monkeypatch):
     )
 
     assert response.status_code == 502
+
+
+def test_process_image_returns_503_when_gpu_queue_full(monkeypatch):
+    def raise_full(data, filename):
+        raise GpuQueueFullError("GPU 자원 큐가 가득 찼습니다")
+
+    monkeypatch.setattr(image_router, "run_spai_inference", raise_full)
+    monkeypatch.setattr(
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], [])
+    )
+
+    response = client.post(
+        "/process/image",
+        files={"file": ("test.jpg", io.BytesIO(b"fake-image-bytes"), "image/jpeg")},
+    )
+
+    assert response.status_code == 503

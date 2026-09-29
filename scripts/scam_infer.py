@@ -173,11 +173,15 @@ def main() -> None:
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     if not sentences:
-        args.output.write_text(json.dumps({"score": None, "evidence": []}), encoding="utf-8")
+        args.output.write_text(json.dumps({"score": None, "evidence": [], "sentences": []}), encoding="utf-8")
         return
 
     scores = score_sentences(sentences, args.lilju_model_id)
-    result = {"score": aggregate(scores), "evidence": build_evidence(sentences, scores)}
+    result = {
+        "score": aggregate(scores),
+        "evidence": build_evidence(sentences, scores),
+        "sentences": sentences,
+    }
     args.output.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
 
 

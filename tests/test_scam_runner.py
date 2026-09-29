@@ -13,6 +13,22 @@ from app.services.scam_runner import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _stub_gpu_queue(monkeypatch):
+    # test_spai_runner.py/test_dfdc_runner.py의 _stub_gpu_queue와 동일한 이유 - stt/video
+    # 경로가 이제 get_gpu_queue().acquire(...)를 거치는데, 큐 사용 자체를 검증하지 않는 기존
+    # 테스트들은 get_settings만 목킹하고 gpu_queue 쪽 설정(SPAI_REPO_DIR 등 다른 설정들까지
+    # 요구하는 실제 Settings())은 준비하지 않으므로, 그대로 두면 무관한 RuntimeError로 깨진다.
+    # 큐 동작 자체를 검증하는 테스트들은 이 기본값을 자기 안에서 다시 덮어쓴다.
+    from contextlib import nullcontext
+
+    class _NoopGpuQueue:
+        def acquire(self, label):
+            return nullcontext()
+
+    monkeypatch.setattr("app.services.scam_runner.get_gpu_queue", lambda: _NoopGpuQueue())
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
@@ -39,8 +55,11 @@ def _scam_settings(tmp_path) -> MagicMock:
     return settings
 
 
-def _write_result_json(output_file: Path, score, evidence=None) -> None:
-    output_file.write_text(json.dumps({"score": score, "evidence": evidence or []}), encoding="utf-8")
+def _write_result_json(output_file: Path, score, evidence=None, sentences=None) -> None:
+    output_file.write_text(
+        json.dumps({"score": score, "evidence": evidence or [], "sentences": sentences or []}),
+        encoding="utf-8",
+    )
 
 
 @patch("app.services.scam_runner.subprocess.run")
@@ -50,7 +69,11 @@ def test_run_scam_inference_image_returns_score_and_evidence(mock_get_settings, 
 
     def fake_run(command, **kwargs):
         output_file = Path(command[command.index("--output") + 1])
-        _write_result_json(output_file, 0.82, [{"sentence": "계좌번호를 알려주세요", "score": 0.95}])
+        _write_result_json(
+            output_file, 0.82,
+            [{"sentence": "계좌번호를 알려주세요", "score": 0.95}],
+            sentences=["계좌번호를 알려주세요", "지금 바로 입금하세요"],
+        )
         return MagicMock(returncode=0, stderr="")
 
     mock_run.side_effect = fake_run
@@ -59,6 +82,7 @@ def test_run_scam_inference_image_returns_score_and_evidence(mock_get_settings, 
 
     assert result.score == 0.82
     assert result.evidence == [{"sentence": "계좌번호를 알려주세요", "score": 0.95}]
+    assert result.sentences == ["계좌번호를 알려주세요", "지금 바로 입금하세요"]
     called_command = mock_run.call_args.args[0]
     assert called_command[called_command.index("--mode") + 1] == "ocr"
 
@@ -241,3 +265,60 @@ def test_run_scam_inference_video_raises_when_inference_itself_fails(mock_get_se
 
     with pytest.raises(ScamInferenceError):
         run_scam_inference_video(b"fake-video-bytes", "test.mp4")
+
+
+def _fake_queue(calls):
+    class FakeQueue:
+        def acquire(self, label):
+            calls.append(label)
+            from contextlib import contextmanager
+
+            @contextmanager
+            def cm():
+                yield
+
+            return cm()
+
+    return FakeQueue()
+
+
+@patch("app.services.scam_runner.subprocess.run")
+@patch("app.services.scam_runner.get_settings")
+def test_run_scam_inference_image_does_not_use_gpu_queue(mock_get_settings, mock_run, tmp_path, monkeypatch):
+    # ocr(이미지) 경로는 CPU 전용이라 GPU 큐를 타면 안 된다 - spai_runner.py/dfdc_runner.py의
+    # test_run_..._uses_gpu_queue와 동일하게 get_gpu_queue를 scam_runner 모듈 안에 바인딩된
+    # 이름으로 패치한다(소스 모듈 gpu_queue.get_gpu_queue를 패치하면 이미 import된
+    # scam_runner.get_gpu_queue에는 반영되지 않는다).
+    mock_get_settings.return_value = _scam_settings(tmp_path)
+    calls = []
+    monkeypatch.setattr("app.services.scam_runner.get_gpu_queue", lambda: _fake_queue(calls))
+
+    def fake_run(command, **kwargs):
+        output_file = Path(command[command.index("--output") + 1])
+        _write_result_json(output_file, None)
+        return MagicMock(returncode=0, stderr="")
+
+    mock_run.side_effect = fake_run
+
+    run_scam_inference_image(b"fake-image-bytes", "test.jpg")
+
+    assert calls == []
+
+
+@patch("app.services.scam_runner.subprocess.run")
+@patch("app.services.scam_runner.get_settings")
+def test_run_scam_inference_audio_uses_gpu_queue(mock_get_settings, mock_run, tmp_path, monkeypatch):
+    mock_get_settings.return_value = _scam_settings(tmp_path)
+    calls = []
+    monkeypatch.setattr("app.services.scam_runner.get_gpu_queue", lambda: _fake_queue(calls))
+
+    def fake_run(command, **kwargs):
+        output_file = Path(command[command.index("--output") + 1])
+        _write_result_json(output_file, None)
+        return MagicMock(returncode=0, stderr="")
+
+    mock_run.side_effect = fake_run
+
+    run_scam_inference_audio(b"fake-audio-bytes", "test.wav")
+
+    assert calls == ["scam_infer:stt"]
