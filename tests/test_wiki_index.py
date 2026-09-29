@@ -63,3 +63,48 @@ def test_search_returns_empty_list_when_nothing_matches(tmp_path):
     conn.commit()
 
     assert search(conn, "복권 당첨", limit=5) == []
+
+
+def test_search_handles_hyphen_in_keywords_no_crash(tmp_path):
+    """Regression: FTS5 special chars like hyphen should not crash."""
+    conn = create_index(tmp_path / "wiki.sqlite3", snapshot="2026-09-01")
+    add_chunk(conn, "코로나-19", "코로나-19는 신종 코로나바이러스 감염증이다.", "코로나-19 바이러스")
+    conn.commit()
+
+    # Should not raise OperationalError (main requirement)
+    results = search(conn, "테스트-하이픈", limit=5)
+    assert results == []
+
+
+def test_search_handles_plus_sign_and_finds_matches(tmp_path):
+    """Regression: FTS5 special chars like + should not crash, and should find exact matches."""
+    conn = create_index(tmp_path / "wiki.sqlite3", snapshot="2026-09-01")
+    add_chunk(conn, "프로그래밍 언어", "C++는 고성능 프로그래밍 언어이다.", "프로그래밍 C++")
+    conn.commit()
+
+    # Should not raise OperationalError, and should find the C++ keyword when searched
+    results = search(conn, "C++", limit=5)
+    assert len(results) == 1
+    assert results[0][0] == "프로그래밍 언어"
+
+
+def test_search_handles_unterminated_quote_no_crash(tmp_path):
+    """Regression: Unterminated quotes should not crash."""
+    conn = create_index(tmp_path / "wiki.sqlite3", snapshot="2026-09-01")
+    add_chunk(conn, "테스트", "테스트 문서입니다.", "테스트")
+    conn.commit()
+
+    # Should not raise OperationalError (main requirement)
+    results = search(conn, '"unterminated', limit=5)
+    assert results == []
+
+
+def test_search_handles_bare_paren_no_crash(tmp_path):
+    """Regression: Bare parentheses (common in disambiguation titles) should not crash."""
+    conn = create_index(tmp_path / "wiki.sqlite3", snapshot="2026-09-01")
+    add_chunk(conn, "제목 (동음이의)", "이것은 동음이의 문서입니다.", "제목 동음이의")
+    conn.commit()
+
+    # Should not raise OperationalError (main requirement)
+    results = search(conn, "(", limit=5)
+    assert results == []

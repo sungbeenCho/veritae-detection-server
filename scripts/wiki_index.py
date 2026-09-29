@@ -79,11 +79,17 @@ def get_snapshot(conn: sqlite3.Connection) -> str:
     return row[0] if row else ""
 
 
+def _quote_fts5_token(token: str) -> str:
+    """Escape FTS5 special characters by quoting tokens as literal phrases."""
+    return '"' + token.replace('"', '""') + '"'
+
+
 def search(conn: sqlite3.Connection, keywords: str, limit: int = 50) -> list[tuple[str, str]]:
     if not keywords.strip():
         return []
+    quoted = " ".join(_quote_fts5_token(t) for t in keywords.split())
     rows = conn.execute(
         "SELECT title, text FROM chunks WHERE keywords MATCH ? ORDER BY rank LIMIT ?",
-        (keywords, limit),
+        (quoted, limit),
     ).fetchall()
     return [(row[0], row[1]) for row in rows]
