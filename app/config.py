@@ -118,6 +118,12 @@ class Settings:
         self.text_extraction_work_dir = Path(os.environ.get("TEXT_EXTRACTION_WORK_DIR", "./tmp")).resolve()
         self.text_extraction_work_dir.mkdir(parents=True, exist_ok=True)
 
+        # --- GPU 자원 큐 설정. GPU를 쓰는 서브프로세스/HTTP 호출(SPAI/dfdc/Whisper 경로/e5/LLM)이
+        # 한 번에 max_concurrent개만 동시 실행되게 한다(2026-09-29 결정, 가짜정보탐지 설계 §6).
+        # 지금은 GPU가 한 장이라 1이 기본값 - 나중에 자원이 늘어나면 이 값만 올리면 된다.
+        self.gpu_queue_max_concurrent = int(os.environ.get("GPU_QUEUE_MAX_CONCURRENT", "1"))
+        self.gpu_queue_max_depth = int(os.environ.get("GPU_QUEUE_MAX_DEPTH", "10"))
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -53,3 +53,16 @@ def test_dfdc_checkpoints_env_override_splits_on_comma(monkeypatch):
     settings = Settings()
 
     assert settings.dfdc_checkpoints == [Path("./weights/a"), Path("./weights/b")]
+
+
+def test_gpu_queue_settings_have_sane_defaults(monkeypatch):
+    monkeypatch.setenv("SPAI_REPO_DIR", "C:/fake/spai")
+    monkeypatch.setenv("ANTIDEEPFAKE_REPO_DIR", "C:/fake/antideepfake")
+    monkeypatch.setenv("DFDC_REPO_DIR", "C:/fake/dfdc")
+    monkeypatch.delenv("GPU_QUEUE_MAX_CONCURRENT", raising=False)
+    monkeypatch.delenv("GPU_QUEUE_MAX_DEPTH", raising=False)
+
+    settings = Settings()
+
+    assert settings.gpu_queue_max_concurrent == 1
+    assert settings.gpu_queue_max_depth == 10
