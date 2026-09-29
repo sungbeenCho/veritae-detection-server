@@ -3,9 +3,17 @@ import logging
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from app.schemas import AudioAnalysisResponse, AudioDetectionResult, Evidence, ScamDetectionResult, ScamEvidence
+from app.schemas import (
+    AudioAnalysisResponse,
+    AudioDetectionResult,
+    Evidence,
+    MisinformationDetectionResult,
+    ScamDetectionResult,
+    ScamEvidence,
+)
 from app.services.antideepfake_runner import AntiDeepfakeInferenceError, run_antideepfake_inference
 from app.services.media_probe import probe_audio_duration_seconds
+from app.services.misinfo_runner import MisinfoInferenceError, run_misinfo_inference
 from app.services.scam_runner import ScamInferenceError, run_scam_inference_audio
 
 logger = logging.getLogger(__name__)
@@ -75,7 +83,21 @@ async def process_audio(file: UploadFile = File(...)) -> AudioAnalysisResponse:
         else None
     )
 
+    misinformation_detection = None
+    if scam_result.sentences:
+        try:
+            misinfo_result = run_misinfo_inference(scam_result.sentences)
+        except MisinfoInferenceError as e:
+            logger.exception("가짜정보 판정 파이프라인 실패")
+            raise HTTPException(status_code=502, detail="가짜정보 판정 처리 중 오류가 발생했습니다.") from e
+        misinformation_detection = MisinformationDetectionResult(
+            model=misinfo_result.model,
+            wiki_snapshot=misinfo_result.wiki_snapshot,
+            claims=misinfo_result.claims,
+        )
+
     return AudioAnalysisResponse(
         ai_detection=AudioDetectionResult(model="antideepfake", score=ai_result.score, evidence=evidence),
         scam_detection=scam_detection,
+        misinformation_detection=misinformation_detection,
     )

@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.routers import image as image_router
 from app.services.gpu_queue import GpuQueueFullError
+from app.services.misinfo_runner import MisinfoInferenceError
 from app.services.scam_runner import ScamInferenceError, ScamResult
 from app.services.spai_runner import SpaiInferenceError, SpaiResult
 
@@ -28,6 +29,7 @@ def test_process_image_returns_score(monkeypatch):
     assert response.json() == {
         "ai_detection": {"model": "spai", "score": 0.87, "evidence_image": None},
         "scam_detection": None,
+        "misinformation_detection": None,
     }
 
 
@@ -91,6 +93,11 @@ def test_process_image_returns_scam_detection_when_present(monkeypatch):
         image_router,
         "run_scam_inference_image",
         lambda data, filename: ScamResult(0.82, [{"sentence": "계좌번호를 알려주세요", "score": 0.95}], ["계좌번호를 알려주세요"]),
+    )
+    monkeypatch.setattr(
+        image_router,
+        "run_misinfo_inference",
+        lambda sentences: type("R", (), {"model": "qwen3.5:4b", "wiki_snapshot": "2026-09-01", "claims": []})(),
     )
 
     response = client.post(
@@ -157,3 +164,72 @@ def test_process_image_returns_503_when_gpu_queue_full(monkeypatch):
     )
 
     assert response.status_code == 503
+
+
+def test_process_image_includes_misinformation_detection_when_refuted(monkeypatch):
+    monkeypatch.setattr(image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.1, None))
+    monkeypatch.setattr(
+        image_router,
+        "run_scam_inference_image",
+        lambda data, filename: ScamResult(None, [], ["선풍기를 틀고 자면 사망한다."]),
+    )
+    monkeypatch.setattr(
+        image_router,
+        "run_misinfo_inference",
+        lambda sentences: type(
+            "R", (), {"model": "qwen3.5:4b", "wiki_snapshot": "2026-09-01",
+                      "claims": [{"sentence": sentences[0], "reason": "미신이다.", "evidence": []}]}
+        )(),
+    )
+
+    response = client.post(
+        "/process/image",
+        files={"file": ("test.jpg", io.BytesIO(b"fake-image-bytes"), "image/jpeg")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["misinformation_detection"] == {
+        "model": "qwen3.5:4b",
+        "wiki_snapshot": "2026-09-01",
+        "claims": [{"sentence": "선풍기를 틀고 자면 사망한다.", "reason": "미신이다.", "evidence": []}],
+    }
+
+
+def test_process_image_omits_misinformation_detection_when_no_sentences(monkeypatch):
+    monkeypatch.setattr(image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.1, None))
+    monkeypatch.setattr(
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], [])
+    )
+    called = []
+    monkeypatch.setattr(
+        image_router, "run_misinfo_inference", lambda sentences: called.append(sentences)
+    )
+
+    response = client.post(
+        "/process/image",
+        files={"file": ("test.jpg", io.BytesIO(b"fake-image-bytes"), "image/jpeg")},
+    )
+
+    assert response.json()["misinformation_detection"] is None
+    assert called == []  # 문장이 없으면 가짜정보 판정 자체를 호출하지 않는다
+
+
+def test_process_image_returns_502_when_misinfo_inference_fails(monkeypatch):
+    monkeypatch.setattr(image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.1, None))
+    monkeypatch.setattr(
+        image_router,
+        "run_scam_inference_image",
+        lambda data, filename: ScamResult(None, [], ["아무 문장"]),
+    )
+
+    def raise_error(sentences):
+        raise MisinfoInferenceError("boom")
+
+    monkeypatch.setattr(image_router, "run_misinfo_inference", raise_error)
+
+    response = client.post(
+        "/process/image",
+        files={"file": ("test.jpg", io.BytesIO(b"fake-image-bytes"), "image/jpeg")},
+    )
+
+    assert response.status_code == 502

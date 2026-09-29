@@ -3,8 +3,16 @@ import logging
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from app.schemas import Evidence, ScamDetectionResult, ScamEvidence, VideoAnalysisResponse, VideoDetectionResult
+from app.schemas import (
+    Evidence,
+    MisinformationDetectionResult,
+    ScamDetectionResult,
+    ScamEvidence,
+    VideoAnalysisResponse,
+    VideoDetectionResult,
+)
 from app.services.dfdc_runner import DfdcInferenceError, NoFaceDetectedError, run_dfdc_inference
+from app.services.misinfo_runner import MisinfoInferenceError, run_misinfo_inference
 from app.services.scam_runner import ScamInferenceError, ScamResult, run_scam_inference_video
 
 logger = logging.getLogger(__name__)
@@ -60,6 +68,19 @@ async def process_video(file: UploadFile = File(...)) -> VideoAnalysisResponse:
         else None
     )
 
+    misinformation_detection = None
+    if scam_result.sentences:
+        try:
+            misinfo_result = run_misinfo_inference(scam_result.sentences)
+        except MisinfoInferenceError as e:
+            logger.exception("가짜정보 판정 파이프라인 실패")
+            raise HTTPException(status_code=502, detail="가짜정보 판정 처리 중 오류가 발생했습니다.") from e
+        misinformation_detection = MisinformationDetectionResult(
+            model=misinfo_result.model,
+            wiki_snapshot=misinfo_result.wiki_snapshot,
+            claims=misinfo_result.claims,
+        )
+
     ai_detection = None
     if ai_result is not None:
         evidence = [
@@ -79,5 +100,6 @@ async def process_video(file: UploadFile = File(...)) -> VideoAnalysisResponse:
     return VideoAnalysisResponse(
         ai_detection=ai_detection,
         scam_detection=scam_detection,
+        misinformation_detection=misinformation_detection,
         error_code=error_code,
     )

@@ -12,6 +12,24 @@ class ScamDetectionResult(BaseModel):
     evidence: list[ScamEvidence]
 
 
+class WikiEvidence(BaseModel):
+    title: str
+    text: str
+    url: str
+
+
+class MisinformationClaim(BaseModel):
+    sentence: str
+    reason: str
+    evidence: list[WikiEvidence]
+
+
+class MisinformationDetectionResult(BaseModel):
+    model: str
+    wiki_snapshot: str
+    claims: list[MisinformationClaim]
+
+
 class AIDetectionResult(BaseModel):
     model: str
     score: float
@@ -21,6 +39,7 @@ class AIDetectionResult(BaseModel):
 class ImageAnalysisResponse(BaseModel):
     ai_detection: AIDetectionResult
     scam_detection: ScamDetectionResult | None = None
+    misinformation_detection: MisinformationDetectionResult | None = None
 
 
 class Evidence(BaseModel):
@@ -40,6 +59,7 @@ class AudioDetectionResult(BaseModel):
 class AudioAnalysisResponse(BaseModel):
     ai_detection: AudioDetectionResult
     scam_detection: ScamDetectionResult | None = None
+    misinformation_detection: MisinformationDetectionResult | None = None
 
 
 class VideoDetectionResult(BaseModel):
@@ -54,4 +74,5 @@ class VideoAnalysisResponse(BaseModel):
     # error_code가 이유를 알려준다. ai_detection이 있으면 error_code는 항상 null이다.
     ai_detection: VideoDetectionResult | None
     scam_detection: ScamDetectionResult | None = None
+    misinformation_detection: MisinformationDetectionResult | None = None
     error_code: str | None = None

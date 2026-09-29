@@ -3,7 +3,14 @@ import logging
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from app.schemas import AIDetectionResult, ImageAnalysisResponse, ScamDetectionResult, ScamEvidence
+from app.schemas import (
+    AIDetectionResult,
+    ImageAnalysisResponse,
+    MisinformationDetectionResult,
+    ScamDetectionResult,
+    ScamEvidence,
+)
+from app.services.misinfo_runner import MisinfoInferenceError, run_misinfo_inference
 from app.services.scam_runner import ScamInferenceError, run_scam_inference_image
 from app.services.spai_runner import SpaiInferenceError, run_spai_inference
 
@@ -55,9 +62,23 @@ async def process_image(file: UploadFile = File(...)) -> ImageAnalysisResponse:
         else None
     )
 
+    misinformation_detection = None
+    if scam_result.sentences:
+        try:
+            misinfo_result = run_misinfo_inference(scam_result.sentences)
+        except MisinfoInferenceError as e:
+            logger.exception("가짜정보 판정 파이프라인 실패")
+            raise HTTPException(status_code=502, detail="가짜정보 판정 처리 중 오류가 발생했습니다.") from e
+        misinformation_detection = MisinformationDetectionResult(
+            model=misinfo_result.model,
+            wiki_snapshot=misinfo_result.wiki_snapshot,
+            claims=misinfo_result.claims,
+        )
+
     return ImageAnalysisResponse(
         ai_detection=AIDetectionResult(
             model="spai", score=ai_result.score, evidence_image=ai_result.evidence_image
         ),
         scam_detection=scam_detection,
+        misinformation_detection=misinformation_detection,
     )
