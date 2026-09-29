@@ -124,6 +124,10 @@ class Settings:
         self.gpu_queue_max_concurrent = int(os.environ.get("GPU_QUEUE_MAX_CONCURRENT", "1"))
         self.gpu_queue_max_depth = int(os.environ.get("GPU_QUEUE_MAX_DEPTH", "10"))
 
+        # --- 가짜정보탐지(misinformation) 설정. 위키 인덱스는 build_wiki_index.py로 미리
+        # 만들어둔 SQLite FTS5 파일(RAM에 안 올림) - 자동 갱신 없음, 필요할 때 재구축(2026-09-29 결정).
+        self.wiki_index_path = Path(os.environ.get("WIKI_INDEX_PATH", "./data/wiki_index.sqlite3"))
+
 
 @lru_cache
 def get_settings() -> Settings:
