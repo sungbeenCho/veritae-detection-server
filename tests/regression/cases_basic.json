@@ -1,0 +1,182 @@
+[
+ {
+  "expected": "contradiction",
+  "category": "인용+부정",
+  "sentence": "백신은 자폐증을 유발한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "인용+부정",
+  "sentence": "5G는 코로나19를 유발한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "인용+부정",
+  "sentence": "달 착륙은 조작되었다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "인용+부정",
+  "sentence": "지구는 평평하다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "인용+부정",
+  "sentence": "소금물은 코로나19를 예방한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "인용+부정",
+  "sentence": "다음 주에 대지진이 온다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "인용+부정",
+  "sentence": "해당 연예인은 사망했다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "인용+부정",
+  "sentence": "전자레인지는 음식의 영양소를 모두 파괴한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "인용+부정",
+  "sentence": "정부는 모든 국민에게 100만원을 지급한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "인용+부정",
+  "sentence": "인간은 뇌의 10퍼센트만 사용한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "인용+부정",
+  "sentence": "선풍기를 틀고 자면 사망한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "인용+부정",
+  "sentence": "만리장성은 우주에서 맨눈으로 보인다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "단순부정",
+  "sentence": "백신은 자폐증을 유발한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "단순부정",
+  "sentence": "이 약은 위험하다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "단순부정",
+  "sentence": "5G는 코로나19를 유발한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "단순부정",
+  "sentence": "지구는 평평하다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "단순부정",
+  "sentence": "만리장성은 우주에서 맨눈으로 보인다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "단순부정",
+  "sentence": "해당 연예인은 사망했다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "단순부정",
+  "sentence": "부산은 대한민국의 수도이다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "단순부정",
+  "sentence": "물은 섭씨 50도에서 끓는다."
+ },
+ {
+  "expected": "entailment",
+  "category": "인용+긍정",
+  "sentence": "백신은 감염병 예방에 효과적이다."
+ },
+ {
+  "expected": "entailment",
+  "category": "인용+긍정",
+  "sentence": "내일 서울에 비가 온다."
+ },
+ {
+  "expected": "entailment",
+  "category": "인용+긍정",
+  "sentence": "규칙적인 운동은 심혈관 질환 위험을 낮춘다."
+ },
+ {
+  "expected": "entailment",
+  "category": "인용+긍정",
+  "sentence": "용의자는 체포되었다."
+ },
+ {
+  "expected": "entailment",
+  "category": "인용+긍정",
+  "sentence": "흡연은 폐암의 주요 원인이다."
+ },
+ {
+  "expected": "entailment",
+  "category": "인용+긍정",
+  "sentence": "다음 달부터 최저임금이 인상된다."
+ },
+ {
+  "expected": "entailment",
+  "category": "단순함의",
+  "sentence": "세종대왕은 한글을 만들었다."
+ },
+ {
+  "expected": "entailment",
+  "category": "단순함의",
+  "sentence": "에베레스트산은 세계에서 가장 높은 산이다."
+ },
+ {
+  "expected": "entailment",
+  "category": "단순함의",
+  "sentence": "구글은 미국 기업이다."
+ },
+ {
+  "expected": "entailment",
+  "category": "단순함의",
+  "sentence": "이순신은 임진왜란에 참전했다."
+ },
+ {
+  "expected": "entailment",
+  "category": "단순함의",
+  "sentence": "에펠탑은 프랑스에 있다."
+ },
+ {
+  "expected": "neutral",
+  "category": "무관",
+  "sentence": "오늘 서울은 날씨가 맑다."
+ },
+ {
+  "expected": "neutral",
+  "category": "무관",
+  "sentence": "아이폰은 애플이 만든 스마트폰이다."
+ },
+ {
+  "expected": "neutral",
+  "category": "무관",
+  "sentence": "커피는 카페인을 함유하고 있다."
+ },
+ {
+  "expected": "neutral",
+  "category": "무관",
+  "sentence": "백신은 자폐증을 유발한다."
+ },
+ {
+  "expected": "neutral",
+  "category": "무관",
+  "sentence": "이순신은 키가 컸다."
+ }
+]

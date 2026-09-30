@@ -1,0 +1,82 @@
+[
+ {
+  "expected": "contradiction",
+  "category": "hard",
+  "sentence": "탄산음료를 마시면 뼈가 녹는다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "hard",
+  "sentence": "아폴로 11호의 달 착륙은 실제로 일어나지 않았다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "hard",
+  "sentence": "그 소문은 사실이다."
+ },
+ {
+  "expected": "entailment",
+  "category": "hard",
+  "sentence": "이 치료법은 효과가 있다."
+ },
+ {
+  "expected": "neutral",
+  "category": "hard",
+  "sentence": "해당 가수는 은퇴한다."
+ },
+ {
+  "expected": "neutral",
+  "category": "hard",
+  "sentence": "이 약은 암을 치료한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "hard",
+  "sentence": "대통령이 영상 속 발언을 했다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "hard",
+  "sentence": "수돗물에서 방사능이 검출됐다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "hard",
+  "sentence": "금융감독원은 개인에게 문자로 대출을 권유한다."
+ },
+ {
+  "expected": "entailment",
+  "category": "hard",
+  "sentence": "두 회사는 합병한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "hard",
+  "sentence": "법원은 피고인에게 유죄를 선고했다."
+ },
+ {
+  "expected": "neutral",
+  "category": "hard",
+  "sentence": "A시에 새 공항이 들어선다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "hard",
+  "sentence": "비타민 C를 다량 섭취하면 감기를 완전히 예방할 수 있다."
+ },
+ {
+  "expected": "entailment",
+  "category": "hard",
+  "sentence": "이 사건은 계획된 범행이었다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "hard",
+  "sentence": "해당 기업은 대규모 정리해고를 단행한다."
+ },
+ {
+  "expected": "neutral",
+  "category": "hard",
+  "sentence": "그는 그 사건과 무관하다."
+ }
+]
