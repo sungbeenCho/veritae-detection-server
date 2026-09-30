@@ -587,7 +587,7 @@ conda activate text-extraction
 python -c "import transformers; print(transformers.__version__)"
 ```
 
-학습 환경을 만들고 학습한다. `<위 버전>` 자리에 방금 나온 버전을 넣는다. PyTorch 설치 명령은 SPAI 환경과 같다.
+학습 환경을 만들고 학습한다. `<위 버전>` 자리에 방금 나온 버전을 넣는다. PyTorch는 SPAI 환경과 같은 CUDA 12.4 빌드를 쓰되, 학습에 필요 없는 torchvision/torchaudio는 뺐다.
 
 ```powershell
 conda create -n nli-train python=3.11 -y
