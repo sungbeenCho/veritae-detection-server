@@ -567,6 +567,13 @@ winget install --id Ollama.Ollama -e
 ollama pull qwen3.5:4b
 ```
 
+**Ollama 0.34.4 이상이 필요하다.** 반박 후보를 다시 판정할 때 생각 모드와 JSON 형식 강제를 함께 쓰는데, 그 이전 버전은 이 조합에서 깨진 JSON이나 빈 응답을 낼 수 있다(ollama PR #18479). 그러면 반박이 전부 조용히 빠져 기능이 동작하지 않는 것처럼 보인다. 버전 확인과 업데이트:
+
+```powershell
+ollama --version
+winget upgrade --id Ollama.Ollama -e
+```
+
 ### 2. `text-extraction` 환경에 패키지 2개 추가
 
 기존 사기 위험도 분석 설정에서 만든 `text-extraction` conda 환경을 그대로 재사용한다(새 환경 안 만듦).
