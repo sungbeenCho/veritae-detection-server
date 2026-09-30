@@ -65,7 +65,7 @@ async def process_image(file: UploadFile = File(...)) -> ImageAnalysisResponse:
     misinformation_detection = None
     if scam_result.sentences:
         try:
-            misinfo_result = run_misinfo_inference(scam_result.sentences)
+            misinfo_result = await asyncio.to_thread(run_misinfo_inference, scam_result.sentences)
         except MisinfoInferenceError as e:
             logger.exception("가짜정보 판정 파이프라인 실패")
             raise HTTPException(status_code=502, detail="가짜정보 판정 처리 중 오류가 발생했습니다.") from e
