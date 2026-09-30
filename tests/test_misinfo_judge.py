@@ -1,4 +1,4 @@
-"""judge_sentence의 판정 흐름: 1차 판정 → 반박 후보만 생각 모드로 정밀 재판정 → 인용된 근거만 표시.
+"""judge_sentence의 판정 흐름: 1차 판정 → 반박 후보는 인용 문단만 보고 검증 → 검증이 고른 문단만 근거로.
 Ollama와 e5 임베딩은 가짜로 바꾸고, 위키 인덱스는 임시 SQLite로 만든다."""
 import json
 
@@ -6,9 +6,11 @@ import pytest
 from kiwipiepy import Kiwi
 
 import misinfo_infer
+from misinfo_lib import JUDGE_SCHEMA, VERIFY_SCHEMA
 from wiki_index import add_chunk, create_index, extract_keywords
 
 SENTENCE = "선풍기를 틀고 자면 사망한다는 이야기를 들었어요."
+FAN_DEATH_BLOCK = "선풍기를 켜고 자면 사망한다는 가설이 있다. 그러나 이 속설은 과학적 근거가 없다."
 
 
 @pytest.fixture(scope="module")
@@ -29,22 +31,44 @@ def conn(tmp_path, kiwi):
     return conn
 
 
-def _response(label, evidence_ids=(1,), reason="이유"):
-    return json.dumps(
-        {"core_claim": "선풍기를 틀고 자면 사망한다.", "evidence_ids": list(evidence_ids), "reason": reason, "label": label},
-        ensure_ascii=False,
-    )
+def _block_ids(prompt: str) -> dict[str, int]:
+    """프롬프트의 근거 문단 번호를 제목별로 찾는다(번호는 검색 순위로 정해진다)."""
+    lines = [line for line in prompt.splitlines() if line.startswith("[") and "] (" in line]
+    return {line.split("] (", 1)[1].split(")", 1)[0]: i for i, line in enumerate(lines, start=1)}
+
+
+def _judge(label, cite=("선풍기 사망설", "케니 맥코믹"), reason="1차 이유"):
+    def respond(prompt):
+        ids = _block_ids(prompt)
+        return json.dumps(
+            {"core_claim": "선풍기를 틀고 자면 사망한다.", "evidence_ids": [ids[t] for t in cite if t in ids],
+             "reason": reason, "label": label},
+            ensure_ascii=False,
+        )
+    return respond
+
+
+def _verify(verdict, refute=("선풍기 사망설",), reason="선풍기 사망설 문서는 근거가 없다고 한다."):
+    def respond(prompt):
+        ids = _block_ids(prompt)
+        return json.dumps(
+            {"core_claim": "선풍기를 틀고 자면 사망한다.", "refuting_sentence": "그러나 이 속설은 과학적 근거가 없다.",
+             "refuting_ids": [ids[t] for t in refute if t in ids], "reason": reason, "verdict": verdict},
+            ensure_ascii=False,
+        )
+    return respond
 
 
 @pytest.fixture
 def ollama(monkeypatch):
-    """ask_ollama를 가짜로 바꾸고, think 값별 응답과 호출 기록을 돌려준다."""
+    """ask_ollama를 가짜로 바꾼다. 1차/검증은 넘겨받은 응답 형식(schema)으로 구분한다."""
     calls = []
     responses = {}
 
-    def fake_ask(url, model, prompt, think):
-        calls.append({"think": think, "prompt": prompt})
-        response = responses[think]
+    def fake_ask(url, model, prompt, schema):
+        stage = "judge" if schema is JUDGE_SCHEMA else "verify" if schema is VERIFY_SCHEMA else "?"
+        calls.append({"stage": stage, "prompt": prompt})
+        response = responses[stage]
         return response(prompt) if callable(response) else response
 
     monkeypatch.setattr(misinfo_infer, "ask_ollama", fake_ask)
@@ -52,67 +76,109 @@ def ollama(monkeypatch):
     return calls, responses
 
 
-def _judge(kiwi, conn):
+def _run(kiwi, conn):
     return misinfo_infer.judge_sentence(kiwi, conn, SENTENCE, "http://ollama", "qwen", evidence_count=5)
 
 
-def test_non_refutation_is_not_rechecked(kiwi, conn, ollama):
+def test_non_refutation_is_not_verified(kiwi, conn, ollama):
     calls, responses = ollama
-    responses[False] = _response("판단불가", evidence_ids=[])
+    responses["judge"] = _judge("판단불가", cite=())
 
-    assert _judge(kiwi, conn) is None
-    assert [c["think"] for c in calls] == [False]
+    assert _run(kiwi, conn) is None
+    assert [c["stage"] for c in calls] == ["judge"]
 
 
-def test_refutation_is_rechecked_with_thinking_and_final_verdict_decides(kiwi, conn, ollama):
+def test_refutation_without_cited_evidence_is_not_verified_or_shown(kiwi, conn, ollama):
     calls, responses = ollama
-    responses[False] = _response("반박")
-    responses[True] = _response("지지")
+    responses["judge"] = _judge("반박", cite=())
 
-    assert _judge(kiwi, conn) is None
-    assert [c["think"] for c in calls] == [False, True]
-    assert calls[0]["prompt"] == calls[1]["prompt"]
+    assert _run(kiwi, conn) is None
+    assert [c["stage"] for c in calls] == ["judge"]
 
 
-def _cite_fan_death_block(prompt):
-    """프롬프트에서 '선풍기 사망설' 문단의 번호를 찾아 그것만 인용한다(번호는 검색 순위로 정해진다)."""
-    block_lines = [line for line in prompt.splitlines() if line.startswith("[") and "] (" in line]
-    fan_death_id = next(i for i, line in enumerate(block_lines, start=1) if "(선풍기 사망설)" in line)
-    return _response("반박", evidence_ids=[fan_death_id], reason="선풍기 사망설 문서는 근거가 없다고 한다.")
-
-
-def test_confirmed_refutation_shows_only_evidence_cited_by_final_verdict(kiwi, conn, ollama):
-    _, responses = ollama
-    responses[False] = _response("반박", evidence_ids=[1, 2])
-    responses[True] = _cite_fan_death_block
-
-    claim = _judge(kiwi, conn)
-
-    assert claim["reason"] == "선풍기 사망설 문서는 근거가 없다고 한다."
-    assert [e["title"] for e in claim["evidence"]] == ["선풍기 사망설"]
-    assert claim["evidence"][0]["text"] == "선풍기를 켜고 자면 사망한다는 가설이 있다. 그러나 이 속설은 과학적 근거가 없다."
-
-
-def test_refutation_without_any_cited_evidence_is_not_shown(kiwi, conn, ollama):
-    _, responses = ollama
-    responses[False] = _response("반박")
-    responses[True] = _response("반박", evidence_ids=[])
-
-    assert _judge(kiwi, conn) is None
-
-
-def test_malformed_recheck_response_is_not_shown(kiwi, conn, ollama):
-    _, responses = ollama
-    responses[False] = _response("반박")
-    responses[True] = "JSON이 아님"
-
-    assert _judge(kiwi, conn) is None
-
-
-def test_neighbor_context_is_included_in_prompt(kiwi, conn, ollama):
+def test_verification_sees_original_sentence_and_only_cited_blocks(kiwi, conn, ollama):
     calls, responses = ollama
-    responses[False] = _response("판단불가", evidence_ids=[])
+    responses["judge"] = _judge("반박", cite=("선풍기 사망설",))
+    responses["verify"] = _verify("반박 아님", refute=())
 
-    _judge(kiwi, conn)
+    _run(kiwi, conn)
 
-    assert "선풍기를 켜고 자면 사망한다는 가설이 있다. 그러나 이 속설은 과학적 근거가 없다." in calls[0]["prompt"]
+    verify_prompt = calls[1]["prompt"]
+    assert SENTENCE in verify_prompt
+    assert list(_block_ids(verify_prompt)) == ["선풍기 사망설"]
+
+
+def test_rejected_verification_drops_the_refutation(kiwi, conn, ollama):
+    _, responses = ollama
+    responses["judge"] = _judge("반박")
+    responses["verify"] = _verify("반박 아님", refute=())
+
+    assert _run(kiwi, conn) is None
+
+
+def test_verified_refutation_shows_only_blocks_verification_confirmed(kiwi, conn, ollama):
+    """1차가 무관한 문단(케니 맥코믹)까지 인용해도, 검증이 실제로 반박한다고 고른 문단만 근거로 나간다."""
+    _, responses = ollama
+    responses["judge"] = _judge("반박", cite=("선풍기 사망설", "케니 맥코믹"))
+    responses["verify"] = _verify("반박", refute=("선풍기 사망설",))
+
+    claim = _run(kiwi, conn)
+
+    assert claim == {
+        "sentence": SENTENCE,
+        "reason": "선풍기 사망설 문서는 근거가 없다고 한다.",
+        "evidence": [
+            {"title": "선풍기 사망설", "text": FAN_DEATH_BLOCK, "url": "https://ko.wikipedia.org/wiki/선풍기_사망설"}
+        ],
+    }
+
+
+def test_verified_refutation_without_refuting_blocks_is_not_shown(kiwi, conn, ollama):
+    _, responses = ollama
+    responses["judge"] = _judge("반박")
+    responses["verify"] = _verify("반박", refute=())
+
+    assert _run(kiwi, conn) is None
+
+
+def test_malformed_verification_is_not_shown(kiwi, conn, ollama):
+    _, responses = ollama
+    responses["judge"] = _judge("반박")
+    responses["verify"] = ""
+
+    assert _run(kiwi, conn) is None
+
+
+def test_neighbor_context_is_included_in_judge_prompt(kiwi, conn, ollama):
+    calls, responses = ollama
+    responses["judge"] = _judge("판단불가", cite=())
+
+    _run(kiwi, conn)
+
+    assert FAN_DEATH_BLOCK in calls[0]["prompt"]
+
+
+def test_ollama_request_fixes_context_size_and_disables_thinking(monkeypatch):
+    sent = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"response": "{}"}).encode()
+
+    def fake_urlopen(req, timeout):
+        sent.update(json.loads(req.data))
+        return FakeResponse()
+
+    monkeypatch.setattr(misinfo_infer.urllib.request, "urlopen", fake_urlopen)
+
+    misinfo_infer.ask_ollama("http://ollama", "qwen", "프롬프트", VERIFY_SCHEMA)
+
+    assert sent["think"] is False
+    assert sent["format"] == VERIFY_SCHEMA
+    assert sent["options"]["num_ctx"] == misinfo_infer.OLLAMA_NUM_CTX

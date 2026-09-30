@@ -1,6 +1,6 @@
 # scripts/misinfo_infer.py
-"""문장 목록 -> 위키 검색 -> e5 재정렬 -> 앞뒤 문맥 붙이기 -> LLM 판정 -> 반박 후보만 생각 모드로
-정밀 재판정 -> 반박된 문장만, 판정에 인용된 근거와 함께 결과로.
+"""문장 목록 -> 위키 검색 -> e5 재정렬 -> 앞뒤 문맥 붙이기 -> LLM 1차 판정 -> 반박 후보는 인용 문단만
+보고 다시 검증 -> 검증을 통과한 반박 문장만, 실제로 반박하는 근거와 함께 결과로.
 text-extraction conda env(kiwipiepy, mwparserfromhell, torch, transformers 설치됨)에서
 실행되어야 한다. veritae-detection-server(FastAPI)는 이 스크립트를 subprocess로 호출하고
 --output 경로의 JSON만 읽는다 - scam_infer.py와 동일한 패턴.
@@ -15,7 +15,15 @@ from pathlib import Path
 
 from kiwipiepy import Kiwi
 
-from misinfo_lib import OLLAMA_SCHEMA, build_claim, build_prompt, parse_llm_response
+from misinfo_lib import (
+    JUDGE_SCHEMA,
+    VERIFY_SCHEMA,
+    build_claim,
+    build_judge_prompt,
+    build_verify_prompt,
+    parse_judge_response,
+    parse_verify_response,
+)
 from wiki_index import Chunk, expand_with_neighbors, extract_keywords, get_snapshot, search
 
 # 이름 있는 로거를 쓴다 - 회귀 테스트가 이 로거만 자세히 보여주고 httpx/HuggingFace 로그는 끌 수 있게.
@@ -69,14 +77,24 @@ def rerank(sentence: str, candidates: list[Chunk], top_k: int) -> list[Chunk]:
     return [candidates[i] for i in top_indices]
 
 
-def ask_ollama(ollama_url: str, model: str, prompt: str, think: bool) -> str:
+# 모델이 입력과 출력을 합쳐 한 번에 다룰 수 있는 토큰 수. 서버 기본값(데스크탑 실측 4096)에
+# 기대지 않고 명시한다 - 입력이 이 한도를 넘으면 Ollama가 프롬프트 앞부분(지시문)을 조용히
+# 잘라내고, 출력이 남은 한도를 넘으면 JSON을 다 쓰기 전에 멈춰 빈 응답이 된다(2026-10-01 실측:
+# 생각 모드가 4096을 다 써서 done_reason=length, response=''). 근거 문단 최대치(조각 약 15개)
+# 입력 + 판정 출력이 여유 있게 들어가는 크기다.
+OLLAMA_NUM_CTX = 8192
+
+
+def ask_ollama(ollama_url: str, model: str, prompt: str, schema: dict) -> str:
     body = {
         "model": model,
         "prompt": prompt,
-        "format": OLLAMA_SCHEMA,
+        "format": schema,
         "stream": False,
-        "think": think,
-        "options": {"temperature": 0},
+        # 생각 모드는 쓰지 않는다 - qwen3.5:4b는 생각이 수천 토큰으로 길어져 한도에 걸리거나
+        # 문장당 수십 초가 걸려 분석 제한 시간(MISINFO_TIMEOUT_SECONDS)을 넘긴다(2026-10-01 실측).
+        "think": False,
+        "options": {"temperature": 0, "num_ctx": OLLAMA_NUM_CTX},
     }
     req = urllib.request.Request(
         f"{ollama_url}/api/generate",
@@ -109,17 +127,17 @@ def unload_ollama_model(ollama_url: str, model: str) -> None:
         logger.warning("Ollama 모델 언로드 요청 실패 (model=%s)", model, exc_info=True)
 
 
-def _judge(prompt: str, sentence: str, ollama_url: str, model: str, evidence_count: int, think: bool) -> dict | None:
-    raw_response = ask_ollama(ollama_url, model, prompt, think=think)
-    verdict = parse_llm_response(raw_response, evidence_count)
-    if verdict is None:
+def _ask_parsed(prompt: str, schema: dict, parse, count: int, stage: str, sentence: str, ollama_url: str, model: str) -> dict | None:
+    raw_response = ask_ollama(ollama_url, model, prompt, schema)
+    parsed = parse(raw_response, count)
+    if parsed is None:
         # 형식 오류 - 이 문장은 판단불가로 취급(§10), 결과에 포함하지 않는다. 다만 조용히
         # 넘어가면 LLM 출력이 계속 깨지고 있어도 알아챌 방법이 없으므로 경고 로그를 남긴다.
         logger.warning(
-            "LLM 응답 형식 오류로 문장을 판단불가 처리함: think=%s sentence=%r raw_response=%r",
-            think, sentence, raw_response,
+            "LLM 응답 형식 오류로 문장을 판단불가 처리함: stage=%s sentence=%r raw_response=%r",
+            stage, sentence, raw_response,
         )
-    return verdict
+    return parsed
 
 
 def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str, evidence_count: int) -> dict | None:
@@ -130,32 +148,35 @@ def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str,
 
     top_chunks = rerank(sentence, candidates, top_k=evidence_count)
     evidence_blocks = expand_with_neighbors(conn, top_chunks)
-    prompt = build_prompt(sentence, evidence_blocks)
 
-    first = _judge(prompt, sentence, ollama_url, model, len(evidence_blocks), think=False)
+    first = _ask_parsed(
+        build_judge_prompt(sentence, evidence_blocks), JUDGE_SCHEMA, parse_judge_response,
+        len(evidence_blocks), "1차", sentence, ollama_url, model,
+    )
     logger.debug(
         "1차 판정: sentence=%r verdict=%r evidence_titles=%r",
         sentence, first, [title for title, _ in evidence_blocks],
     )
-    if first is None or first["label"] != "반박":
+    if first is None or first["label"] != "반박" or not first["evidence_ids"]:
         return None
 
-    # 반박은 사용자에게 "이 문장은 거짓"이라고 보여주는 유일한 판정이라, 반박 후보만 생각 모드를
-    # 켠 신중한 판정으로 다시 판정하고 그 결과를 최종으로 쓴다(두 판정 일치를 요구하는 게 아니라
-    # 더 신중한 판정이 결정한다). 같은 근거 문단 전체를 그대로 보여준다.
-    final = _judge(prompt, sentence, ollama_url, model, len(evidence_blocks), think=True)
-    if final is None or final["label"] != "반박":
+    # 반박은 사용자에게 "이 문장은 거짓"이라고 보여주는 유일한 판정이라, 1차가 인용한 문단만
+    # 따로 보여주고 "이 문단이 정말 주장을 거짓으로 만드는가"를 독립적으로 다시 확인한다. 검증이
+    # 실제로 반박한다고 고른 문단만 근거로 표시한다 - 반박이 아닌 문단은 하나도 나가지 않는다.
+    cited = [evidence_blocks[i - 1] for i in first["evidence_ids"]]
+    check = _ask_parsed(
+        build_verify_prompt(sentence, cited), VERIFY_SCHEMA, parse_verify_response,
+        len(cited), "검증", sentence, ollama_url, model,
+    )
+    logger.debug("검증: sentence=%r check=%r cited_titles=%r", sentence, check, [title for title, _ in cited])
+    if check is None or check["verdict"] != "반박" or not check["refuting_ids"]:
         logger.info(
-            "1차 반박이 정밀 재판정에서 뒤집힘: sentence=%r first_reason=%r final=%r",
-            sentence, first["reason"], final,
+            "1차 반박이 검증을 통과하지 못해 제외함: sentence=%r first_reason=%r check=%r",
+            sentence, first["reason"], check,
         )
         return None
-    if not final["evidence_ids"]:
-        # 근거를 함께 보여주는 게 이 기능의 원칙이라, 근거 문단을 하나도 지목하지 못한 반박은
-        # 보여줄 수 없다.
-        logger.warning("근거 문단 없이 반박으로 판정되어 제외함: sentence=%r final=%r", sentence, final)
-        return None
-    return build_claim(sentence, final, evidence_blocks)
+    refuting = [cited[i - 1] for i in check["refuting_ids"]]
+    return build_claim(sentence, check["reason"], refuting)
 
 
 def main() -> None:

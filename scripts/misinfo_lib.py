@@ -1,7 +1,11 @@
 """LLM 프롬프트 조립과 응답 검증 - 순수 함수만 모아서 실제 모델/네트워크 없이 테스트한다.
-프롬프트와 응답 형식(OLLAMA_SCHEMA)은 tests/regression 회귀 테스트셋으로 검증한 그대로 고정한다
+프롬프트와 응답 형식은 tests/regression 회귀 테스트셋으로 검증한 그대로 고정한다
 (docs/superpowers/specs/2026-09-29-misinformation-detection-design.md §5) - 바꾸려면 데스크탑에서
 회귀 테스트셋을 반드시 다시 돌려야 한다.
+
+판정은 두 단계다. 1차 판정(JUDGE)이 반박 후보와 인용 문단을 고르고, 검증(VERIFY)이 인용된
+문단만 보고 "이 문단이 정말 주장을 거짓으로 만드는가"를 독립적으로 다시 확인해 실제로
+반박하는 문단만 남긴다. 화면에는 검증을 통과한 문단만 근거로 나간다.
 """
 from __future__ import annotations
 
@@ -9,63 +13,141 @@ import json
 
 from wiki_index import wiki_url
 
-VALID_LABELS = {"지지", "반박", "판단불가"}
+JUDGE_LABELS = ("지지", "반박", "판단불가")
+VERIFY_VERDICTS = ("반박", "반박 아님")
 
-# 필드 순서가 곧 모델이 생각하는 순서다. 모델은 앞에서부터 한 글자씩 쓰므로, label을 먼저
-# 쓰게 하면 근거를 따지기 전에 판정부터 정하고 reason은 그 뒤에 끼워 맞춘다 - 2026-10-01
-# 실측에서 "label=반박인데 reason은 '일치합니다'"가 나온 원인이다. 핵심 주장 정리 → 근거 선택
-# → 이유 → 판정 순서로 강제한다.
-OLLAMA_SCHEMA = {
+# 필드 순서가 곧 모델이 생각하는 순서다. 모델은 앞에서부터 한 글자씩 쓰므로, 판정을 먼저
+# 쓰게 하면 근거를 따지기 전에 판정부터 정하고 이유는 그 뒤에 끼워 맞춘다 - 2026-10-01
+# 실측에서 "label=반박인데 reason은 '일치합니다'"가 나온 원인이다. 판정은 항상 맨 뒤에 둔다.
+JUDGE_SCHEMA = {
     "type": "object",
     "properties": {
         "core_claim": {"type": "string"},
         "evidence_ids": {"type": "array", "items": {"type": "integer"}},
         "reason": {"type": "string"},
-        "label": {"type": "string", "enum": ["지지", "반박", "판단불가"]},
+        "label": {"type": "string", "enum": list(JUDGE_LABELS)},
     },
     "required": ["core_claim", "evidence_ids", "reason", "label"],
 }
 
-PROMPT_TEMPLATE = """너는 사실 검증 도우미다. 아래 [근거 문단]들은 위키백과에서 자동으로 찾아온 것이며, 주장과 관련 없는 문단이 섞여 있을 수 있다. [근거 문단]에 적힌 내용만 보고 판정하라. 네가 원래 알고 있는 지식은 쓰지 마라.
+VERIFY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "core_claim": {"type": "string"},
+        "refuting_sentence": {"type": "string"},
+        "refuting_ids": {"type": "array", "items": {"type": "integer"}},
+        "reason": {"type": "string"},
+        "verdict": {"type": "string", "enum": list(VERIFY_VERDICTS)},
+    },
+    "required": ["core_claim", "refuting_sentence", "refuting_ids", "reason", "verdict"],
+}
+
+_GROUNDING_RULE = "[근거 문단]에 적힌 내용만 보고 판정하라. 네가 원래 알고 있는 지식은 쓰지 마라."
+
+_CORE_CLAIM_RULE = (
+    "[주장]에서 참/거짓을 따질 핵심 내용을 한 문장으로 적는다. [주장]이 \"~라는 이야기를 들었다\", "
+    "\"~라고 한다\", \"~라더라\"처럼 전해 들은 말을 옮기는 문장이면, 전해 들은 그 내용 자체를 적는다. "
+    "반대로 \"~라는 속설이 있다\", \"~라는 음모론이 있다\", \"~라는 것은 잘못 알려진 것이다\"처럼 그 내용을 "
+    "속설이나 틀린 이야기라고 소개하는 문장이면, 문장 그대로를 적는다. 글자 인식 오류로 보이는 오타는 바로잡는다."
+)
+
+_REASON_RULE = (
+    "reason은 사용자에게 그대로 보여주는 문장인데 사용자는 문단 번호를 볼 수 없다. "
+    "\"[1]\", \"문단 2\" 같은 번호는 쓰지 말고 문서 제목으로 가리킨다."
+)
+
+_REFUTES = "근거 문단의 내용이 사실이라면 core_claim은 거짓일 수밖에 없다(core_claim을 직접 부정하지 않아도 된다)"
+
+# 소개와 평가를 구분한다. 위키는 속설을 "사실이 아니다"보다 "과학적 근거가 없는 미신이다"처럼
+# 평가하는 경우가 많은데, "근거가 없다"는 엄밀히는 "거짓이다"와 달라서 이 규칙이 없으면 검증이
+# 대표 사례(선풍기 사망설)조차 반박 아님으로 떨어뜨릴 수 있다.
+_MENTION_RULE = (
+    "어떤 내용을 \"~라는 가설이 있다\", \"~라는 속설이 있다\", \"~라는 주장이 있다\"고 소개만 하는 문단은, "
+    "그 내용 자체가 참이라는 근거도 거짓이라는 근거도 아니다. 반대로 그 내용을 \"근거 없는 속설\", \"미신\", "
+    "\"잘못 알려진 것\", \"사실이 아니다\"라고 평가하는 문단은, 그 내용이 거짓이라는 근거다."
+)
+
+JUDGE_TEMPLATE = f"""너는 사실 검증 도우미다. 아래 [근거 문단]들은 위키백과에서 자동으로 찾아온 것이며, 주장과 관련 없는 문단이 섞여 있을 수 있다. {_GROUNDING_RULE}
 
 다음 순서대로 답하라.
-1. core_claim: [주장]에서 참/거짓을 따질 핵심 내용을 한 문장으로 적는다. [주장]이 "~라는 이야기를 들었다", "~라고 한다", "~라더라"처럼 전해 들은 말을 옮기는 문장이면, 전해 들은 그 내용 자체를 적는다. 반대로 "~라는 속설이 있다", "~라는 음모론이 있다", "~라는 것은 잘못 알려진 것이다"처럼 그 내용을 속설이나 틀린 이야기라고 소개하는 문장이면, 문장 그대로를 적는다. 글자 인식 오류로 보이는 오타는 바로잡는다.
-2. evidence_ids: core_claim이 참인지 거짓인지를 직접 말해주는 근거 문단의 번호를 모두 적는다. 그런 문단이 없으면 빈 목록으로 둔다.
-3. reason: 고른 근거 문단이 core_claim에 대해 무엇이라고 말하는지 한 문장으로 설명한다. reason은 사용자에게 그대로 보여주는 문장인데 사용자는 문단 번호를 볼 수 없다. "[1]", "문단 2" 같은 번호는 쓰지 말고 문서 제목으로 가리킨다.
+1. core_claim: {_CORE_CLAIM_RULE}
+2. evidence_ids: core_claim이 참인지 거짓인지를 알려주는 근거 문단의 번호를 모두 적는다. 그런 문단이 없으면 빈 목록으로 둔다.
+3. reason: 고른 근거 문단이 core_claim에 대해 무엇이라고 말하는지 한 문장으로 설명한다. {_REASON_RULE}
 4. label: reason을 바탕으로 판정한다.
 - 지지: 고른 근거 문단이 core_claim이 참이라고 말한다
-- 반박: 고른 근거 문단이 core_claim이 거짓이라고 말한다
-- 판단불가: 근거 문단이 core_claim의 참/거짓을 말하지 않는다
-어떤 내용을 "~라는 가설이 있다", "~라는 속설이 있다", "~라는 주장이 있다"고 소개만 하는 문단은, 그 내용 자체가 참이라는 근거도 거짓이라는 근거도 아니다.
+- 반박: {_REFUTES}
+- 판단불가: 근거 문단이 core_claim의 참/거짓을 정해주지 않는다
+{_MENTION_RULE}
 
 [근거 문단]
-{premise}
+{{premise}}
 
 [주장]
-{hypothesis}"""
+{{hypothesis}}"""
+
+VERIFY_TEMPLATE = f"""너는 사실 검증 검토자다. 아래 [근거 문단]이 [주장]을 거짓으로 만드는지 확인하라. {_GROUNDING_RULE} 확실하지 않으면 "반박 아님"으로 답하라.
+
+다음 순서대로 답하라.
+1. core_claim: {_CORE_CLAIM_RULE}
+2. refuting_sentence: 근거 문단에서, 그 내용이 사실이라면 core_claim이 거짓일 수밖에 없게 만드는 문장을 그대로 옮겨 적는다. 그런 문장이 없으면 빈 문자열로 둔다.
+3. refuting_ids: 그런 문장이 들어 있는 근거 문단의 번호를 모두 적는다. 없으면 빈 목록으로 둔다.
+4. reason: 그 근거 문단 때문에 core_claim이 왜 거짓인지 한 문장으로 설명한다. {_REASON_RULE}
+5. verdict: reason을 바탕으로 판정한다.
+- 반박: {_REFUTES}
+- 반박 아님: 그렇지 않다. 근거 문단이 core_claim과 관련된 내용을 다루기만 하거나 소개만 하는 경우도 반박 아님이다.
+{_MENTION_RULE}
+
+[근거 문단]
+{{premise}}
+
+[주장]
+{{hypothesis}}"""
 
 
-def build_prompt(sentence: str, evidence_blocks: list[tuple[str, str]]) -> str:
-    premise = "\n".join(f"[{i}] ({title}) {text}" for i, (title, text) in enumerate(evidence_blocks, start=1))
-    return PROMPT_TEMPLATE.format(premise=premise, hypothesis=sentence)
+def _format_blocks(blocks: list[tuple[str, str]]) -> str:
+    return "\n".join(f"[{i}] ({title}) {text}" for i, (title, text) in enumerate(blocks, start=1))
 
 
-def parse_llm_response(raw_response: str, evidence_count: int) -> dict | None:
-    """형식이 틀리면 None. evidence_ids는 1..evidence_count 범위의 정수만 순서대로 중복 없이 남긴다."""
+def build_judge_prompt(sentence: str, evidence_blocks: list[tuple[str, str]]) -> str:
+    return JUDGE_TEMPLATE.format(premise=_format_blocks(evidence_blocks), hypothesis=sentence)
+
+
+def build_verify_prompt(sentence: str, cited_blocks: list[tuple[str, str]]) -> str:
+    # 1차 판정이 정리한 core_claim이 아니라 원래 문장을 넘긴다 - 1차가 전해 들은 말/속설 소개를
+    # 잘못 정리했으면 검증도 엉뚱한 주장을 확인하게 되므로, 검증은 처음부터 독립적으로 정리한다.
+    return VERIFY_TEMPLATE.format(premise=_format_blocks(cited_blocks), hypothesis=sentence)
+
+
+def _load_object(raw_response: str) -> dict | None:
     try:
         data = json.loads(raw_response)
     except (json.JSONDecodeError, TypeError):
         return None
-    if not isinstance(data, dict):
+    return data if isinstance(data, dict) else None
+
+
+def _valid_ids(values: list, count: int) -> list[int]:
+    """1..count 범위의 정수만 순서대로 중복 없이 남긴다(bool은 int의 하위 타입이라 따로 뺀다)."""
+    ids: list[int] = []
+    for value in values:
+        if isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= count and value not in ids:
+            ids.append(value)
+    return ids
+
+
+def parse_judge_response(raw_response: str, evidence_count: int) -> dict | None:
+    """형식이 틀리면 None."""
+    data = _load_object(raw_response)
+    if data is None:
         return None
     core_claim = data.get("core_claim")
     evidence_ids = data.get("evidence_ids")
     reason = data.get("reason")
     label = data.get("label")
-    # 이유는 반박일 때만 화면에 나간다 - 판단불가/지지에서 이유가 비어 있는 건 형식 오류로 보지 않는다
+    # 이유는 반박일 때만 쓰인다 - 판단불가/지지에서 이유가 비어 있는 건 형식 오류로 보지 않는다
     # (2026-10-01 실측: "편의점" 문장이 판단불가 + 빈 이유로 와서 불필요한 경고가 났다).
     if (
-        label not in VALID_LABELS
+        label not in JUDGE_LABELS
         or not isinstance(reason, str)
         or (label == "반박" and not reason.strip())
         or not isinstance(core_claim, str)
@@ -73,23 +155,46 @@ def parse_llm_response(raw_response: str, evidence_count: int) -> dict | None:
         or not isinstance(evidence_ids, list)
     ):
         return None
-    valid_ids: list[int] = []
-    for evidence_id in evidence_ids:
-        if (
-            isinstance(evidence_id, int)
-            and not isinstance(evidence_id, bool)
-            and 1 <= evidence_id <= evidence_count
-            and evidence_id not in valid_ids
-        ):
-            valid_ids.append(evidence_id)
-    return {"core_claim": core_claim, "evidence_ids": valid_ids, "reason": reason, "label": label}
+    return {
+        "core_claim": core_claim,
+        "evidence_ids": _valid_ids(evidence_ids, evidence_count),
+        "reason": reason,
+        "label": label,
+    }
 
 
-def build_claim(sentence: str, verdict: dict, evidence_blocks: list[tuple[str, str]]) -> dict:
-    """판정에 실제로 인용된 근거 문단(evidence_ids)만 근거로 담는다 - 검색 후보 전부가 아니다."""
-    cited = [evidence_blocks[i - 1] for i in verdict["evidence_ids"]]
+def parse_verify_response(raw_response: str, cited_count: int) -> dict | None:
+    """형식이 틀리면 None."""
+    data = _load_object(raw_response)
+    if data is None:
+        return None
+    core_claim = data.get("core_claim")
+    refuting_sentence = data.get("refuting_sentence")
+    refuting_ids = data.get("refuting_ids")
+    reason = data.get("reason")
+    verdict = data.get("verdict")
+    if (
+        verdict not in VERIFY_VERDICTS
+        or not isinstance(reason, str)
+        or (verdict == "반박" and not reason.strip())
+        or not isinstance(core_claim, str)
+        or not isinstance(refuting_sentence, str)
+        or not isinstance(refuting_ids, list)
+    ):
+        return None
+    return {
+        "core_claim": core_claim,
+        "refuting_sentence": refuting_sentence,
+        "refuting_ids": _valid_ids(refuting_ids, cited_count),
+        "reason": reason,
+        "verdict": verdict,
+    }
+
+
+def build_claim(sentence: str, reason: str, evidence_blocks: list[tuple[str, str]]) -> dict:
+    """evidence_blocks는 검증을 통과한(실제로 반박하는) 문단만 넘긴다 - 검색 후보 전부가 아니다."""
     return {
         "sentence": sentence,
-        "reason": verdict["reason"],
-        "evidence": [{"title": title, "text": text, "url": wiki_url(title)} for title, text in cited],
+        "reason": reason,
+        "evidence": [{"title": title, "text": text, "url": wiki_url(title)} for title, text in evidence_blocks],
     }
