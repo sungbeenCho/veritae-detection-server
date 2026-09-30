@@ -96,7 +96,11 @@ def _quote_fts5_token(token: str) -> str:
 def search(conn: sqlite3.Connection, keywords: str, limit: int = 50) -> list[tuple[str, str]]:
     if not keywords.strip():
         return []
-    quoted = " ".join(_quote_fts5_token(t) for t in keywords.split())
+    # OR로 이어야 한다 - AND(공백 join)는 문장에서 뽑은 키워드가 ~200자 조각 하나에 전부
+    # 들어있어야만 매치되는데 그런 경우가 드물어 거의 항상 빈 리스트를 반환한다
+    # (2026-09-30 리뷰에서 실제 재현: "선풍기를 틀고 자면 사망한다." 등). OR + BM25
+    # 랭킹(ORDER BY rank)으로 일부만 일치해도 후보를 찾고 관련도 순으로 정렬한다.
+    quoted = " OR ".join(_quote_fts5_token(t) for t in keywords.split())
     rows = conn.execute(
         "SELECT title, text FROM chunks WHERE keywords MATCH ? ORDER BY rank LIMIT ?",
         (quoted, limit),

@@ -1,10 +1,12 @@
 import sqlite3
 
 import pytest
+from kiwipiepy import Kiwi
 
 from scripts.wiki_index import (
     add_chunk,
     create_index,
+    extract_keywords,
     get_snapshot,
     search,
     split_into_chunks,
@@ -108,3 +110,62 @@ def test_search_handles_bare_paren_no_crash(tmp_path):
     # Should not raise OperationalError (main requirement)
     results = search(conn, "(", limit=5)
     assert results == []
+
+
+def test_search_finds_chunk_when_only_some_keywords_match(tmp_path):
+    """Critical 회귀(2026-09-30 리뷰): 쿼리 키워드 중 일부만 조각의 키워드와 겹쳐도 찾아야 한다.
+    공백으로 이어 AND로 묶으면(예전 구현) 쿼리 키워드 전부가 한 조각에 들어있어야만 매치되는데,
+    실제 문장에서 뽑은 키워드가 ~200자 조각 하나에 전부 들어있는 경우는 드물어 거의 항상 빈
+    리스트를 반환했다. "틀다"가 저장된 키워드에 없어도(AND였다면 매치 실패) OR로는 찾아야 한다.
+    """
+    conn = create_index(tmp_path / "wiki.sqlite3", snapshot="2026-09-01")
+    add_chunk(
+        conn,
+        "선풍기 사망설",
+        "선풍기 사망설은 밀폐된 방에서 선풍기를 켜놓고 자면 산소가 부족해 사망한다는 도시전설이다.",
+        "선풍기 사망설 밀폐 방 켜놓다 자다 산소 부족 사망 도시전설",
+    )
+    conn.commit()
+
+    results = search(conn, "선풍기 틀다 자다 사망", limit=5)
+
+    assert results
+    assert results[0][0] == "선풍기 사망설"
+
+
+def test_search_reviewer_repro_fan_death_sentence(tmp_path):
+    """리뷰어가 메모리 DB로 직접 재현한 문장 1: "선풍기를 틀고 자면 사망한다."
+    "켜놓고"라는 조각 안 단어와 문장의 "틀고"가 형태소가 달라 AND로는 후보를 못 찾았다.
+    """
+    kiwi = Kiwi()
+    conn = create_index(tmp_path / "wiki.sqlite3", snapshot="2026-09-01")
+    chunk_text = (
+        "선풍기 사망설은 밀폐된 방에서 선풍기를 켜놓고 자면 산소가 부족해 사망할 수 있다는 "
+        "도시전설로, 과학적 근거가 없다."
+    )
+    add_chunk(conn, "선풍기 사망설", chunk_text, extract_keywords(kiwi, chunk_text))
+    conn.commit()
+
+    keywords = extract_keywords(kiwi, "선풍기를 틀고 자면 사망한다.")
+    results = search(conn, keywords, limit=5)
+
+    assert results
+
+
+def test_search_reviewer_repro_great_wall_sentence(tmp_path):
+    """리뷰어가 메모리 DB로 직접 재현한 문장 2: "만리장성은 우주에서 맨눈으로 보인다."
+    "육안"과 "맨눈"처럼 표현이 다른 단어가 섞이면 AND로는 후보를 못 찾았다.
+    """
+    kiwi = Kiwi()
+    conn = create_index(tmp_path / "wiki.sqlite3", snapshot="2026-09-01")
+    chunk_text = (
+        "만리장성은 우주에서 육안으로 보이지 않는다는 것이 여러 우주비행사의 증언과 연구로 "
+        "확인되었다."
+    )
+    add_chunk(conn, "만리장성", chunk_text, extract_keywords(kiwi, chunk_text))
+    conn.commit()
+
+    keywords = extract_keywords(kiwi, "만리장성은 우주에서 맨눈으로 보인다.")
+    results = search(conn, keywords, limit=5)
+
+    assert results
