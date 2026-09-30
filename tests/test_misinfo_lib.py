@@ -51,6 +51,10 @@ def test_parse_rejects_invalid_label():
     assert parse_llm_response(_raw(label="모르겠음"), evidence_count=3) is None
 
 
+def test_parse_accepts_blank_reason_only_when_not_refutation():
+    assert parse_llm_response(_raw(label="판단불가", evidence_ids=[], reason=""), evidence_count=3)["label"] == "판단불가"
+
+
 def test_parse_rejects_missing_or_blank_fields():
     assert parse_llm_response(_raw(reason=""), evidence_count=3) is None
     assert parse_llm_response(_raw(core_claim=" "), evidence_count=3) is None

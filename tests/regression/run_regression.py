@@ -77,8 +77,11 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # 1차 반박이 정밀 재판정에서 뒤집힌 경우 등 판정 과정 로그(INFO/WARNING)를 같이 보여준다.
-    logging.basicConfig(level=logging.INFO, format="    [%(levelname)s] %(message)s")
+    # 모든 문장의 1차 판정과 재판정 결과(misinfo 로거)는 자세히 보여주고, httpx/HuggingFace의
+    # 접속 확인 로그는 끈다(2026-10-01: 그대로 두면 같은 요청이 여러 번 찍혀 결과를 읽기 어려웠다).
+    logging.basicConfig(level=logging.WARNING, format="    [%(levelname)s] %(message)s")
+    logging.getLogger("misinfo").setLevel(logging.DEBUG)
+    logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
     # 생각 모드(think)와 JSON 스키마(format)를 같이 쓰는 재판정은 Ollama 0.34.4 이전 버전에서
     # 깨진 JSON이나 빈 응답을 낼 수 있다(ollama PR #18479). 결과를 읽기 전에 버전부터 확인한다.
     with urllib.request.urlopen(f"{args.ollama_url}/api/version", timeout=10) as resp:

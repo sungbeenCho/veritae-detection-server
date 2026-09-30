@@ -18,6 +18,9 @@ from kiwipiepy import Kiwi
 from misinfo_lib import OLLAMA_SCHEMA, build_claim, build_prompt, parse_llm_response
 from wiki_index import Chunk, expand_with_neighbors, extract_keywords, get_snapshot, search
 
+# 이름 있는 로거를 쓴다 - 회귀 테스트가 이 로거만 자세히 보여주고 httpx/HuggingFace 로그는 끌 수 있게.
+logger = logging.getLogger("misinfo")
+
 EMBEDDING_MODEL_ID = "intfloat/multilingual-e5-small"
 
 # 프로세스당 한 번만 로드하는 e5 토크나이저/모델 캐시. embed()가 호출될 때마다
@@ -103,7 +106,7 @@ def unload_ollama_model(ollama_url: str, model: str) -> None:
     except Exception:
         # 언로드 실패는 이번 요청 자체를 실패시킬 이유가 아니다(best-effort) - 다만 조용히
         # 삼키면 다음에도 GPU에 모델이 남아있는 원인을 못 찾으니 반드시 경고 로그를 남긴다.
-        logging.warning("Ollama 모델 언로드 요청 실패 (model=%s)", model, exc_info=True)
+        logger.warning("Ollama 모델 언로드 요청 실패 (model=%s)", model, exc_info=True)
 
 
 def _judge(prompt: str, sentence: str, ollama_url: str, model: str, evidence_count: int, think: bool) -> dict | None:
@@ -112,7 +115,7 @@ def _judge(prompt: str, sentence: str, ollama_url: str, model: str, evidence_cou
     if verdict is None:
         # 형식 오류 - 이 문장은 판단불가로 취급(§10), 결과에 포함하지 않는다. 다만 조용히
         # 넘어가면 LLM 출력이 계속 깨지고 있어도 알아챌 방법이 없으므로 경고 로그를 남긴다.
-        logging.warning(
+        logger.warning(
             "LLM 응답 형식 오류로 문장을 판단불가 처리함: think=%s sentence=%r raw_response=%r",
             think, sentence, raw_response,
         )
@@ -130,6 +133,10 @@ def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str,
     prompt = build_prompt(sentence, evidence_blocks)
 
     first = _judge(prompt, sentence, ollama_url, model, len(evidence_blocks), think=False)
+    logger.debug(
+        "1차 판정: sentence=%r verdict=%r evidence_titles=%r",
+        sentence, first, [title for title, _ in evidence_blocks],
+    )
     if first is None or first["label"] != "반박":
         return None
 
@@ -138,7 +145,7 @@ def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str,
     # 더 신중한 판정이 결정한다). 같은 근거 문단 전체를 그대로 보여준다.
     final = _judge(prompt, sentence, ollama_url, model, len(evidence_blocks), think=True)
     if final is None or final["label"] != "반박":
-        logging.info(
+        logger.info(
             "1차 반박이 정밀 재판정에서 뒤집힘: sentence=%r first_reason=%r final=%r",
             sentence, first["reason"], final,
         )
@@ -146,7 +153,7 @@ def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str,
     if not final["evidence_ids"]:
         # 근거를 함께 보여주는 게 이 기능의 원칙이라, 근거 문단을 하나도 지목하지 못한 반박은
         # 보여줄 수 없다.
-        logging.warning("근거 문단 없이 반박으로 판정되어 제외함: sentence=%r final=%r", sentence, final)
+        logger.warning("근거 문단 없이 반박으로 판정되어 제외함: sentence=%r final=%r", sentence, final)
         return None
     return build_claim(sentence, final, evidence_blocks)
 

@@ -31,7 +31,7 @@ PROMPT_TEMPLATE = """너는 사실 검증 도우미다. 아래 [근거 문단]�
 다음 순서대로 답하라.
 1. core_claim: [주장]에서 참/거짓을 따질 핵심 내용을 한 문장으로 적는다. [주장]이 "~라는 이야기를 들었다", "~라고 한다", "~라더라"처럼 전해 들은 말을 옮기는 문장이면, 전해 들은 그 내용 자체를 적는다. 반대로 "~라는 속설이 있다", "~라는 음모론이 있다", "~라는 것은 잘못 알려진 것이다"처럼 그 내용을 속설이나 틀린 이야기라고 소개하는 문장이면, 문장 그대로를 적는다. 글자 인식 오류로 보이는 오타는 바로잡는다.
 2. evidence_ids: core_claim이 참인지 거짓인지를 직접 말해주는 근거 문단의 번호를 모두 적는다. 그런 문단이 없으면 빈 목록으로 둔다.
-3. reason: 고른 근거 문단이 core_claim에 대해 무엇이라고 말하는지 한 문장으로 설명한다. 문단 번호 대신 문서 제목으로 가리킨다.
+3. reason: 고른 근거 문단이 core_claim에 대해 무엇이라고 말하는지 한 문장으로 설명한다. reason은 사용자에게 그대로 보여주는 문장인데 사용자는 문단 번호를 볼 수 없다. "[1]", "문단 2" 같은 번호는 쓰지 말고 문서 제목으로 가리킨다.
 4. label: reason을 바탕으로 판정한다.
 - 지지: 고른 근거 문단이 core_claim이 참이라고 말한다
 - 반박: 고른 근거 문단이 core_claim이 거짓이라고 말한다
@@ -62,10 +62,12 @@ def parse_llm_response(raw_response: str, evidence_count: int) -> dict | None:
     evidence_ids = data.get("evidence_ids")
     reason = data.get("reason")
     label = data.get("label")
+    # 이유는 반박일 때만 화면에 나간다 - 판단불가/지지에서 이유가 비어 있는 건 형식 오류로 보지 않는다
+    # (2026-10-01 실측: "편의점" 문장이 판단불가 + 빈 이유로 와서 불필요한 경고가 났다).
     if (
         label not in VALID_LABELS
         or not isinstance(reason, str)
-        or not reason.strip()
+        or (label == "반박" and not reason.strip())
         or not isinstance(core_claim, str)
         or not core_claim.strip()
         or not isinstance(evidence_ids, list)
