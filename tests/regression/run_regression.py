@@ -19,6 +19,7 @@ import logging
 import sqlite3
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "scripts"))
@@ -78,6 +79,10 @@ def main() -> None:
 
     # 1차 반박이 정밀 재판정에서 뒤집힌 경우 등 판정 과정 로그(INFO/WARNING)를 같이 보여준다.
     logging.basicConfig(level=logging.INFO, format="    [%(levelname)s] %(message)s")
+    # 생각 모드(think)와 JSON 스키마(format)를 같이 쓰는 재판정은 Ollama 0.34.4 이전 버전에서
+    # 깨진 JSON이나 빈 응답을 낼 수 있다(ollama PR #18479). 결과를 읽기 전에 버전부터 확인한다.
+    with urllib.request.urlopen(f"{args.ollama_url}/api/version", timeout=10) as resp:
+        print(f"Ollama 버전: {json.loads(resp.read())['version']} (재판정에는 0.34.4 이상 필요)\n")
     conn = sqlite3.connect(args.wiki_index)
     kiwi = Kiwi()
 
