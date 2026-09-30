@@ -553,7 +553,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ## 가짜정보(허위정보) 판별 설정
 
-이 서버는 텍스트에서 뽑은 문장 중 한국어 위키백과 내용과 어긋나는 주장을 찾아준다. 판정은 로컬 LLM(Ollama)으로 하고, 검색은 미리 만들어둔 위키 인덱스(SQLite 파일)로 한다 - 둘 다 이 데스크탑에서만 돌고 외부로 아무것도 나가지 않는다.
+이 서버는 텍스트에서 뽑은 문장 중 한국어 위키백과 내용과 어긋나는 주장을 찾아준다. 판정은 로컬 LLM(Ollama)으로 하고, 검색은 미리 만들어둔 위키 인덱스(SQLite 파일)로 한다 - 둘 다 이 데스크탑에서만 돌고 분석 요청 자체는 외부로 나가지 않는다. 다만 재정렬용 e5 모델은 최초 1회 HuggingFace에서 자동 다운로드되니(아래 4번 참고) 완전히 오프라인은 아니다.
 
 ### 1. Ollama 설치 및 모델 다운로드
 
@@ -578,7 +578,12 @@ pip install kiwipiepy mwparserfromhell
 
 ### 3. 위키 인덱스 구축 (최초 1회, 이후 원할 때 재실행)
 
-한국어 위키백과 전체 덤프(약 1.4GB)를 받아서 인덱스를 만든다. 몇십 분 정도 걸릴 수 있다.
+한국어 위키백과 전체 덤프(약 1.4GB)를 받아서 인덱스를 만든다. **몇십 분이 아니라 훨씬 오래
+걸릴 수 있다** - 노트북(순수 파이썬 XML 파서)에서 실측한 결과 변환에만 7시간 이상 걸렸다
+(설계서 §4). 이 데스크탑은 C 확장 파서를 쓸 수 있어 더 빠를 것으로 예상되지만 실측된 적은
+없으니, 처음 돌릴 때는 여유 시간을 넉넉히 잡아야 한다. 5000페이지마다
+`pages=... chunks=... elapsed=...`를 stderr에 찍으니 진행 속도를 보고 남은 시간을 가늠하면
+된다. 급하게 동작만 확인하려면 `--limit 5000` 같은 옵션으로 일부만 먼저 만들어볼 수 있다.
 
 ```powershell
 cd C:\ai\veritae-detection-server
@@ -596,7 +601,14 @@ python build_wiki_index.py --dump C:\ai\kowiki-latest-pages-articles.xml.bz2 --o
 $env:WIKI_INDEX_PATH = "C:\ai\veritae-detection-server\data\wiki_index.sqlite3"
 $env:OLLAMA_URL = "http://localhost:11434"   # 기본값과 동일, 보통 안 바꿔도 됨
 $env:OLLAMA_MODEL = "qwen3.5:4b"             # 기본값과 동일
+$env:MISINFO_EVIDENCE_CHUNK_COUNT = "5"      # 판정마다 LLM에 넘길 근거 조각 수, 기본값과 동일
+$env:MISINFO_TIMEOUT_SECONDS = "300"         # 가짜정보 판정 서브프로세스 타임아웃(초), 기본값과 동일
 ```
+
+**e5 재정렬 모델 최초 다운로드:** 첫 요청 처리 시 `intfloat/multilingual-e5-small`(재정렬용
+임베딩 모델, 약 470MB)을 HuggingFace에서 자동으로 받는다. Lilju 모델과 마찬가지로 이후엔
+로컬 캐시를 쓰므로 다시 받지 않는다 - 서버를 처음 켜고 문장이 있는 첫 분석 요청을 보낼 때
+그만큼 응답이 느려질 수 있다는 점만 알아두면 된다.
 
 ### 5. 서버 재시작 및 확인
 
