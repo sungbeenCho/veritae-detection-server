@@ -4,8 +4,10 @@ import pytest
 from kiwipiepy import Kiwi
 
 from scripts.wiki_index import (
+    Chunk,
     add_chunk,
     create_index,
+    expand_with_neighbors,
     extract_keywords,
     get_snapshot,
     search,
@@ -169,3 +171,69 @@ def test_search_reviewer_repro_great_wall_sentence(tmp_path):
     results = search(conn, keywords, limit=5)
 
     assert results
+
+
+def _index_with(tmp_path, rows):
+    conn = create_index(tmp_path / "wiki.sqlite3", snapshot="2026-09-01")
+    for title, text in rows:
+        add_chunk(conn, title, text, text)
+    conn.commit()
+    return conn
+
+
+def _chunk(conn, text):
+    return Chunk(*conn.execute("SELECT title, text, rowid FROM chunks WHERE text = ?", (text,)).fetchone())
+
+
+def test_search_returns_rowid_for_each_chunk(tmp_path):
+    conn = _index_with(tmp_path, [("A", "첫째"), ("B", "선풍기")])
+
+    results = search(conn, "선풍기", limit=5)
+
+    assert results == [Chunk("B", "선풍기", 2)]
+
+
+def test_expand_attaches_previous_and_next_chunk_of_same_article(tmp_path):
+    """선택된 조각에 "가설이 있다"만 담기고 바로 뒤 "근거가 없다"가 잘리던 문제(2026-10-01)."""
+    conn = _index_with(tmp_path, [
+        ("선풍기 사망설", "선풍기 사망설은 속설이다."),
+        ("선풍기 사망설", "호흡장애 가설이 있다."),
+        ("선풍기 사망설", "그러나 과학적 근거는 없다."),
+    ])
+
+    blocks = expand_with_neighbors(conn, [_chunk(conn, "호흡장애 가설이 있다.")])
+
+    assert blocks == [("선풍기 사망설", "선풍기 사망설은 속설이다. 호흡장애 가설이 있다. 그러나 과학적 근거는 없다.")]
+
+
+def test_expand_does_not_cross_into_other_articles(tmp_path):
+    conn = _index_with(tmp_path, [("A", "a1"), ("B", "b1"), ("C", "c1")])
+
+    blocks = expand_with_neighbors(conn, [_chunk(conn, "b1")])
+
+    assert blocks == [("B", "b1")]
+
+
+def test_expand_merges_overlapping_selections_and_keeps_rank_order(tmp_path):
+    conn = _index_with(tmp_path, [
+        ("A", "a1"), ("A", "a2"), ("A", "a3"), ("A", "a4"),
+        ("B", "b1"), ("B", "b2"),
+    ])
+
+    blocks = expand_with_neighbors(conn, [_chunk(conn, "b2"), _chunk(conn, "a2"), _chunk(conn, "a3")])
+
+    assert blocks == [("B", "b1 b2"), ("A", "a1 a2 a3 a4")]
+
+
+def test_expand_keeps_far_apart_chunks_of_same_article_separate(tmp_path):
+    conn = _index_with(tmp_path, [("A", f"a{i}") for i in range(1, 8)])
+
+    blocks = expand_with_neighbors(conn, [_chunk(conn, "a2"), _chunk(conn, "a6")])
+
+    assert blocks == [("A", "a1 a2 a3"), ("A", "a5 a6 a7")]
+
+
+def test_expand_returns_empty_for_no_chunks(tmp_path):
+    conn = _index_with(tmp_path, [("A", "a1")])
+
+    assert expand_with_neighbors(conn, []) == []

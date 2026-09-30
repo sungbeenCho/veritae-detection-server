@@ -9,6 +9,7 @@ import re
 import sqlite3
 import urllib.parse
 from pathlib import Path
+from typing import NamedTuple
 
 import mwparserfromhell
 from kiwipiepy import Kiwi
@@ -108,7 +109,13 @@ def _quote_fts5_token(token: str) -> str:
     return '"' + token.replace('"', '""') + '"'
 
 
-def search(conn: sqlite3.Connection, keywords: str, limit: int = 50) -> list[tuple[str, str]]:
+class Chunk(NamedTuple):
+    title: str
+    text: str
+    rowid: int
+
+
+def search(conn: sqlite3.Connection, keywords: str, limit: int = 50) -> list[Chunk]:
     if not keywords.strip():
         return []
     # OR로 이어야 한다 - AND(공백 join)는 문장에서 뽑은 키워드가 ~200자 조각 하나에 전부
@@ -117,7 +124,38 @@ def search(conn: sqlite3.Connection, keywords: str, limit: int = 50) -> list[tup
     # 랭킹(ORDER BY rank)으로 일부만 일치해도 후보를 찾고 관련도 순으로 정렬한다.
     quoted = " OR ".join(_quote_fts5_token(t) for t in keywords.split())
     rows = conn.execute(
-        "SELECT title, text FROM chunks WHERE keywords MATCH ? ORDER BY rank LIMIT ?",
+        "SELECT title, text, rowid FROM chunks WHERE keywords MATCH ? ORDER BY rank LIMIT ?",
         (quoted, limit),
     ).fetchall()
-    return [(row[0], row[1]) for row in rows]
+    return [Chunk(*row) for row in rows]
+
+
+def expand_with_neighbors(conn: sqlite3.Connection, chunks: list[Chunk]) -> list[tuple[str, str]]:
+    """각 조각에 같은 문서의 바로 앞뒤 조각을 붙여 (제목, 본문) 묶음으로 돌려준다.
+
+    약 200자 조각 하나만 보면 "이런 가설이 있다"까지만 담기고 바로 뒤의 "과학적 근거가
+    없다"가 잘려, 판정도 근거 표시도 틀어진다(2026-10-01 선풍기 사망설 실측). 구축 시 한
+    문서의 조각은 연속된 rowid로 저장되므로 인덱스를 다시 만들지 않고 rowid±1로 찾는다.
+    겹치거나 맞닿는 묶음은 하나로 합치고, 묶음 순서는 그 안에 든 선택 조각의 순위를 따른다.
+    """
+    if not chunks:
+        return []
+    wanted: dict[int, set[str]] = {}
+    for chunk in chunks:
+        for rowid in (chunk.rowid - 1, chunk.rowid, chunk.rowid + 1):
+            wanted.setdefault(rowid, set()).add(chunk.title)
+    placeholders = ",".join("?" * len(wanted))
+    rows = conn.execute(
+        f"SELECT rowid, title, text FROM chunks WHERE rowid IN ({placeholders})", list(wanted)
+    ).fetchall()
+    kept = {rowid: (title, text) for rowid, title, text in rows if title in wanted[rowid]}
+
+    rank = {chunk.rowid: i for i, chunk in enumerate(chunks)}
+    runs: list[list[int]] = []
+    for rowid in sorted(kept):
+        if runs and runs[-1][-1] == rowid - 1 and kept[runs[-1][-1]][0] == kept[rowid][0]:
+            runs[-1].append(rowid)
+        else:
+            runs.append([rowid])
+    runs.sort(key=lambda run: min(rank.get(r, len(chunks)) for r in run))
+    return [(kept[run[0]][0], " ".join(kept[r][1] for r in run)) for run in runs]

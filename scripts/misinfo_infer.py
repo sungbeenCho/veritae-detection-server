@@ -1,5 +1,6 @@
 # scripts/misinfo_infer.py
-"""문장 목록 -> 위키 검색 -> e5 재정렬 -> LLM 판정 -> 반박된 문장만 결과로.
+"""문장 목록 -> 위키 검색 -> e5 재정렬 -> 앞뒤 문맥 붙이기 -> LLM 판정 -> 반박 후보만 생각 모드로
+정밀 재판정 -> 반박된 문장만, 판정에 인용된 근거와 함께 결과로.
 text-extraction conda env(kiwipiepy, mwparserfromhell, torch, transformers 설치됨)에서
 실행되어야 한다. veritae-detection-server(FastAPI)는 이 스크립트를 subprocess로 호출하고
 --output 경로의 JSON만 읽는다 - scam_infer.py와 동일한 패턴.
@@ -14,17 +15,8 @@ from pathlib import Path
 
 from kiwipiepy import Kiwi
 
-from misinfo_lib import build_claim, build_prompt, parse_llm_response
-from wiki_index import extract_keywords, get_snapshot, search
-
-OLLAMA_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "label": {"type": "string", "enum": ["지지", "반박", "판단불가"]},
-        "reason": {"type": "string"},
-    },
-    "required": ["label", "reason"],
-}
+from misinfo_lib import OLLAMA_SCHEMA, build_claim, build_prompt, parse_llm_response
+from wiki_index import Chunk, expand_with_neighbors, extract_keywords, get_snapshot, search
 
 EMBEDDING_MODEL_ID = "intfloat/multilingual-e5-small"
 
@@ -64,23 +56,23 @@ def embed(texts: list[str]):
     return torch.nn.functional.normalize(vectors, dim=-1).cpu()
 
 
-def rerank(sentence: str, candidates: list[tuple[str, str]], top_k: int) -> list[tuple[str, str]]:
+def rerank(sentence: str, candidates: list[Chunk], top_k: int) -> list[Chunk]:
     if not candidates:
         return []
     query_vec = embed(["query: " + sentence])
-    passage_vecs = embed([f"passage: {title} {text}" for title, text in candidates])
+    passage_vecs = embed([f"passage: {c.title} {c.text}" for c in candidates])
     scores = (passage_vecs @ query_vec.T).squeeze(-1)
     top_indices = scores.argsort(descending=True)[:top_k].tolist()
     return [candidates[i] for i in top_indices]
 
 
-def ask_ollama(ollama_url: str, model: str, prompt: str) -> str:
+def ask_ollama(ollama_url: str, model: str, prompt: str, think: bool) -> str:
     body = {
         "model": model,
         "prompt": prompt,
         "format": OLLAMA_SCHEMA,
         "stream": False,
-        "think": False,
+        "think": think,
         "options": {"temperature": 0},
     }
     req = urllib.request.Request(
@@ -114,6 +106,19 @@ def unload_ollama_model(ollama_url: str, model: str) -> None:
         logging.warning("Ollama 모델 언로드 요청 실패 (model=%s)", model, exc_info=True)
 
 
+def _judge(prompt: str, sentence: str, ollama_url: str, model: str, evidence_count: int, think: bool) -> dict | None:
+    raw_response = ask_ollama(ollama_url, model, prompt, think=think)
+    verdict = parse_llm_response(raw_response, evidence_count)
+    if verdict is None:
+        # 형식 오류 - 이 문장은 판단불가로 취급(§10), 결과에 포함하지 않는다. 다만 조용히
+        # 넘어가면 LLM 출력이 계속 깨지고 있어도 알아챌 방법이 없으므로 경고 로그를 남긴다.
+        logging.warning(
+            "LLM 응답 형식 오류로 문장을 판단불가 처리함: think=%s sentence=%r raw_response=%r",
+            think, sentence, raw_response,
+        )
+    return verdict
+
+
 def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str, evidence_count: int) -> dict | None:
     keywords = extract_keywords(kiwi, sentence)
     candidates = search(conn, keywords, limit=50) if keywords else []
@@ -121,21 +126,29 @@ def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str,
         return None
 
     top_chunks = rerank(sentence, candidates, top_k=evidence_count)
-    prompt = build_prompt(sentence, top_chunks)
-    raw_response = ask_ollama(ollama_url, model, prompt)
-    verdict = parse_llm_response(raw_response)
-    if verdict is None:
-        # 형식 오류 - 이 문장은 판단불가로 취급(§10), 결과에 포함하지 않는다. 다만 조용히
-        # 넘어가면 LLM 출력이 계속 깨지고 있어도 알아챌 방법이 없으므로 경고 로그를 남긴다
-        # (계획 Global Constraints 19행, 스펙 §10, 2026-09-30 리뷰).
-        logging.warning(
-            "LLM 응답 형식 오류로 문장을 판단불가 처리함: sentence=%r raw_response=%r",
-            sentence, raw_response,
+    evidence_blocks = expand_with_neighbors(conn, top_chunks)
+    prompt = build_prompt(sentence, evidence_blocks)
+
+    first = _judge(prompt, sentence, ollama_url, model, len(evidence_blocks), think=False)
+    if first is None or first["label"] != "반박":
+        return None
+
+    # 반박은 사용자에게 "이 문장은 거짓"이라고 보여주는 유일한 판정이라, 반박 후보만 생각 모드를
+    # 켠 신중한 판정으로 다시 판정하고 그 결과를 최종으로 쓴다(두 판정 일치를 요구하는 게 아니라
+    # 더 신중한 판정이 결정한다). 같은 근거 문단 전체를 그대로 보여준다.
+    final = _judge(prompt, sentence, ollama_url, model, len(evidence_blocks), think=True)
+    if final is None or final["label"] != "반박":
+        logging.info(
+            "1차 반박이 정밀 재판정에서 뒤집힘: sentence=%r first_reason=%r final=%r",
+            sentence, first["reason"], final,
         )
         return None
-    if verdict["label"] != "반박":
+    if not final["evidence_ids"]:
+        # 근거를 함께 보여주는 게 이 기능의 원칙이라, 근거 문단을 하나도 지목하지 못한 반박은
+        # 보여줄 수 없다.
+        logging.warning("근거 문단 없이 반박으로 판정되어 제외함: sentence=%r final=%r", sentence, final)
         return None
-    return build_claim(sentence, verdict, top_chunks)
+    return build_claim(sentence, final, evidence_blocks)
 
 
 def main() -> None:
