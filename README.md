@@ -551,6 +551,74 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ---
 
+## 가짜정보(허위정보) 판별 설정
+
+이 서버는 텍스트에서 뽑은 문장 중 한국어 위키백과 내용과 어긋나는 주장을 찾아준다. 판정은 로컬 LLM(Ollama)으로 하고, 검색은 미리 만들어둔 위키 인덱스(SQLite 파일)로 한다 - 둘 다 이 데스크탑에서만 돌고 외부로 아무것도 나가지 않는다.
+
+### 1. Ollama 설치 및 모델 다운로드
+
+```powershell
+winget install --id Ollama.Ollama -e
+```
+
+**설치 프로그램이 시작 프로그램에 자동 등록한다 - 데스크탑에서는 이게 의도된 동작이다**(항상 켜둬야 하는 서버이므로). 설치 후 새 PowerShell 창에서:
+
+```powershell
+ollama pull qwen3.5:4b
+```
+
+### 2. `text-extraction` 환경에 패키지 2개 추가
+
+기존 사기 위험도 분석 설정에서 만든 `text-extraction` conda 환경을 그대로 재사용한다(새 환경 안 만듦).
+
+```powershell
+conda activate text-extraction
+pip install kiwipiepy mwparserfromhell
+```
+
+### 3. 위키 인덱스 구축 (최초 1회, 이후 원할 때 재실행)
+
+한국어 위키백과 전체 덤프(약 1.4GB)를 받아서 인덱스를 만든다. 몇십 분 정도 걸릴 수 있다.
+
+```powershell
+cd C:\ai\veritae-detection-server
+Invoke-WebRequest -Uri "https://dumps.wikimedia.org/kowiki/latest/kowiki-latest-pages-articles.xml.bz2" -OutFile "C:\ai\kowiki-latest-pages-articles.xml.bz2"
+conda activate text-extraction
+cd scripts
+python build_wiki_index.py --dump C:\ai\kowiki-latest-pages-articles.xml.bz2 --output C:\ai\veritae-detection-server\data\wiki_index.sqlite3 --snapshot 2026-09-01
+```
+
+`--snapshot`은 그날 날짜(YYYY-MM-DD)로 적으면 된다 - 응답의 `wikiSnapshot` 필드로 그대로 나간다.
+
+### 4. 환경변수 설정
+
+```powershell
+$env:WIKI_INDEX_PATH = "C:\ai\veritae-detection-server\data\wiki_index.sqlite3"
+$env:OLLAMA_URL = "http://localhost:11434"   # 기본값과 동일, 보통 안 바꿔도 됨
+$env:OLLAMA_MODEL = "qwen3.5:4b"             # 기본값과 동일
+```
+
+### 5. 서버 재시작 및 확인
+
+```powershell
+conda activate detection-api
+cd C:\ai\veritae-detection-server
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+가짜정보탐지가 실제로 잘 되는지, 프롬프트나 설정을 바꾼 뒤에도 정확도가 떨어지지 않았는지는 `tests/regression/README.md`의 회귀 테스트셋으로 확인한다.
+
+### GPU 자원 큐
+
+SPAI/dfdc/사기감지(음성·영상)/가짜정보탐지가 전부 같은 GPU를 쓰기 때문에, 동시에 여러 요청이 오면 한 번에 하나씩만 실제로 GPU를 쓰고 나머지는 순서를 기다린다(`GPU_QUEUE_MAX_CONCURRENT`, 기본 1). 대기 중인 요청이 너무 많이 쌓이면(`GPU_QUEUE_MAX_DEPTH`, 기본 10) 새 요청은 503으로 즉시 거절된다. 필요하면 환경변수로 조정한다:
+
+```powershell
+$env:GPU_QUEUE_MAX_CONCURRENT = "1"
+$env:GPU_QUEUE_MAX_DEPTH = "10"
+```
+
+---
+
 ## 로컬 개발 (테스트 실행)
 
 이 레포를 수정하는 개발 머신(이 컴퓨터)에서 테스트를 돌릴 때는 SPAI 없이도 가능하다 (테스트는 `run_spai_inference`를 mock 처리한다):
