@@ -32,16 +32,22 @@ JUDGE_SCHEMA = {
     "required": ["core_claim", "evidence_ids", "reason", "label"],
 }
 
+MYTH_INTRO_ANSWERS = ("예", "아니오")
+
+# 검증은 1차가 정리한 핵심 주장을 그대로 확인한다. 검증이 원래 문장부터 다시 정리하게 했더니
+# 1차가 제대로 푼 전해 들은 말("~더라")을 다시 못 풀어 맞는 반박을 버렸다(2026-10-01 실측).
+# 대신 1차가 속설 소개 문장("~라는 속설이 있다")을 안의 내용으로 잘못 풀어 위험한 반박을 만드는
+# 방향만 막도록, 원래 문장이 속설 소개인지를 먼저 답하게 하고 "예"면 코드에서 버린다.
 VERIFY_SCHEMA = {
     "type": "object",
     "properties": {
-        "core_claim": {"type": "string"},
+        "myth_intro": {"type": "string", "enum": list(MYTH_INTRO_ANSWERS)},
         "refuting_sentence": {"type": "string"},
         "refuting_ids": {"type": "array", "items": {"type": "integer"}},
         "reason": {"type": "string"},
         "verdict": {"type": "string", "enum": list(VERIFY_VERDICTS)},
     },
-    "required": ["core_claim", "refuting_sentence", "refuting_ids", "reason", "verdict"],
+    "required": ["myth_intro", "refuting_sentence", "refuting_ids", "reason", "verdict"],
 }
 
 _GROUNDING_RULE = "[근거 문단]에 적힌 내용만 보고 판정하라. 네가 원래 알고 있는 지식은 쓰지 마라."
@@ -69,7 +75,22 @@ _MENTION_RULE = (
     "\"잘못 알려진 것\", \"사실이 아니다\"라고 평가하는 문단은, 그 내용이 거짓이라는 근거다."
 )
 
-JUDGE_TEMPLATE = f"""너는 사실 검증 도우미다. 아래 [근거 문단]들은 위키백과에서 자동으로 찾아온 것이며, 주장과 관련 없는 문단이 섞여 있을 수 있다. {_GROUNDING_RULE}
+# 정의만으로는 4B 모델이 "직접 부정하지 않았다"며 문자 그대로만 따져 맞는 반박을 버렸다(2026-10-01
+# 실측: "에펠탑은 프랑스 파리에 있다"로 "독일에 있다"를 반박하지 못함). 예시로 기준을 보여준다.
+# 예시는 회귀 테스트셋 문장과 겹치지 않게 골랐다 - 시험 문제의 답을 가르치면 실측이 무의미해진다.
+_EXAMPLES = """판정 예시(아래 [근거 문단]과는 관계없는 예시다):
+- 근거 "불국사는 경상북도 경주시에 있다." / 주장 "불국사는 전라남도에 있다." → 반박이다. 한 절이 두 지역에 동시에 있을 수 없다.
+- 근거 "모나리자는 레오나르도 다 빈치가 그린 그림이다." / 주장 "모나리자는 미켈란젤로가 그렸다." → 반박이다.
+- 근거 "혈액형으로 성격을 알 수 있다는 것은 과학적 근거가 없는 속설이다." / 주장 "혈액형으로 성격을 알 수 있다." → 반박이다. 근거 없는 속설이라고 평가한다.
+- 근거 "보름달이 뜨면 범죄가 늘어난다는 속설이 있다." / 주장 "보름달이 뜨면 범죄가 늘어난다." → 반박이 아니다. 속설을 소개만 한다.
+- 근거 "창덕궁은 조선의 궁궐이다." / 주장 "창덕궁은 종로구에 있다." → 반박이 아니다. 근거가 위치를 말하지 않는다."""
+
+_CAREFUL_RULE = (
+    "근거 문단은 하나씩 따로 따진다. 주장과 관련 없는 문단은 무시하고, 어느 한 문단이라도 주장을 거짓으로 "
+    "만들면 그것으로 충분하다. 이름이 비슷한 다른 인물·장소·시대를 같은 것으로 착각하지 않도록 이름을 정확히 비교한다."
+)
+
+JUDGE_TEMPLATE = f"""너는 사실 검증 도우미다. 아래 [근거 문단]들은 위키백과에서 자동으로 찾아온 것이며, 주장과 관련 없는 문단이 섞여 있을 수 있다. {_GROUNDING_RULE} {_CAREFUL_RULE}
 
 다음 순서대로 답하라.
 1. core_claim: {_CORE_CLAIM_RULE}
@@ -81,36 +102,43 @@ JUDGE_TEMPLATE = f"""너는 사실 검증 도우미다. 아래 [근거 문단]�
 - 판단불가: 근거 문단이 core_claim의 참/거짓을 정해주지 않는다
 {_MENTION_RULE}
 
+{_EXAMPLES}
+
 [근거 문단]
 {{premise}}
 
 [주장]
 {{hypothesis}}"""
 
-VERIFY_TEMPLATE = f"""너는 사실 검증 검토자다. 아래 [근거 문단]이 [주장]을 거짓으로 만드는지 확인하라. {_GROUNDING_RULE} 확실하지 않으면 "반박 아님"으로 답하라.
+VERIFY_TEMPLATE = f"""너는 사실 검증 검토자다. 아래 [근거 문단]이 [검증할 주장]을 거짓으로 만드는지 확인하라. [검증할 주장]은 [원래 문장]에서 참/거짓을 따질 핵심 내용을 뽑은 것이다. {_GROUNDING_RULE} {_CAREFUL_RULE} 확실하지 않으면 "반박 아님"으로 답하라.
 
 다음 순서대로 답하라.
-1. core_claim: {_CORE_CLAIM_RULE}
-2. refuting_sentence: 근거 문단에서, 그 내용이 사실이라면 core_claim이 거짓일 수밖에 없게 만드는 문장을 그대로 옮겨 적는다. 그런 문장이 없으면 빈 문자열로 둔다.
+1. myth_intro: [원래 문장]이 그 내용을 "속설", "음모론", "미신", "잘못 알려진 것"이라고 부르며 소개하는 문장이면 "예", 아니면 "아니오"로 답한다. "~라고 들었다", "~라더라"처럼 전해 들은 말을 옮기기만 하는 문장은 "아니오"다.
+2. refuting_sentence: 근거 문단에서, 그 내용이 사실이라면 [검증할 주장]이 거짓일 수밖에 없게 만드는 문장을 그대로 옮겨 적는다. 그런 문장이 없으면 빈 문자열로 둔다.
 3. refuting_ids: 그런 문장이 들어 있는 근거 문단의 번호를 모두 적는다. 없으면 빈 목록으로 둔다.
-4. reason: 그 근거 문단 때문에 core_claim이 왜 거짓인지 한 문장으로 설명한다. {_REASON_RULE}
+4. reason: 그 근거 문단 때문에 [검증할 주장]이 왜 거짓인지 한 문장으로 설명한다. {_REASON_RULE}
 5. verdict: reason을 바탕으로 판정한다.
-- 반박: {_REFUTES}
-- 반박 아님: 그렇지 않다. 근거 문단이 core_claim과 관련된 내용을 다루기만 하거나 소개만 하는 경우도 반박 아님이다.
+- 반박: {_REFUTES.replace("core_claim", "[검증할 주장]")}
+- 반박 아님: 그렇지 않다. 근거 문단이 관련된 내용을 다루기만 하거나 소개만 하는 경우도 반박 아님이다.
 {_MENTION_RULE}
+
+{_EXAMPLES}
 
 [근거 문단]
 {{premise}}
 
-[주장]
-{{hypothesis}}"""
+[원래 문장]
+{{sentence}}
+
+[검증할 주장]
+{{claim}}"""
 
 
 # 근거 문단 전체 글자 수 상한. 입력이 모델 컨텍스트(misinfo_infer.OLLAMA_NUM_CTX=8192 토큰)를 넘으면
 # Ollama가 프롬프트 앞부분 - 오반박을 막는 지시문 - 부터 조용히 잘라낸다(2026-10-01 리뷰). 한국어는
-# 한 토큰이 한 글자보다 짧지 않으므로, 근거 5,000자 + 지시문 약 1,300자 + 주장 + 출력이 어떤
+# 한 토큰이 한 글자보다 짧지 않으므로, 근거 4,500자 + 지시문·예시 약 2,100자 + 주장 + 출력이 어떤
 # 토크나이저에서도 8192 안에 들어간다. 보통 입력(문단 5개 x 약 600자)은 이 상한에 걸리지 않는다.
-PREMISE_MAX_CHARS = 5000
+PREMISE_MAX_CHARS = 4500
 
 
 def fit_blocks(blocks: list[tuple[str, str]], max_chars: int = PREMISE_MAX_CHARS) -> list[tuple[str, str]]:
@@ -148,10 +176,8 @@ def build_judge_prompt(sentence: str, evidence_blocks: list[tuple[str, str]]) ->
     return JUDGE_TEMPLATE.format(premise=_format_blocks(evidence_blocks), hypothesis=sentence)
 
 
-def build_verify_prompt(sentence: str, cited_blocks: list[tuple[str, str]]) -> str:
-    # 1차 판정이 정리한 core_claim이 아니라 원래 문장을 넘긴다 - 1차가 전해 들은 말/속설 소개를
-    # 잘못 정리했으면 검증도 엉뚱한 주장을 확인하게 되므로, 검증은 원래 문장부터 다시 정리한다.
-    return VERIFY_TEMPLATE.format(premise=_format_blocks(cited_blocks), hypothesis=sentence)
+def build_verify_prompt(sentence: str, claim: str, cited_blocks: list[tuple[str, str]]) -> str:
+    return VERIFY_TEMPLATE.format(premise=_format_blocks(cited_blocks), sentence=sentence, claim=claim)
 
 
 def _load_object(raw_response: str) -> dict | None:
@@ -204,22 +230,22 @@ def parse_verify_response(raw_response: str, cited_count: int) -> dict | None:
     data = _load_object(raw_response)
     if data is None:
         return None
-    core_claim = data.get("core_claim")
+    myth_intro = data.get("myth_intro")
     refuting_sentence = data.get("refuting_sentence")
     refuting_ids = data.get("refuting_ids")
     reason = data.get("reason")
     verdict = data.get("verdict")
     if (
         verdict not in VERIFY_VERDICTS
+        or myth_intro not in MYTH_INTRO_ANSWERS
         or not isinstance(reason, str)
         or (verdict == "반박" and not reason.strip())
-        or not isinstance(core_claim, str)
         or not isinstance(refuting_sentence, str)
         or not isinstance(refuting_ids, list)
     ):
         return None
     return {
-        "core_claim": core_claim,
+        "myth_intro": myth_intro,
         "refuting_sentence": refuting_sentence,
         "refuting_ids": _valid_ids(refuting_ids, cited_count),
         "reason": reason,

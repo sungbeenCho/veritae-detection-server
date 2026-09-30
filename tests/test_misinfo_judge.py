@@ -48,11 +48,11 @@ def _judge(label, cite=("선풍기 사망설", "케니 맥코믹"), reason="1차
     return respond
 
 
-def _verify(verdict, refute=("선풍기 사망설",), reason="선풍기 사망설 문서는 근거가 없다고 한다."):
+def _verify(verdict, refute=("선풍기 사망설",), reason="선풍기 사망설 문서는 근거가 없다고 한다.", myth_intro="아니오"):
     def respond(prompt):
         ids = _block_ids(prompt)
         return json.dumps(
-            {"core_claim": "선풍기를 틀고 자면 사망한다.", "refuting_sentence": "그러나 이 속설은 과학적 근거가 없다.",
+            {"myth_intro": myth_intro, "refuting_sentence": "그러나 이 속설은 과학적 근거가 없다.",
              "refuting_ids": [ids[t] for t in refute if t in ids], "reason": reason, "verdict": verdict},
             ensure_ascii=False,
         )
@@ -96,7 +96,7 @@ def test_refutation_without_cited_evidence_is_not_verified_or_shown(kiwi, conn, 
     assert [c["stage"] for c in calls] == ["judge"]
 
 
-def test_verification_sees_original_sentence_and_only_cited_blocks(kiwi, conn, ollama):
+def test_verification_gets_first_pass_claim_sentence_and_only_cited_blocks(kiwi, conn, ollama):
     calls, responses = ollama
     responses["judge"] = _judge("반박", cite=("선풍기 사망설",))
     responses["verify"] = _verify("반박 아님", refute=())
@@ -104,8 +104,29 @@ def test_verification_sees_original_sentence_and_only_cited_blocks(kiwi, conn, o
     _run(kiwi, conn)
 
     verify_prompt = calls[1]["prompt"]
-    assert SENTENCE in verify_prompt
+    assert f"[원래 문장]\n{SENTENCE}" in verify_prompt
+    assert "[검증할 주장]\n선풍기를 틀고 자면 사망한다." in verify_prompt
     assert list(_block_ids(verify_prompt)) == ["선풍기 사망설"]
+
+
+def test_myth_introducing_sentence_is_never_shown_as_refuted(kiwi, conn, ollama):
+    """1차가 "~라는 속설이 있다"(참인 문장)를 속의 내용으로 잘못 풀어 반박했어도, 검증이 속설
+    소개 문장이라고 답하면 판정·근거와 상관없이 버린다."""
+    _, responses = ollama
+    responses["judge"] = _judge("반박")
+    responses["verify"] = _verify("반박", myth_intro="예")
+
+    assert _run(kiwi, conn) is None
+
+
+def test_pick_diverse_limits_chunks_per_article():
+    from wiki_index import Chunk
+
+    ranked = [Chunk("선풍기 사망설", f"s{i}", i) for i in range(4)] + [Chunk("미신", "m", 9), Chunk("선풍기", "f", 10)]
+
+    picked = misinfo_infer.pick_diverse(ranked, top_k=4)
+
+    assert [c.title for c in picked] == ["선풍기 사망설", "선풍기 사망설", "미신", "선풍기"]
 
 
 def test_rejected_verification_drops_the_refutation(kiwi, conn, ollama):

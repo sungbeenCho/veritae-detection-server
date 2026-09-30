@@ -69,14 +69,32 @@ def embed(texts: list[str]):
     return torch.nn.functional.normalize(vectors, dim=-1).cpu()
 
 
+# 한 문서에서 고를 수 있는 조각 수. 상위 5개가 전부 한 문서('선풍기 사망설', '에펠탑의 레플리카…')
+# 조각이라 다른 문서의 근거('미신' 문서의 "선풍기 미신" 등)가 밀려났다(2026-10-01 실측). 앞뒤 문맥을
+# 붙이므로 한 문서에서 2개면 그 문서의 내용은 충분히 담긴다.
+MAX_CHUNKS_PER_TITLE = 2
+
+
 def rerank(sentence: str, candidates: list[Chunk], top_k: int) -> list[Chunk]:
     if not candidates:
         return []
     query_vec = embed(["query: " + sentence])
     passage_vecs = embed([f"passage: {c.title} {c.text}" for c in candidates])
     scores = (passage_vecs @ query_vec.T).squeeze(-1)
-    top_indices = scores.argsort(descending=True)[:top_k].tolist()
-    return [candidates[i] for i in top_indices]
+    return pick_diverse([candidates[i] for i in scores.argsort(descending=True).tolist()], top_k)
+
+
+def pick_diverse(ranked: list[Chunk], top_k: int, per_title: int = MAX_CHUNKS_PER_TITLE) -> list[Chunk]:
+    """순위 순으로 고르되 한 문서에서는 per_title개까지만 고른다."""
+    picked: list[Chunk] = []
+    counts: dict[str, int] = {}
+    for chunk in ranked:
+        if counts.get(chunk.title, 0) < per_title:
+            picked.append(chunk)
+            counts[chunk.title] = counts.get(chunk.title, 0) + 1
+            if len(picked) == top_k:
+                break
+    return picked
 
 
 # 모델이 입력과 출력을 합쳐 한 번에 다룰 수 있는 토큰 수. 서버 기본값(데스크탑 실측 4096)에
@@ -167,11 +185,12 @@ def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str,
     # 실제로 반박한다고 고른 문단만 근거로 표시한다 - 반박이 아닌 문단은 하나도 나가지 않는다.
     cited = [evidence_blocks[i - 1] for i in first["evidence_ids"]]
     check = _ask_parsed(
-        build_verify_prompt(sentence, cited), VERIFY_SCHEMA, parse_verify_response,
+        build_verify_prompt(sentence, first["core_claim"], cited), VERIFY_SCHEMA, parse_verify_response,
         len(cited), "검증", sentence, ollama_url, model,
     )
     logger.debug("검증: sentence=%r check=%r cited_titles=%r", sentence, check, [title for title, _ in cited])
-    if check is None or check["verdict"] != "반박" or not check["refuting_ids"]:
+    # 원래 문장이 속설을 속설이라고 소개하는 참인 문장이면, 1차가 그 속을 풀어 반박했더라도 버린다.
+    if check is None or check["myth_intro"] == "예" or check["verdict"] != "반박" or not check["refuting_ids"]:
         logger.info(
             "1차 반박이 검증을 통과하지 못해 제외함: sentence=%r first_reason=%r check=%r",
             sentence, first["reason"], check,
