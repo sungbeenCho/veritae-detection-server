@@ -133,6 +133,14 @@ def test_verified_refutation_shows_only_blocks_verification_confirmed(kiwi, conn
     }
 
 
+def test_block_numbers_in_verified_reason_become_titles(kiwi, conn, ollama):
+    _, responses = ollama
+    responses["judge"] = _judge("반박", cite=("선풍기 사망설",))
+    responses["verify"] = _verify("반박", refute=("선풍기 사망설",), reason="[1] 문서는 근거가 없다고 한다.")
+
+    assert _run(kiwi, conn)["reason"] == "'선풍기 사망설' 문서는 근거가 없다고 한다."
+
+
 def test_verified_refutation_without_refuting_blocks_is_not_shown(kiwi, conn, ollama):
     _, responses = ollama
     responses["judge"] = _judge("반박")

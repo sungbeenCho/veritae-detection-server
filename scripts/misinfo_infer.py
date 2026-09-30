@@ -21,8 +21,10 @@ from misinfo_lib import (
     build_claim,
     build_judge_prompt,
     build_verify_prompt,
+    fit_blocks,
     parse_judge_response,
     parse_verify_response,
+    replace_block_numbers,
 )
 from wiki_index import Chunk, expand_with_neighbors, extract_keywords, get_snapshot, search
 
@@ -80,8 +82,8 @@ def rerank(sentence: str, candidates: list[Chunk], top_k: int) -> list[Chunk]:
 # 모델이 입력과 출력을 합쳐 한 번에 다룰 수 있는 토큰 수. 서버 기본값(데스크탑 실측 4096)에
 # 기대지 않고 명시한다 - 입력이 이 한도를 넘으면 Ollama가 프롬프트 앞부분(지시문)을 조용히
 # 잘라내고, 출력이 남은 한도를 넘으면 JSON을 다 쓰기 전에 멈춰 빈 응답이 된다(2026-10-01 실측:
-# 생각 모드가 4096을 다 써서 done_reason=length, response=''). 근거 문단 최대치(조각 약 15개)
-# 입력 + 판정 출력이 여유 있게 들어가는 크기다.
+# 생각 모드가 4096을 다 써서 done_reason=length, response=''). 입력 크기는 misinfo_lib.fit_blocks가
+# 이 한도 안으로 보장한다.
 OLLAMA_NUM_CTX = 8192
 
 
@@ -147,7 +149,7 @@ def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str,
         return None
 
     top_chunks = rerank(sentence, candidates, top_k=evidence_count)
-    evidence_blocks = expand_with_neighbors(conn, top_chunks)
+    evidence_blocks = fit_blocks(expand_with_neighbors(conn, top_chunks))
 
     first = _ask_parsed(
         build_judge_prompt(sentence, evidence_blocks), JUDGE_SCHEMA, parse_judge_response,
@@ -161,7 +163,7 @@ def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str,
         return None
 
     # 반박은 사용자에게 "이 문장은 거짓"이라고 보여주는 유일한 판정이라, 1차가 인용한 문단만
-    # 따로 보여주고 "이 문단이 정말 주장을 거짓으로 만드는가"를 독립적으로 다시 확인한다. 검증이
+    # 따로 보여주고 "이 문단이 정말 주장을 거짓으로 만드는가"로 좁혀 다시 확인한다. 검증이
     # 실제로 반박한다고 고른 문단만 근거로 표시한다 - 반박이 아닌 문단은 하나도 나가지 않는다.
     cited = [evidence_blocks[i - 1] for i in first["evidence_ids"]]
     check = _ask_parsed(
@@ -176,7 +178,8 @@ def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str,
         )
         return None
     refuting = [cited[i - 1] for i in check["refuting_ids"]]
-    return build_claim(sentence, check["reason"], refuting)
+    # 검증 프롬프트의 번호는 인용 문단(cited) 기준이다.
+    return build_claim(sentence, replace_block_numbers(check["reason"], cited), refuting)
 
 
 def main() -> None:

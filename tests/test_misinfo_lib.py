@@ -2,13 +2,51 @@ import json
 
 from scripts.misinfo_lib import (
     JUDGE_SCHEMA,
+    PREMISE_MAX_CHARS,
     VERIFY_SCHEMA,
     build_claim,
     build_judge_prompt,
     build_verify_prompt,
+    fit_blocks,
     parse_judge_response,
     parse_verify_response,
+    replace_block_numbers,
 )
+
+
+def test_fit_blocks_keeps_everything_under_the_limit():
+    blocks = [("A", "가" * 600), ("B", "나" * 600)]
+
+    assert fit_blocks(blocks, max_chars=5000) == blocks
+
+
+def test_fit_blocks_drops_whole_lower_ranked_blocks_without_cutting_text():
+    blocks = [("A", "가" * 3000), ("B", "나" * 2500), ("C", "다" * 1000)]
+
+    assert fit_blocks(blocks, max_chars=5000) == [("A", "가" * 3000), ("C", "다" * 1000)]
+
+
+def test_fit_blocks_cuts_only_when_the_top_block_alone_is_too_long():
+    kept = fit_blocks([("A", "가" * 9000), ("B", "나" * 10)], max_chars=5000)
+
+    assert kept == [("A", "가" * 4999)]
+
+
+def test_worst_case_prompt_fits_context_even_at_one_token_per_character():
+    """입력이 컨텍스트를 넘으면 오반박을 막는 지시문부터 잘린다 - 글자 수가 곧 토큰 수라고 가정해도
+    (한국어 토큰은 한 글자보다 짧지 않다) 판정 출력 여유 1,000토큰을 남기고 8192 안에 들어가야 한다."""
+    worst = fit_blocks([("제목" * 10, "가" * 3000)] * 5)
+    sentence = "가" * 300
+
+    for prompt in (build_judge_prompt(sentence, worst), build_verify_prompt(sentence, worst)):
+        assert len(prompt) + 1000 <= 8192
+    assert sum(len(t) + len(x) for t, x in worst) <= PREMISE_MAX_CHARS
+
+
+def test_replace_block_numbers_uses_titles_and_leaves_unknown_numbers():
+    blocks = [("백신", "..."), ("자폐증", "...")]
+
+    assert replace_block_numbers("[1] 문서와 [2] 문서, [7]은 모름", blocks) == "'백신' 문서와 '자폐증' 문서, [7]은 모름"
 
 
 def _judge_raw(**overrides) -> str:

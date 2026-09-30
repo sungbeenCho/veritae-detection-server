@@ -3,13 +3,15 @@
 (docs/superpowers/specs/2026-09-29-misinformation-detection-design.md §5) - 바꾸려면 데스크탑에서
 회귀 테스트셋을 반드시 다시 돌려야 한다.
 
-판정은 두 단계다. 1차 판정(JUDGE)이 반박 후보와 인용 문단을 고르고, 검증(VERIFY)이 인용된
-문단만 보고 "이 문단이 정말 주장을 거짓으로 만드는가"를 독립적으로 다시 확인해 실제로
-반박하는 문단만 남긴다. 화면에는 검증을 통과한 문단만 근거로 나간다.
+판정은 두 단계다. 1차 판정(JUDGE)이 반박 후보와 인용 문단을 고르고, 검증(VERIFY)이 무관한
+문단을 치운 채 인용된 문단만 보고 "이 문단이 정말 주장을 거짓으로 만드는가"로 좁혀 다시 확인해
+실제로 반박하는 문단만 남긴다. 같은 모델·같은 설정이라 완전히 독립적인 판단은 아니다 - 효과는
+회귀 테스트셋으로 확인한다. 화면에는 검증을 통과한 문단만 근거로 나간다.
 """
 from __future__ import annotations
 
 import json
+import re
 
 from wiki_index import wiki_url
 
@@ -104,6 +106,40 @@ VERIFY_TEMPLATE = f"""너는 사실 검증 검토자다. 아래 [근거 문단]�
 {{hypothesis}}"""
 
 
+# 근거 문단 전체 글자 수 상한. 입력이 모델 컨텍스트(misinfo_infer.OLLAMA_NUM_CTX=8192 토큰)를 넘으면
+# Ollama가 프롬프트 앞부분 - 오반박을 막는 지시문 - 부터 조용히 잘라낸다(2026-10-01 리뷰). 한국어는
+# 한 토큰이 한 글자보다 짧지 않으므로, 근거 5,000자 + 지시문 약 1,300자 + 주장 + 출력이 어떤
+# 토크나이저에서도 8192 안에 들어간다. 보통 입력(문단 5개 x 약 600자)은 이 상한에 걸리지 않는다.
+PREMISE_MAX_CHARS = 5000
+
+
+def fit_blocks(blocks: list[tuple[str, str]], max_chars: int = PREMISE_MAX_CHARS) -> list[tuple[str, str]]:
+    """순위 순으로 문단을 담다가 상한을 넘는 문단은 뺀다. 문단 중간은 자르지 않는다 - 잘라내면
+    "가설이 있다" 뒤의 "근거 없다"가 빠지는 문제(2026-10-01)가 다시 생긴다. 1순위 문단 하나가
+    혼자 상한을 넘는 극단적인 경우에만 그 문단을 잘라서 넣는다."""
+    kept: list[tuple[str, str]] = []
+    used = 0
+    for title, text in blocks:
+        size = len(title) + len(text)
+        if used + size <= max_chars:
+            kept.append((title, text))
+            used += size
+        elif not kept:
+            kept.append((title, text[: max_chars - len(title)]))
+            used = max_chars
+    return kept
+
+
+def replace_block_numbers(reason: str, blocks: list[tuple[str, str]]) -> str:
+    """이유 문장의 "[1]" 같은 문단 번호를 문서 제목으로 바꾼다. 사용자는 번호를 볼 수 없는데,
+    프롬프트로 금지해도 모델이 자주 어겼다(2026-10-01 실측: "[1] 문서에서 ..."). 범위 밖 번호는 둔다."""
+    def to_title(match: re.Match) -> str:
+        number = int(match.group(1))
+        return f"'{blocks[number - 1][0]}'" if 1 <= number <= len(blocks) else match.group(0)
+
+    return re.sub(r"\[(\d+)\]", to_title, reason)
+
+
 def _format_blocks(blocks: list[tuple[str, str]]) -> str:
     return "\n".join(f"[{i}] ({title}) {text}" for i, (title, text) in enumerate(blocks, start=1))
 
@@ -114,7 +150,7 @@ def build_judge_prompt(sentence: str, evidence_blocks: list[tuple[str, str]]) ->
 
 def build_verify_prompt(sentence: str, cited_blocks: list[tuple[str, str]]) -> str:
     # 1차 판정이 정리한 core_claim이 아니라 원래 문장을 넘긴다 - 1차가 전해 들은 말/속설 소개를
-    # 잘못 정리했으면 검증도 엉뚱한 주장을 확인하게 되므로, 검증은 처음부터 독립적으로 정리한다.
+    # 잘못 정리했으면 검증도 엉뚱한 주장을 확인하게 되므로, 검증은 원래 문장부터 다시 정리한다.
     return VERIFY_TEMPLATE.format(premise=_format_blocks(cited_blocks), hypothesis=sentence)
 
 
