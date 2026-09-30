@@ -1,0 +1,102 @@
+[
+ {
+  "expected": "entailment",
+  "category": "e2e_wiki_search",
+  "sentence": "세종대왕은 훈민정음을 창제했다."
+ },
+ {
+  "expected": "entailment",
+  "category": "e2e_wiki_search",
+  "sentence": "에베레스트산은 세계에서 가장 높은 산이다."
+ },
+ {
+  "expected": "entailment",
+  "category": "e2e_wiki_search",
+  "sentence": "대한민국의 수도는 서울이다."
+ },
+ {
+  "expected": "entailment",
+  "category": "e2e_wiki_search",
+  "sentence": "이순신은 한산도 대첩에서 승리했다."
+ },
+ {
+  "expected": "entailment",
+  "category": "e2e_wiki_search",
+  "sentence": "물의 끓는점은 1기압에서 섭씨 100도이다."
+ },
+ {
+  "expected": "entailment",
+  "category": "e2e_wiki_search",
+  "sentence": "커피에는 카페인이 들어 있다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "e2e_wiki_search",
+  "sentence": "만리장성은 우주에서 맨눈으로 보인다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "e2e_wiki_search",
+  "sentence": "인간은 뇌의 10퍼센트만 사용한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "e2e_wiki_search",
+  "sentence": "선풍기를 틀고 자면 사망한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "e2e_wiki_search",
+  "sentence": "백신은 자폐증을 유발한다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "e2e_wiki_search",
+  "sentence": "부산은 대한민국의 수도이다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "e2e_wiki_search",
+  "sentence": "아폴로 11호의 달 착륙은 조작되었다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "e2e_wiki_search",
+  "sentence": "지구는 평평하다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "e2e_wiki_search",
+  "sentence": "에펠탑은 영국 런던에 있다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "e2e_wiki_search",
+  "sentence": "세종대왕은 고려의 왕이었다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "e2e_wiki_search",
+  "sentence": "한글은 조선 세조 때 만들어졌다."
+ },
+ {
+  "expected": "contradiction",
+  "category": "e2e_wiki_search",
+  "sentence": "태양은 지구 주위를 돈다."
+ },
+ {
+  "expected": "neutral",
+  "category": "e2e_wiki_search",
+  "sentence": "우리 동네 편의점은 다음 주에 문을 닫는다."
+ },
+ {
+  "expected": "neutral",
+  "category": "e2e_wiki_search",
+  "sentence": "김철수 씨는 어제 복권에 당첨되었다."
+ },
+ {
+  "expected": "neutral",
+  "category": "e2e_wiki_search",
+  "sentence": "다음 주 월요일에 서울에 비가 온다."
+ }
+]
