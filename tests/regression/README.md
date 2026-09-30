@@ -1,7 +1,8 @@
 # tests/regression/README.md
 
 가짜정보탐지 정확도/속도 회귀 테스트셋. pytest가 아니라 **데스크탑에서 수동으로** 돌린다 -
-실제 위키 인덱스(build_wiki_index.py로 미리 구축)와 Ollama가 켜져 있어야 한다.
+실제 위키 인덱스(build_wiki_index.py로 미리 구축), 반박 확인용 NLI 모델(train_nli.py로 미리 학습,
+기본 위치 `data\nli_model`, 다른 곳이면 `--nli-model`로 지정), Ollama가 모두 준비돼 있어야 한다.
 
 ## 언제 돌리나
 

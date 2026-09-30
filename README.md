@@ -566,6 +566,7 @@ winget install --id Ollama.Ollama -e
 ```powershell
 ollama pull qwen3.5:4b
 ```
+
 ### 2. `text-extraction` 환경에 패키지 2개 추가
 
 기존 사기 위험도 분석 설정에서 만든 `text-extraction` conda 환경을 그대로 재사용한다(새 환경 안 만듦).
@@ -574,6 +575,38 @@ ollama pull qwen3.5:4b
 conda activate text-extraction
 pip install kiwipiepy mwparserfromhell
 ```
+
+### 2-1. 반박 확인용 NLI 모델 학습 (최초 1회, 약 1~2시간)
+
+LLM이 "거짓"이라고 판정한 문장은, 문장 두 개의 모순 여부만 판정하는 NLI 분류기로 근거 문단을 한 번 더 확인한 뒤에만 표시한다(`scripts/nli_check.py`). 라이선스가 명시된 한국어 NLI 모델이 없어 `klue/roberta-large`를 KLUE-NLI로 직접 학습한다. 학습에는 GPU가 필요한데 `text-extraction` 환경의 PyTorch는 CPU 전용이라, 학습 전용 환경을 따로 만든다. 기존 환경은 건드리지 않는다.
+
+먼저 `text-extraction`의 transformers 버전을 확인한다. 학습 환경도 같은 버전으로 맞춰야 학습한 모델을 판정 쪽에서 문제없이 읽는다.
+
+```powershell
+conda activate text-extraction
+python -c "import transformers; print(transformers.__version__)"
+```
+
+학습 환경을 만들고 학습한다. `<위 버전>` 자리에 방금 나온 버전을 넣는다. PyTorch 설치 명령은 SPAI 환경과 같다.
+
+```powershell
+conda create -n nli-train python=3.11 -y
+conda activate nli-train
+conda install pytorch pytorch-cuda=12.4 -c pytorch -c nvidia -y
+pip install transformers==<위 버전> datasets accelerate
+cd C:\ai\veritae-detection-server\scripts
+python train_nli.py --output C:\ai\veritae-detection-server\data\nli_model
+```
+
+학습 중에는 GPU를 거의 다 쓰므로 분석 요청을 보내지 않는다. 끝나면 `완료: KLUE-NLI 검증 정확도 0.8x -> ...`가 찍힌다(0.85 이상이 정상). 이어서 판정 환경에서 모델을 제대로 읽는지 확인한다. `0.9` 이상의 숫자가 나오면 정상이다.
+
+```powershell
+conda activate text-extraction
+cd C:\ai\veritae-detection-server\scripts
+python -c "from nli_check import NliModel; print(NliModel(r'C:\ai\veritae-detection-server\data\nli_model').contradiction_scores(['에펠탑은 프랑스 파리에 있다.'], '에펠탑은 독일에 있다.'))"
+```
+
+모델 폴더는 기본적으로 레포의 `data\nli_model`을 쓴다. 다른 곳에 두면 환경변수 `MISINFO_NLI_MODEL`로 경로를 지정한다. 학습 결과는 원재료(KLUE 데이터셋, KLUE-RoBERTa)의 라이선스인 CC BY-SA 4.0을 따른다.
 
 ### 3. 위키 인덱스 구축 (최초 1회, 이후 원할 때 재실행)
 

@@ -1,6 +1,6 @@
 # scripts/misinfo_infer.py
-"""문장 목록 -> 위키 검색 -> e5 재정렬 -> 앞뒤 문맥 붙이기 -> LLM 1차 판정 -> 반박 후보는 인용 문단만
-보고 다시 검증 -> 검증을 통과한 반박 문장만, 실제로 반박하는 근거와 함께 결과로.
+"""문장 목록 -> 위키 검색 -> e5 재정렬 -> 앞뒤 문맥 붙이기 -> LLM 1차 판정 -> 반박 후보는 인용 문단을
+NLI 분류기로 문장 단위 확인 -> 둘 다 반박이라고 한 문장만, 모순이 확인된 근거 문단과 함께 결과로.
 text-extraction conda env(kiwipiepy, mwparserfromhell, torch, transformers 설치됨)에서
 실행되어야 한다. veritae-detection-server(FastAPI)는 이 스크립트를 subprocess로 호출하고
 --output 경로의 JSON만 읽는다 - scam_infer.py와 동일한 패턴.
@@ -15,17 +15,8 @@ from pathlib import Path
 
 from kiwipiepy import Kiwi
 
-from misinfo_lib import (
-    JUDGE_SCHEMA,
-    VERIFY_SCHEMA,
-    build_claim,
-    build_judge_prompt,
-    build_verify_prompt,
-    fit_blocks,
-    parse_judge_response,
-    parse_verify_response,
-    replace_block_numbers,
-)
+from misinfo_lib import JUDGE_SCHEMA, build_claim, build_judge_prompt, fit_blocks, parse_judge_response, replace_block_numbers
+from nli_check import ContradictionScorer, NliModel, default_model_path, refuting_blocks
 from wiki_index import Chunk, expand_with_neighbors, extract_keywords, get_snapshot, search
 
 # 이름 있는 로거를 쓴다 - 회귀 테스트가 이 로거만 자세히 보여주고 httpx/HuggingFace 로그는 끌 수 있게.
@@ -147,20 +138,9 @@ def unload_ollama_model(ollama_url: str, model: str) -> None:
         logger.warning("Ollama 모델 언로드 요청 실패 (model=%s)", model, exc_info=True)
 
 
-def _ask_parsed(prompt: str, schema: dict, parse, count: int, stage: str, sentence: str, ollama_url: str, model: str) -> dict | None:
-    raw_response = ask_ollama(ollama_url, model, prompt, schema)
-    parsed = parse(raw_response, count)
-    if parsed is None:
-        # 형식 오류 - 이 문장은 판단불가로 취급(§10), 결과에 포함하지 않는다. 다만 조용히
-        # 넘어가면 LLM 출력이 계속 깨지고 있어도 알아챌 방법이 없으므로 경고 로그를 남긴다.
-        logger.warning(
-            "LLM 응답 형식 오류로 문장을 판단불가 처리함: stage=%s sentence=%r raw_response=%r",
-            stage, sentence, raw_response,
-        )
-    return parsed
-
-
-def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str, evidence_count: int) -> dict | None:
+def judge_sentence(
+    kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str, evidence_count: int, nli: ContradictionScorer,
+) -> dict | None:
     keywords = extract_keywords(kiwi, sentence)
     candidates = search(conn, keywords, limit=50) if keywords else []
     if not candidates:
@@ -169,10 +149,12 @@ def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str,
     top_chunks = rerank(sentence, candidates, top_k=evidence_count)
     evidence_blocks = fit_blocks(expand_with_neighbors(conn, top_chunks))
 
-    first = _ask_parsed(
-        build_judge_prompt(sentence, evidence_blocks), JUDGE_SCHEMA, parse_judge_response,
-        len(evidence_blocks), "1차", sentence, ollama_url, model,
-    )
+    raw_response = ask_ollama(ollama_url, model, build_judge_prompt(sentence, evidence_blocks), JUDGE_SCHEMA)
+    first = parse_judge_response(raw_response, len(evidence_blocks))
+    if first is None:
+        # 형식 오류 - 이 문장은 판단불가로 취급(§10), 결과에 포함하지 않는다. 다만 조용히
+        # 넘어가면 LLM 출력이 계속 깨지고 있어도 알아챌 방법이 없으므로 경고 로그를 남긴다.
+        logger.warning("LLM 응답 형식 오류로 문장을 판단불가 처리함: sentence=%r raw_response=%r", sentence, raw_response)
     logger.debug(
         "1차 판정: sentence=%r verdict=%r evidence_titles=%r",
         sentence, first, [title for title, _ in evidence_blocks],
@@ -180,25 +162,22 @@ def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str,
     if first is None or first["label"] != "반박" or not first["evidence_ids"]:
         return None
 
-    # 반박은 사용자에게 "이 문장은 거짓"이라고 보여주는 유일한 판정이라, 1차가 인용한 문단만
-    # 따로 보여주고 "이 문단이 정말 주장을 거짓으로 만드는가"로 좁혀 다시 확인한다. 검증이
-    # 실제로 반박한다고 고른 문단만 근거로 표시한다 - 반박이 아닌 문단은 하나도 나가지 않는다.
+    # 반박은 사용자에게 "이 문장은 거짓"이라고 보여주는 유일한 판정이라, 1차가 인용한 문단을 NLI
+    # 분류기로 문장 단위로 다시 확인한다. 주장과 모순되는 문장이 실제로 들어 있는 문단만 근거로
+    # 표시하고, 그런 문단이 하나도 없으면 반박을 버린다(nli_check.py 모듈 설명 참고).
     cited = [evidence_blocks[i - 1] for i in first["evidence_ids"]]
-    check = _ask_parsed(
-        build_verify_prompt(sentence, first["core_claim"], cited), VERIFY_SCHEMA, parse_verify_response,
-        len(cited), "검증", sentence, ollama_url, model,
+    confirmed = refuting_blocks(nli, cited, first["core_claim"])
+    logger.debug(
+        "NLI 확인: sentence=%r claim=%r confirmed=%r cited_titles=%r",
+        sentence, first["core_claim"],
+        [(c["title"], c["sentence"], round(c["score"], 3)) for c in confirmed], [title for title, _ in cited],
     )
-    logger.debug("검증: sentence=%r check=%r cited_titles=%r", sentence, check, [title for title, _ in cited])
-    # 원래 문장이 속설을 속설이라고 소개하는 참인 문장이면, 1차가 그 속을 풀어 반박했더라도 버린다.
-    if check is None or check["myth_intro"] == "예" or check["verdict"] != "반박" or not check["refuting_ids"]:
-        logger.info(
-            "1차 반박이 검증을 통과하지 못해 제외함: sentence=%r first_reason=%r check=%r",
-            sentence, first["reason"], check,
-        )
+    if not confirmed:
+        logger.info("1차 반박을 NLI가 확인하지 못해 제외함: sentence=%r first_reason=%r", sentence, first["reason"])
         return None
-    refuting = [cited[i - 1] for i in check["refuting_ids"]]
-    # 검증 프롬프트의 번호는 인용 문단(cited) 기준이다.
-    return build_claim(sentence, replace_block_numbers(check["reason"], cited), refuting)
+    # 1차 판정의 번호는 evidence_blocks 기준이다.
+    reason = replace_block_numbers(first["reason"], evidence_blocks)
+    return build_claim(sentence, reason, [(c["title"], c["text"]) for c in confirmed])
 
 
 def main() -> None:
@@ -211,9 +190,11 @@ def main() -> None:
     parser.add_argument("--ollama-url", required=True)
     parser.add_argument("--ollama-model", required=True)
     parser.add_argument("--evidence-count", type=int, default=5)
+    parser.add_argument("--nli-model", default=default_model_path())
     args = parser.parse_args()
 
     sentences = json.loads(args.sentences.read_text(encoding="utf-8"))
+    nli = NliModel(args.nli_model)
 
     # 읽기 전용으로 연다 - 일반 sqlite3.connect(path)는 파일이 없으면 빈 DB 파일을 새로
     # 만들어버려서(스키마 없는 깨진 wiki_index.sqlite3), 이후 모든 검색이 "그냥 결과 없음"으로
@@ -229,7 +210,9 @@ def main() -> None:
     claims = []
     try:
         for sentence in sentences:
-            claim = judge_sentence(kiwi, conn, sentence, args.ollama_url, args.ollama_model, args.evidence_count)
+            claim = judge_sentence(
+                kiwi, conn, sentence, args.ollama_url, args.ollama_model, args.evidence_count, nli.contradiction_scores,
+            )
             if claim is not None:
                 claims.append(claim)
     finally:

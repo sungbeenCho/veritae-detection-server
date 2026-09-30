@@ -3,10 +3,8 @@
 (docs/superpowers/specs/2026-09-29-misinformation-detection-design.md §5) - 바꾸려면 데스크탑에서
 회귀 테스트셋을 반드시 다시 돌려야 한다.
 
-판정은 두 단계다. 1차 판정(JUDGE)이 반박 후보와 인용 문단을 고르고, 검증(VERIFY)이 무관한
-문단을 치운 채 인용된 문단만 보고 "이 문단이 정말 주장을 거짓으로 만드는가"로 좁혀 다시 확인해
-실제로 반박하는 문단만 남긴다. 같은 모델·같은 설정이라 완전히 독립적인 판단은 아니다 - 효과는
-회귀 테스트셋으로 확인한다. 화면에는 검증을 통과한 문단만 근거로 나간다.
+판정은 두 단계다. 1차 판정(LLM, 이 모듈)이 핵심 주장을 정리하고 반박 후보와 인용 문단을 고르면,
+nli_check.py의 NLI 분류기가 인용 문단을 문장 단위로 확인해 실제로 모순되는 문장이 든 문단만 남긴다.
 """
 from __future__ import annotations
 
@@ -16,7 +14,6 @@ import re
 from wiki_index import wiki_url
 
 JUDGE_LABELS = ("지지", "반박", "판단불가")
-VERIFY_VERDICTS = ("반박", "반박 아님")
 
 # 필드 순서가 곧 모델이 생각하는 순서다. 모델은 앞에서부터 한 글자씩 쓰므로, 판정을 먼저
 # 쓰게 하면 근거를 따지기 전에 판정부터 정하고 이유는 그 뒤에 끼워 맞춘다 - 2026-10-01
@@ -30,24 +27,6 @@ JUDGE_SCHEMA = {
         "label": {"type": "string", "enum": list(JUDGE_LABELS)},
     },
     "required": ["core_claim", "evidence_ids", "reason", "label"],
-}
-
-MYTH_INTRO_ANSWERS = ("예", "아니오")
-
-# 검증은 1차가 정리한 핵심 주장을 그대로 확인한다. 검증이 원래 문장부터 다시 정리하게 했더니
-# 1차가 제대로 푼 전해 들은 말("~더라")을 다시 못 풀어 맞는 반박을 버렸다(2026-10-01 실측).
-# 대신 1차가 속설 소개 문장("~라는 속설이 있다")을 안의 내용으로 잘못 풀어 위험한 반박을 만드는
-# 방향만 막도록, 원래 문장이 속설 소개인지를 먼저 답하게 하고 "예"면 코드에서 버린다.
-VERIFY_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "myth_intro": {"type": "string", "enum": list(MYTH_INTRO_ANSWERS)},
-        "refuting_sentence": {"type": "string"},
-        "refuting_ids": {"type": "array", "items": {"type": "integer"}},
-        "reason": {"type": "string"},
-        "verdict": {"type": "string", "enum": list(VERIFY_VERDICTS)},
-    },
-    "required": ["myth_intro", "refuting_sentence", "refuting_ids", "reason", "verdict"],
 }
 
 _GROUNDING_RULE = "[근거 문단]에 적힌 내용만 보고 판정하라. 네가 원래 알고 있는 지식은 쓰지 마라."
@@ -110,29 +89,6 @@ JUDGE_TEMPLATE = f"""너는 사실 검증 도우미다. 아래 [근거 문단]�
 [주장]
 {{hypothesis}}"""
 
-VERIFY_TEMPLATE = f"""너는 사실 검증 검토자다. 아래 [근거 문단]이 [검증할 주장]을 거짓으로 만드는지 확인하라. [검증할 주장]은 [원래 문장]에서 참/거짓을 따질 핵심 내용을 뽑은 것이다. {_GROUNDING_RULE} {_CAREFUL_RULE} 확실하지 않으면 "반박 아님"으로 답하라.
-
-다음 순서대로 답하라.
-1. myth_intro: [원래 문장]이 그 내용을 "속설", "음모론", "미신", "잘못 알려진 것"이라고 부르며 소개하는 문장이면 "예", 아니면 "아니오"로 답한다. "~라고 들었다", "~라더라"처럼 전해 들은 말을 옮기기만 하는 문장은 "아니오"다.
-2. refuting_sentence: 근거 문단에서, 그 내용이 사실이라면 [검증할 주장]이 거짓일 수밖에 없게 만드는 문장을 그대로 옮겨 적는다. 그런 문장이 없으면 빈 문자열로 둔다.
-3. refuting_ids: 그런 문장이 들어 있는 근거 문단의 번호를 모두 적는다. 없으면 빈 목록으로 둔다.
-4. reason: 그 근거 문단 때문에 [검증할 주장]이 왜 거짓인지 한 문장으로 설명한다. {_REASON_RULE}
-5. verdict: reason을 바탕으로 판정한다.
-- 반박: {_REFUTES.replace("core_claim", "[검증할 주장]")}
-- 반박 아님: 그렇지 않다. 근거 문단이 관련된 내용을 다루기만 하거나 소개만 하는 경우도 반박 아님이다.
-{_MENTION_RULE}
-
-{_EXAMPLES}
-
-[근거 문단]
-{{premise}}
-
-[원래 문장]
-{{sentence}}
-
-[검증할 주장]
-{{claim}}"""
-
 
 # 근거 문단 전체 글자 수 상한. 입력이 모델 컨텍스트(misinfo_infer.OLLAMA_NUM_CTX=8192 토큰)를 넘으면
 # Ollama가 프롬프트 앞부분 - 오반박을 막는 지시문 - 부터 조용히 잘라낸다(2026-10-01 리뷰). 한국어는
@@ -174,10 +130,6 @@ def _format_blocks(blocks: list[tuple[str, str]]) -> str:
 
 def build_judge_prompt(sentence: str, evidence_blocks: list[tuple[str, str]]) -> str:
     return JUDGE_TEMPLATE.format(premise=_format_blocks(evidence_blocks), hypothesis=sentence)
-
-
-def build_verify_prompt(sentence: str, claim: str, cited_blocks: list[tuple[str, str]]) -> str:
-    return VERIFY_TEMPLATE.format(premise=_format_blocks(cited_blocks), sentence=sentence, claim=claim)
 
 
 def _load_object(raw_response: str) -> dict | None:
@@ -225,36 +177,8 @@ def parse_judge_response(raw_response: str, evidence_count: int) -> dict | None:
     }
 
 
-def parse_verify_response(raw_response: str, cited_count: int) -> dict | None:
-    """형식이 틀리면 None."""
-    data = _load_object(raw_response)
-    if data is None:
-        return None
-    myth_intro = data.get("myth_intro")
-    refuting_sentence = data.get("refuting_sentence")
-    refuting_ids = data.get("refuting_ids")
-    reason = data.get("reason")
-    verdict = data.get("verdict")
-    if (
-        verdict not in VERIFY_VERDICTS
-        or myth_intro not in MYTH_INTRO_ANSWERS
-        or not isinstance(reason, str)
-        or (verdict == "반박" and not reason.strip())
-        or not isinstance(refuting_sentence, str)
-        or not isinstance(refuting_ids, list)
-    ):
-        return None
-    return {
-        "myth_intro": myth_intro,
-        "refuting_sentence": refuting_sentence,
-        "refuting_ids": _valid_ids(refuting_ids, cited_count),
-        "reason": reason,
-        "verdict": verdict,
-    }
-
-
 def build_claim(sentence: str, reason: str, evidence_blocks: list[tuple[str, str]]) -> dict:
-    """evidence_blocks는 검증을 통과한(실제로 반박하는) 문단만 넘긴다 - 검색 후보 전부가 아니다."""
+    """evidence_blocks는 NLI 확인을 통과한(모순 문장이 실제로 든) 문단만 넘긴다 - 검색 후보 전부가 아니다."""
     return {
         "sentence": sentence,
         "reason": reason,

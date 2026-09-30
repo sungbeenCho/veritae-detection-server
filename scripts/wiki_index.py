@@ -32,6 +32,10 @@ def strip_wiki_markup(wikitext: str) -> str:
     return "\n".join(lines)
 
 
+def split_sentences(text: str) -> list[str]:
+    return [s.strip() for s in _SENT_SPLIT.split(text) if s.strip()]
+
+
 def split_into_chunks(text: str, target_chars: int = 200) -> list[str]:
     sentences: list[str] = []
     for line in text.split("\n"):

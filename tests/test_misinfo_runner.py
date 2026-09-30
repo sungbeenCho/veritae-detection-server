@@ -34,6 +34,7 @@ def _misinfo_settings(tmp_path) -> MagicMock:
     settings.ollama_model = "qwen3.5:4b"
     settings.misinfo_evidence_chunk_count = 5
     settings.misinfo_timeout_seconds = 300
+    settings.misinfo_nli_model = Path("/fake/nli_model")
     return settings
 
 
@@ -65,6 +66,7 @@ def test_run_misinfo_inference_returns_claims(mock_get_settings, mock_run, tmp_p
     assert result.claims == [{"sentence": "선풍기를 틀고 자면 사망한다.", "reason": "미신이다.", "evidence": []}]
     called_command = mock_run.call_args.args[0]
     assert "--sentences" in called_command
+    assert called_command[called_command.index("--nli-model") + 1] == str(mock_get_settings.return_value.misinfo_nli_model)
 
 
 @patch("app.services.misinfo_runner.subprocess.run")

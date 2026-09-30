@@ -137,6 +137,10 @@ class Settings:
         self.ollama_model = os.environ.get("OLLAMA_MODEL", "qwen3.5:4b")
         self.misinfo_evidence_chunk_count = int(os.environ.get("MISINFO_EVIDENCE_CHUNK_COUNT", "5"))
         self.misinfo_timeout_seconds = int(os.environ.get("MISINFO_TIMEOUT_SECONDS", "300"))
+        # 반박 확인용 NLI 분류기(scripts/train_nli.py로 학습한 모델 폴더, 2026-10-01 결정).
+        self.misinfo_nli_model = Path(
+            os.environ.get("MISINFO_NLI_MODEL", str(Path(__file__).resolve().parent.parent / "data" / "nli_model"))
+        )
 
 
 @lru_cache

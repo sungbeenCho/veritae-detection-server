@@ -24,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "scripts"))
 from kiwipiepy import Kiwi  # noqa: E402
 from misinfo_infer import judge_sentence  # noqa: E402
+from nli_check import NliModel, default_model_path  # noqa: E402
 
 HERE = Path(__file__).parent
 
@@ -32,14 +33,14 @@ def load_cases(name: str) -> list[dict]:
     return json.loads((HERE / name).read_text(encoding="utf-8"))
 
 
-def run_group(name: str, cases: list[dict], kiwi, conn, ollama_url: str, model: str, evidence_count: int) -> None:
+def run_group(name: str, cases: list[dict], kiwi, conn, ollama_url: str, model: str, evidence_count: int, nli) -> None:
     correct = 0
     dangerous = 0
     slowest = 0.0
     start = time.time()
     for case in cases:
         t0 = time.time()
-        claim = judge_sentence(kiwi, conn, case["sentence"], ollama_url, model, evidence_count)
+        claim = judge_sentence(kiwi, conn, case["sentence"], ollama_url, model, evidence_count, nli)
         took = time.time() - t0
         slowest = max(slowest, took)
         got = "contradiction" if claim is not None else "not_contradiction"
@@ -68,6 +69,7 @@ def main() -> None:
     parser.add_argument("--ollama-url", required=True)
     parser.add_argument("--ollama-model", required=True)
     parser.add_argument("--evidence-count", type=int, default=5)
+    parser.add_argument("--nli-model", default=default_model_path())
     parser.add_argument(
         "--include-nli-legacy",
         action="store_true",
@@ -83,13 +85,14 @@ def main() -> None:
     logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
     conn = sqlite3.connect(args.wiki_index)
     kiwi = Kiwi()
+    nli = NliModel(args.nli_model).contradiction_scores
 
-    run_group("cases_e2e", load_cases("cases_e2e.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count)
-    run_group("cases_grounding", load_cases("cases_grounding.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count)
+    run_group("cases_e2e", load_cases("cases_e2e.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli)
+    run_group("cases_grounding", load_cases("cases_grounding.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli)
 
     if args.include_nli_legacy:
-        run_group("cases_basic (참고용, NLI 벤치마크 - 머지 게이트 아님)", load_cases("cases_basic.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count)
-        run_group("cases_hard (참고용, NLI 벤치마크 - 머지 게이트 아님)", load_cases("cases_hard.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count)
+        run_group("cases_basic (참고용, NLI 벤치마크 - 머지 게이트 아님)", load_cases("cases_basic.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli)
+        run_group("cases_hard (참고용, NLI 벤치마크 - 머지 게이트 아님)", load_cases("cases_hard.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli)
 
 
 if __name__ == "__main__":

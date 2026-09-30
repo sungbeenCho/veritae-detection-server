@@ -3,13 +3,10 @@ import json
 from scripts.misinfo_lib import (
     JUDGE_SCHEMA,
     PREMISE_MAX_CHARS,
-    VERIFY_SCHEMA,
     build_claim,
     build_judge_prompt,
-    build_verify_prompt,
     fit_blocks,
     parse_judge_response,
-    parse_verify_response,
     replace_block_numbers,
 )
 
@@ -38,8 +35,8 @@ def test_worst_case_prompt_fits_context_even_at_one_token_per_character():
     worst = fit_blocks([("제목" * 10, "가" * 3000)] * 5)
     sentence = "가" * 300
 
-    for prompt in (build_judge_prompt(sentence, worst), build_verify_prompt(sentence, sentence, worst)):
-        assert len(prompt) + 1000 <= 8192
+    prompt = build_judge_prompt(sentence, worst)
+    assert len(prompt) + 1000 <= 8192
     assert sum(len(t) + len(x) for t, x in worst) <= PREMISE_MAX_CHARS
 
 
@@ -60,23 +57,8 @@ def _judge_raw(**overrides) -> str:
     return json.dumps(data, ensure_ascii=False)
 
 
-def _verify_raw(**overrides) -> str:
-    data = {
-        "myth_intro": "아니오",
-        "refuting_sentence": "그러나 이 속설은 과학적 근거가 없다.",
-        "refuting_ids": [1],
-        "reason": "선풍기 사망설 문서는 이 속설에 과학적 근거가 없다고 설명한다.",
-        "verdict": "반박",
-    }
-    data.update(overrides)
-    return json.dumps(data, ensure_ascii=False)
-
-
-def test_schemas_put_verdict_last_so_model_reasons_before_judging():
+def test_schema_puts_label_last_so_model_reasons_before_judging():
     assert list(JUDGE_SCHEMA["properties"]) == ["core_claim", "evidence_ids", "reason", "label"]
-    assert list(VERIFY_SCHEMA["properties"]) == [
-        "myth_intro", "refuting_sentence", "refuting_ids", "reason", "verdict",
-    ]
 
 
 def test_judge_prompt_numbers_blocks_and_carries_rules():
@@ -92,21 +74,6 @@ def test_judge_prompt_numbers_blocks_and_carries_rules():
     assert "거짓일 수밖에 없다" in prompt
     assert "소개만 하는 문단" in prompt and "\"미신\"" in prompt
     assert "판정 예시" in prompt and "이름을 정확히 비교" in prompt
-    assert "{" not in prompt and "}" not in prompt
-
-
-def test_verify_prompt_gets_sentence_claim_and_only_given_blocks():
-    prompt = build_verify_prompt(
-        "선풍기를 틀고 자면 사망한다는 이야기를 들었어요.",
-        "선풍기를 틀고 자면 사망한다.",
-        [("선풍기 사망설", "그러나 이 속설은 과학적 근거가 없다.")],
-    )
-
-    assert "[원래 문장]\n선풍기를 틀고 자면 사망한다는 이야기를 들었어요." in prompt
-    assert "[검증할 주장]\n선풍기를 틀고 자면 사망한다." in prompt
-    assert "[1] (선풍기 사망설) 그러나 이 속설은 과학적 근거가 없다." in prompt
-    assert "[2]" not in prompt
-    assert "확실하지 않으면" in prompt and "myth_intro" in prompt and "판정 예시" in prompt
     assert "{" not in prompt and "}" not in prompt
 
 
@@ -138,7 +105,6 @@ def test_parse_judge_accepts_valid_response():
 
 def test_parse_drops_out_of_range_duplicate_and_non_int_ids():
     assert parse_judge_response(_judge_raw(evidence_ids=[0, 1, 1, 4, "2", True, 3]), evidence_count=3)["evidence_ids"] == [1, 3]
-    assert parse_verify_response(_verify_raw(refuting_ids=[2, 2, 5, False]), cited_count=2)["refuting_ids"] == [2]
 
 
 def test_parse_judge_accepts_blank_reason_only_when_not_refutation():
@@ -153,22 +119,6 @@ def test_parse_judge_rejects_malformed_responses():
     assert parse_judge_response('{"label": "반박", "reason": "이유"}', evidence_count=3) is None
     assert parse_judge_response("", evidence_count=3) is None
     assert parse_judge_response("[1, 2]", evidence_count=3) is None
-
-
-def test_parse_verify_accepts_valid_and_non_refutation_without_reason():
-    assert parse_verify_response(_verify_raw(), cited_count=1)["verdict"] == "반박"
-    parsed = parse_verify_response(
-        _verify_raw(verdict="반박 아님", refuting_sentence="", refuting_ids=[], reason=""), cited_count=1,
-    )
-    assert parsed["verdict"] == "반박 아님"
-
-
-def test_parse_verify_rejects_malformed_responses():
-    assert parse_verify_response(_verify_raw(myth_intro="모름"), cited_count=1) is None
-    assert parse_verify_response(_verify_raw(verdict="반박임"), cited_count=1) is None
-    assert parse_verify_response(_verify_raw(reason="  "), cited_count=1) is None
-    assert parse_verify_response(_verify_raw(refuting_ids=None), cited_count=1) is None
-    assert parse_verify_response("", cited_count=1) is None
 
 
 def test_build_claim_uses_given_reason_and_blocks():

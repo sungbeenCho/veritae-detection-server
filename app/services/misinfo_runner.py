@@ -36,6 +36,7 @@ def run_misinfo_inference(sentences: list[str]) -> MisinfoResult:
         "--ollama-url", settings.ollama_url,
         "--ollama-model", settings.ollama_model,
         "--evidence-count", str(settings.misinfo_evidence_chunk_count),
+        "--nli-model", str(settings.misinfo_nli_model),
     ]
 
     try:
