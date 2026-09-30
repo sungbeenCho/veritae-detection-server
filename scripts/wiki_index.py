@@ -52,12 +52,27 @@ def split_into_chunks(text: str, target_chars: int = 200) -> list[str]:
     return chunks
 
 
+_KEEP_TAGS = {"NNG", "NNP", "VV", "VA", "SL", "SN"}
+
+
 def extract_keywords(kiwi: Kiwi, text: str) -> str:
     # 조사/어미를 떼고 의미 있는 형태소(명사/동사/형용사)만 남겨 검색 정확도를 높인다
     # ("만리장성은"으로 검색해도 "만리장성" 문서를 찾도록 - 2026-09-29 실측으로 확인된 필요성).
-    keep_tags = {"NNG", "NNP", "VV", "VA", "SL", "SN"}
-    tokens = [t.form for t in kiwi.tokenize(text) if t.tag in keep_tags]
+    tokens = [t.form for t in kiwi.tokenize(text) if t.tag in _KEEP_TAGS]
     return " ".join(tokens)
+
+
+def extract_keywords_batch(kiwi: Kiwi, texts: list[str]) -> list[str]:
+    """extract_keywords와 동일한 결과를 텍스트 여러 개를 한 번에 넘겨 얻는다.
+
+    kiwipiepy는 문자열 리스트를 한 번에 넘기면 내부 워커 스레드로 병렬 처리한다 -
+    build_wiki_index.py처럼 청크가 수백만 개인 일괄 처리에서만 쓴다. 실시간 판정
+    한 문장 처리(misinfo_infer.py)는 병렬화할 게 없으니 extract_keywords를 그대로 쓴다.
+    """
+    return [
+        " ".join(t.form for t in tokens if t.tag in _KEEP_TAGS)
+        for tokens in kiwi.tokenize(texts)
+    ]
 
 
 def wiki_url(title: str) -> str:
