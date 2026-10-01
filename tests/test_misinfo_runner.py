@@ -35,6 +35,7 @@ def _misinfo_settings(tmp_path) -> MagicMock:
     settings.misinfo_evidence_chunk_count = 5
     settings.misinfo_timeout_seconds = 300
     settings.misinfo_nli_model = Path("/fake/nli_model")
+    settings.misinfo_wiki_search = False
     return settings
 
 
@@ -67,6 +68,25 @@ def test_run_misinfo_inference_returns_claims(mock_get_settings, mock_run, tmp_p
     called_command = mock_run.call_args.args[0]
     assert "--sentences" in called_command
     assert called_command[called_command.index("--nli-model") + 1] == str(mock_get_settings.return_value.misinfo_nli_model)
+    assert "--wiki-search" not in called_command  # 외부 전송이라 기본은 꺼짐
+
+
+@patch("app.services.misinfo_runner.subprocess.run")
+@patch("app.services.misinfo_runner.get_settings")
+def test_run_misinfo_inference_passes_wiki_search_only_when_enabled(mock_get_settings, mock_run, tmp_path):
+    settings = _misinfo_settings(tmp_path)
+    settings.misinfo_wiki_search = True
+    mock_get_settings.return_value = settings
+
+    def fake_run(command, **kwargs):
+        _write_result_json(Path(command[command.index("--output") + 1]))
+        return MagicMock(returncode=0, stderr="")
+
+    mock_run.side_effect = fake_run
+
+    run_misinfo_inference(["문장"])
+
+    assert "--wiki-search" in mock_run.call_args.args[0]
 
 
 @patch("app.services.misinfo_runner.subprocess.run")

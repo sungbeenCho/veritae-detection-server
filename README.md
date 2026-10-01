@@ -635,6 +635,7 @@ $env:OLLAMA_URL = "http://localhost:11434"   # 기본값과 동일, 보통 안 �
 $env:OLLAMA_MODEL = "qwen3.5:4b"             # 기본값과 동일
 $env:MISINFO_EVIDENCE_CHUNK_COUNT = "5"      # 판정마다 LLM에 넘길 근거 조각 수, 기본값과 동일
 $env:MISINFO_TIMEOUT_SECONDS = "300"         # 가짜정보 판정 서브프로세스 타임아웃(초), 기본값과 동일
+$env:MISINFO_WIKI_SEARCH = "0"               # 1이면 위키백과 검색도 같이 씀(문장의 핵심 단어가 위키백과로 전송됨), 기본 꺼짐
 ```
 
 **e5 재정렬 모델 최초 다운로드:** 첫 요청 처리 시 `intfloat/multilingual-e5-small`(재정렬용

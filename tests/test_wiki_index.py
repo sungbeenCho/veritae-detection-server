@@ -9,6 +9,8 @@ from scripts.wiki_index import (
     create_index,
     expand_with_neighbors,
     lead_rowid,
+    title_chunks,
+    web_search_terms,
     extract_keywords,
     get_snapshot,
     search,
@@ -286,3 +288,32 @@ def test_lead_rowid_survives_titles_with_fts_syntax_characters(tmp_path):
 
     assert lead_rowid(conn, "SPEC: 경시청 (공안부)") == 1
     assert lead_rowid(conn, "없는 문서") is None
+
+
+def test_web_search_terms_keep_adjective_roots_and_drop_particles():
+    from kiwipiepy import Kiwi
+
+    kiwi = Kiwi()
+
+    assert web_search_terms(kiwi, "지구는 평평하다") == "지구 평평"
+    assert web_search_terms(kiwi, "고래가 물고기라고 들었어요") == "고래 물고기"
+
+
+def test_title_chunks_returns_lead_and_best_matching_chunks_of_that_article_only(tmp_path):
+    conn = _index_with(tmp_path, [
+        ("달착륙 음모론", "달착륙 음모론은 날조 주장이다."),
+        ("달착륙 음모론", "사진 그림자 이야기"),
+        ("달착륙 음모론", "조작 주장은 반박되었다"),
+        ("아폴로 11호", "조작 착륙"),
+    ])
+
+    chunks = title_chunks(conn, "달착륙 음모론", "조작 착륙")
+
+    assert [c.text for c in chunks] == ["달착륙 음모론은 날조 주장이다.", "조작 주장은 반박되었다"]
+
+
+def test_title_chunks_skips_missing_and_disambiguation_titles(tmp_path):
+    conn = _index_with(tmp_path, [("세종 (동음이의)", "목록"), ("세종", "세종 조선 왕")])
+
+    assert title_chunks(conn, "세종 (동음이의)", "세종") == []
+    assert title_chunks(conn, "없는 문서", "세종") == []

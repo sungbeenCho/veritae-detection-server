@@ -67,6 +67,17 @@ def extract_keywords(kiwi: Kiwi, text: str) -> str:
     return " ".join(tokens)
 
 
+# 위키백과 검색 기능에 보낼 검색어에는 형용사 어근(XR)도 넣는다 - "지구는 평평하다"에서 "평평"이 빠지면
+# "지구"만 검색돼 지평설 문서를 못 찾았다(2026-10-01 확인). 로컬 인덱스는 _KEEP_TAGS로 만들어져 있어
+# 로컬 검색(extract_keywords)은 그대로 둔다.
+_WEB_SEARCH_TAGS = _KEEP_TAGS | {"XR"}
+
+
+def web_search_terms(kiwi: Kiwi, text: str) -> str:
+    """위키백과 검색에 보낼 핵심 단어. 사용자 문장을 그대로 보내지 않고 단어만 보낸다(조사·어미 제거)."""
+    return " ".join(t.form for t in kiwi.tokenize(text) if t.tag in _WEB_SEARCH_TAGS)
+
+
 def extract_keywords_batch(kiwi: Kiwi, texts: list[str]) -> list[str]:
     """extract_keywords와 동일한 결과를 텍스트 여러 개를 한 번에 넘겨 얻는다.
 
@@ -151,6 +162,32 @@ def lead_rowid(conn: sqlite3.Connection, title: str) -> int | None:
         # 제목이 문장부호뿐이라 검색어가 비는 경우 등 - 첫 문단 없이 진행한다.
         return None
     return row[0] if row else None
+
+
+def title_chunks(conn: sqlite3.Connection, title: str, keywords: str, limit: int = 2) -> list[Chunk]:
+    """한 문서의 첫 조각과, 그 문서 안에서 keywords가 가장 많이 맞는 조각 limit개.
+    위키백과 검색으로 찾은 문서를 로컬 인덱스에서 꺼낼 때 쓴다 - 문서 내용은 로컬 인덱스의 것을 쓴다.
+    로컬 인덱스에 없는 제목(덤프 이후 생긴 문서 등)이면 빈 목록."""
+    if title.endswith(DISAMBIGUATION_SUFFIX):
+        return []
+    found: list[Chunk] = []
+    lead = lead_rowid(conn, title)
+    if lead is None:
+        return []
+    row = conn.execute("SELECT title, text, rowid FROM chunks WHERE rowid = ?", (lead,)).fetchone()
+    if row:
+        found.append(Chunk(*row))
+    if keywords.strip():
+        terms = " OR ".join(_quote_fts5_token(t) for t in keywords.split())
+        try:
+            rows = conn.execute(
+                "SELECT title, text, rowid FROM chunks WHERE chunks MATCH ? AND title = ? ORDER BY rank LIMIT ?",
+                (f"title : {_quote_fts5_token(title)} AND keywords : ({terms})", title, limit),
+            ).fetchall()
+        except sqlite3.OperationalError:
+            rows = []
+        found.extend(Chunk(*r) for r in rows if r[2] != lead)
+    return found
 
 
 def expand_with_neighbors(

@@ -66,3 +66,15 @@ def test_gpu_queue_settings_have_sane_defaults(monkeypatch):
 
     assert settings.gpu_queue_max_concurrent == 1
     assert settings.gpu_queue_max_depth == 10
+
+
+def test_misinfo_wiki_search_is_off_unless_explicitly_enabled(monkeypatch):
+    """위키백과 검색은 사용자 문장의 핵심 단어를 외부로 보내므로 기본은 꺼짐이어야 한다(2026-10-01)."""
+    monkeypatch.setenv("SPAI_REPO_DIR", "C:/fake/spai")
+    monkeypatch.setenv("ANTIDEEPFAKE_REPO_DIR", "C:/fake/antideepfake")
+    monkeypatch.setenv("DFDC_REPO_DIR", "C:/fake/dfdc")
+    monkeypatch.delenv("MISINFO_WIKI_SEARCH", raising=False)
+    assert Settings().misinfo_wiki_search is False
+
+    monkeypatch.setenv("MISINFO_WIKI_SEARCH", "1")
+    assert Settings().misinfo_wiki_search is True

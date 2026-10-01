@@ -10,6 +10,7 @@ docs(veritae-server 레포): docs/superpowers/specs/2026-09-29-misinformation-de
 import argparse
 import json
 import logging
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -27,7 +28,15 @@ from misinfo_lib import (
     replace_block_numbers,
 )
 from nli_check import ContradictionScorer, NliModel, candidate_sentences, confirm_sentences, default_model_path
-from wiki_index import Chunk, expand_with_neighbors, extract_keywords, get_snapshot, search
+from wiki_index import (
+    Chunk,
+    expand_with_neighbors,
+    extract_keywords,
+    get_snapshot,
+    search,
+    title_chunks,
+    web_search_terms,
+)
 
 # 이름 있는 로거를 쓴다 - 회귀 테스트가 이 로거만 자세히 보여주고 httpx/HuggingFace 로그는 끌 수 있게.
 logger = logging.getLogger("misinfo")
@@ -166,11 +175,47 @@ def unload_ollama_model(ollama_url: str, model: str) -> None:
         logger.warning("Ollama 모델 언로드 요청 실패 (model=%s)", model, exc_info=True)
 
 
+# 위키백과 검색 기능(무료 공개 API, 유료 LLM 아님). 로컬 키워드 검색은 단어가 다르면 문서를 못 찾는다 -
+# "달 착륙은 조작되었다"로 "달착륙 음모론"을, "지구는 평평하다"로 "지평설"을 못 찾았다(2026-10-01 실측).
+# 위키백과 검색은 이 둘을 찾았고, 반대로 로컬 검색이 찾는 문서(에펠탑, 후지산)는 못 찾아서 둘을 같이 쓴다.
+# 제목만 받아오고 문서 내용은 로컬 인덱스의 것을 쓴다. 사용자 문장을 그대로 보내지 않고 핵심 단어만 보낸다.
+# 외부 전송이라 설정(MISINFO_WIKI_SEARCH)으로 켤 때만 쓴다 - 기본은 꺼짐.
+WIKI_SEARCH_URL = "https://ko.wikipedia.org/w/api.php"
+WIKI_SEARCH_TITLES = 5
+WIKI_SEARCH_TIMEOUT_SECONDS = 5
+# 위키미디어 API 정책상 연락처가 담긴 User-Agent를 보내야 한다.
+WIKI_USER_AGENT = "VeritaeMisinfo/1.0 (https://github.com/sungbeenCho/veritae-detection-server)"
+
+
+def wiki_search_titles(terms: str, limit: int = WIKI_SEARCH_TITLES) -> list[str]:
+    """위키백과 검색 상위 문서 제목. 실패하면(네트워크 등) 빈 목록 - 로컬 검색만으로 계속 판정한다."""
+    if not terms.strip():
+        return []
+    query = urllib.parse.urlencode(
+        {"action": "query", "list": "search", "format": "json", "srnamespace": 0, "srlimit": limit, "srsearch": terms}
+    )
+    req = urllib.request.Request(f"{WIKI_SEARCH_URL}?{query}", headers={"User-Agent": WIKI_USER_AGENT})
+    try:
+        with urllib.request.urlopen(req, timeout=WIKI_SEARCH_TIMEOUT_SECONDS) as resp:
+            return [hit["title"] for hit in json.loads(resp.read())["query"]["search"]]
+    except (OSError, ValueError, KeyError, TypeError):
+        logger.warning("위키백과 검색 실패 - 로컬 검색만으로 판정함 (terms=%r)", terms, exc_info=True)
+        return []
+
+
 def judge_sentence(
     kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str, evidence_count: int, nli: ContradictionScorer,
+    wiki_search: bool = False,
 ) -> dict | None:
     keywords = extract_keywords(kiwi, sentence)
     candidates = search(conn, keywords, limit=50) if keywords else []
+    if wiki_search:
+        seen = {c.rowid for c in candidates}
+        for title in wiki_search_titles(web_search_terms(kiwi, sentence)):
+            for chunk in title_chunks(conn, title, keywords):
+                if chunk.rowid not in seen:
+                    seen.add(chunk.rowid)
+                    candidates.append(chunk)
     if not candidates:
         return None
 
@@ -232,6 +277,7 @@ def main() -> None:
     parser.add_argument("--ollama-model", required=True)
     parser.add_argument("--evidence-count", type=int, default=5)
     parser.add_argument("--nli-model", default=default_model_path())
+    parser.add_argument("--wiki-search", action="store_true", help="위키백과 검색 기능도 함께 쓴다(핵심 단어만 외부 전송)")
     args = parser.parse_args()
 
     sentences = json.loads(args.sentences.read_text(encoding="utf-8"))
@@ -253,6 +299,7 @@ def main() -> None:
         for sentence in sentences:
             claim = judge_sentence(
                 kiwi, conn, sentence, args.ollama_url, args.ollama_model, args.evidence_count, nli.contradiction_scores,
+                wiki_search=args.wiki_search,
             )
             if claim is not None:
                 claims.append(claim)

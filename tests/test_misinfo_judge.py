@@ -213,6 +213,67 @@ def test_neighbor_context_is_included_in_judge_prompt(kiwi, conn, llm):
     assert FAN_DEATH_BLOCK in _prompts(calls, misinfo_infer.JUDGE_SCHEMA)[0]
 
 
+def test_wiki_search_adds_articles_local_keyword_search_missed(kiwi, tmp_path, llm, monkeypatch):
+    """로컬 키워드 검색은 단어가 다르면 못 찾는다("조작" vs "음모론") - 위키백과 검색이 찾은 문서를 후보에 더한다."""
+    conn = create_index(tmp_path / "w.sqlite3", snapshot="2026-09-01")
+    for title, text in [("아폴로 11호", "아폴로 11호는 1969년 달에 착륙했다."),
+                        ("달착륙 음모론", "달착륙 음모론은 아폴로 계획이 날조되었다는 주장이다. 과학자들은 이를 반박했다.")]:
+        add_chunk(conn, title, text, extract_keywords(kiwi, text))
+    conn.commit()
+    sent = []
+    monkeypatch.setattr(misinfo_infer, "wiki_search_titles", lambda terms: sent.append(terms) or ["달착륙 음모론"])
+    calls, answer = llm
+    answer.update(label="판단불가", cite=())
+
+    misinfo_infer.judge_sentence(kiwi, conn, "아폴로 11호의 달 착륙은 조작되었다.", "u", "m", 5, _nli(set()), wiki_search=True)
+
+    judge_prompt = _prompts(calls, misinfo_infer.JUDGE_SCHEMA)[0]
+    assert "(달착륙 음모론)" in judge_prompt
+    assert sent == ["아폴로 11 달 착륙 조작"]  # 문장이 아니라 핵심 단어만 보낸다
+
+
+def test_wiki_search_is_not_used_unless_enabled(kiwi, conn, llm, monkeypatch):
+    monkeypatch.setattr(misinfo_infer, "wiki_search_titles", lambda terms: (_ for _ in ()).throw(AssertionError("호출되면 안 된다")))
+    _, answer = llm
+    answer.update(label="판단불가", cite=())
+
+    assert _run(kiwi, conn, _nli(set())) is None
+
+
+def test_wiki_search_failure_falls_back_to_local_search(monkeypatch):
+    def broken(req, timeout):
+        raise OSError("network down")
+
+    monkeypatch.setattr(misinfo_infer.urllib.request, "urlopen", broken)
+
+    assert misinfo_infer.wiki_search_titles("지구 평평") == []
+
+
+def test_wiki_search_sends_user_agent_and_reads_titles(monkeypatch):
+    seen = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"query": {"search": [{"title": "지평설"}, {"title": "지구"}]}}).encode()
+
+    def fake_urlopen(req, timeout):
+        seen["agent"] = req.get_header("User-agent")
+        seen["url"] = req.full_url
+        return FakeResponse()
+
+    monkeypatch.setattr(misinfo_infer.urllib.request, "urlopen", fake_urlopen)
+
+    assert misinfo_infer.wiki_search_titles("지구 평평") == ["지평설", "지구"]
+    assert "VeritaeMisinfo" in seen["agent"]
+    assert seen["url"].startswith("https://ko.wikipedia.org/w/api.php?")
+
+
 def test_pick_diverse_limits_chunks_per_article():
     from wiki_index import Chunk
 

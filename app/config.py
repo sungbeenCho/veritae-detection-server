@@ -141,6 +141,9 @@ class Settings:
         self.misinfo_nli_model = Path(
             os.environ.get("MISINFO_NLI_MODEL", str(Path(__file__).resolve().parent.parent / "data" / "nli_model"))
         )
+        # 위키백과 검색 기능을 같이 쓸지(2026-10-01). 사용자 문장의 핵심 단어가 위키백과(해외)로 전송되므로
+        # 기본은 꺼짐 - 켜려면 MISINFO_WIKI_SEARCH=1.
+        self.misinfo_wiki_search = os.environ.get("MISINFO_WIKI_SEARCH", "0") == "1"
 
 
 @lru_cache

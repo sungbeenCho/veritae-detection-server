@@ -38,6 +38,8 @@ def run_misinfo_inference(sentences: list[str]) -> MisinfoResult:
         "--evidence-count", str(settings.misinfo_evidence_chunk_count),
         "--nli-model", str(settings.misinfo_nli_model),
     ]
+    if settings.misinfo_wiki_search:
+        command.append("--wiki-search")
 
     try:
         with get_gpu_queue().acquire("misinfo_infer"):

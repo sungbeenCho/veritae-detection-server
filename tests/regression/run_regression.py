@@ -118,7 +118,7 @@ class CandidateRecorder:
 
 
 def run_group(name: str, cases: list[dict], kiwi, conn, ollama_url: str, model: str, evidence_count: int, nli,
-              recorder: CandidateRecorder | None = None) -> None:
+              recorder: CandidateRecorder | None = None, wiki_search: bool = False) -> None:
     correct = 0
     dangerous = 0
     bad_evidence = 0
@@ -128,7 +128,7 @@ def run_group(name: str, cases: list[dict], kiwi, conn, ollama_url: str, model: 
         t0 = time.time()
         if recorder:
             recorder.start()
-        claim = judge_sentence(kiwi, conn, case["sentence"], ollama_url, model, evidence_count, nli)
+        claim = judge_sentence(kiwi, conn, case["sentence"], ollama_url, model, evidence_count, nli, wiki_search=wiki_search)
         took = time.time() - t0
         if recorder:
             recorder.finish(case, claim)
@@ -164,6 +164,7 @@ def main() -> None:
     parser.add_argument("--nli-model", default=default_model_path())
     parser.add_argument("--llm-cache", type=Path, help="LLM 응답 캐시 파일(프롬프트 수정 반복 시험용)")
     parser.add_argument("--dump-candidates", type=Path, help="근거 문장 선택 방식 비교용 기록 파일(JSON)")
+    parser.add_argument("--wiki-search", action="store_true", help="위키백과 검색 기능도 함께 쓴다(핵심 단어만 외부 전송)")
     parser.add_argument(
         "--include-nli-legacy",
         action="store_true",
@@ -191,7 +192,8 @@ def main() -> None:
             ("cases_hard (참고용, NLI 벤치마크 - 머지 게이트 아님)", "cases_hard.json"),
         ]
     for name, file in groups:
-        run_group(name, load_cases(file), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli, recorder)
+        run_group(name, load_cases(file), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli, recorder,
+                  wiki_search=args.wiki_search)
 
     if recorder:
         args.dump_candidates.write_text(json.dumps(recorder.records, ensure_ascii=False, indent=1), encoding="utf-8")
