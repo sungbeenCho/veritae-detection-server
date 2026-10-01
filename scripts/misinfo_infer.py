@@ -177,7 +177,9 @@ def judge_sentence(
         return None
     # 1차 판정의 번호는 evidence_blocks 기준이다.
     reason = replace_block_numbers(first["reason"], evidence_blocks)
-    return build_claim(sentence, reason, [(c["title"], c["text"]) for c in confirmed])
+    # 화면에는 반박 문장 하나와 문서 링크만 보여준다 - 판정에 쓴 긴 문맥(앞뒤 문단)을 그대로 내보내면
+    # 핵심 문장이 무관한 내용 사이에 묻힌다(2026-10-01 사용자 결정).
+    return build_claim(sentence, reason, [(c["title"], c["sentence"]) for c in confirmed])
 
 
 def main() -> None:

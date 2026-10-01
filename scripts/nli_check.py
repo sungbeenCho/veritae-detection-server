@@ -70,7 +70,7 @@ def refuting_blocks(
     score: ContradictionScorer, blocks: list[tuple[str, str]], claim: str, threshold: float = NLI_THRESHOLD,
 ) -> list[dict]:
     """각 문단에서 주장과 가장 모순되는 문장을 찾아, 모순 확률이 threshold 이상인 문단만 돌려준다.
-    결과: [{"title", "text", "sentence", "score"}] - 입력 순서 유지."""
+    결과: [{"title", "sentence", "score"}] - 입력 순서 유지. 화면에는 sentence(반박 문장)만 보여준다."""
     confirmed = []
     for title, text in blocks:
         sentences = [s for s in split_sentences(text) if 4 < len(s) <= MAX_SENTENCE_CHARS]
@@ -79,7 +79,7 @@ def refuting_blocks(
             continue
         best = max(range(len(scores)), key=scores.__getitem__)
         if scores[best] >= threshold:
-            confirmed.append({"title": title, "text": text, "sentence": sentences[best], "score": scores[best]})
+            confirmed.append({"title": title, "sentence": sentences[best], "score": scores[best]})
     return confirmed
 
 

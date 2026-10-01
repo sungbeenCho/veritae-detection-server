@@ -108,8 +108,8 @@ def test_nli_checks_cited_blocks_sentence_by_sentence_against_core_claim(kiwi, c
     assert nli.seen == [(["선풍기를 켜고 자면 사망한다는 가설이 있다.", REFUTING], CLAIM)]
 
 
-def test_confirmed_refutation_shows_only_blocks_with_a_contradicting_sentence(kiwi, conn, llm):
-    """1차가 무관한 문단(케니 맥코믹)까지 인용해도, 모순 문장이 확인된 문단만 근거로 나간다."""
+def test_confirmed_refutation_shows_only_the_refuting_sentence_and_link(kiwi, conn, llm):
+    """1차가 무관한 문단(케니 맥코믹)까지 인용해도 모순이 확인된 문서만, 그것도 반박 문장 하나와 링크만 나간다."""
     _, answer = llm
     answer.update(label="반박", cite=("선풍기 사망설", "케니 맥코믹"))
 
@@ -117,7 +117,7 @@ def test_confirmed_refutation_shows_only_blocks_with_a_contradicting_sentence(ki
 
     assert claim["sentence"] == SENTENCE
     assert [e["title"] for e in claim["evidence"]] == ["선풍기 사망설"]
-    assert claim["evidence"][0]["text"] == FAN_DEATH_BLOCK
+    assert claim["evidence"][0]["text"] == REFUTING
     assert claim["evidence"][0]["url"] == "https://ko.wikipedia.org/wiki/선풍기_사망설"
 
 

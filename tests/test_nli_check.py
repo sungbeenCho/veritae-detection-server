@@ -16,7 +16,6 @@ def test_keeps_only_blocks_whose_best_sentence_reaches_threshold():
 
     assert confirmed == [{
         "title": "에펠탑",
-        "text": "에펠탑은 프랑스 파리에 있다. 1889년에 지어졌다.",
         "sentence": "에펠탑은 프랑스 파리에 있다.",
         "score": 0.99,
     }]
@@ -61,3 +60,4 @@ def test_skips_table_like_fragments_longer_than_a_real_sentence():
     assert len(table) > MAX_SENTENCE_CHARS
     assert seen == ["짧은 문장입니다."]
     assert confirmed[0]["sentence"] == "짧은 문장입니다."
+
