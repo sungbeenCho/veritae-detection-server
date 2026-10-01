@@ -10,7 +10,9 @@ cases_grounding.json(14건, 전해 들은 말/OCR 오타/속설을 소개만 하
 반박 판정은 라벨뿐 아니라 화면에 나가는 근거 문장도 채점한다. 반박이어야 하는 문장에는
 evidence_keys(단어 묶음 목록)가 있고, 표시된 근거 문장이 모든 묶음에서 단어를 하나 이상 포함해야
 맞는 근거로 본다(2026-10-01: 라벨은 맞는데 "지구의 베어링" 같은 무관한 문장이 근거로 나간 사례).
-BAD-EVIDENCE로 찍힌 문장은 자동 채점이 놓친 표현일 수도 있으니 사람이 직접 읽어 확인한다. cases_basic.json/cases_hard.json은 원래 위키 검색이
+BAD-EVIDENCE로 찍힌 문장은 자동 채점이 놓친 표현일 수도 있으니 사람이 직접 읽어 확인한다.
+
+cases_basic.json/cases_hard.json은 원래 위키 검색이
 아니라 premise(근거 문단)가 함께 주어지는 NLI 분류기 실험 데이터였는데, 이 브랜치로 옮겨오며
 premise가 빠져 실제 검색 기반 파이프라인과는 맞지 않는다(자세한 사유는 이 디렉터리의
 README.md 참고) - 그래서 기본 실행에서 빼고 --include-nli-legacy를 줬을 때만 참고용으로 돈다.
@@ -86,9 +88,11 @@ def run_group(name: str, cases: list[dict], kiwi, conn, ollama_url: str, model: 
             # 사람이 직접 읽어서 확인한다(2026-10-01: 라벨은 반박인데 근거는 속설을 뒷받침한 사례).
             print(f"    이유: {claim['reason']}")
             for evidence in claim["evidence"]:
-                print(f"    근거: ({evidence['title']}) {evidence['text']}")
+                good = "evidence_keys" in case and evidence_ok(evidence["text"], case["evidence_keys"])
+                bad_evidence += int(not good)
+                print(f"    {'근거' if good else '[BAD-EVIDENCE] 근거'}: ({evidence['title']}) {evidence['text']}")
     elapsed = time.time() - start
-    print(f"\n##### {name}: {correct}/{len(cases)} 정확, 위험 오답 {dangerous}건, "
+    print(f"\n##### {name}: {correct}/{len(cases)} 정확, 위험 오답 {dangerous}건, 잘못된 근거 문장 {bad_evidence}건, "
           f"총 {elapsed:.0f}s(문장당 {elapsed / len(cases):.1f}s, 가장 느린 문장 {slowest:.1f}s)\n")
 
 
