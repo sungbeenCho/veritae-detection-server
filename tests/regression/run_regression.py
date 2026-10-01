@@ -21,6 +21,7 @@ README.md 참고) - 그래서 기본 실행에서 빼고 --include-nli-legacy를
   python run_regression.py --wiki-index <db경로> --ollama-url http://localhost:11434 --ollama-model qwen3.5:4b
   python run_regression.py ... --include-nli-legacy   # cases_basic/cases_hard도 참고용으로 같이 돌림
   python run_regression.py ... --llm-cache cache.json   # 같은 프롬프트의 LLM 응답을 재사용(temperature 0)
+  python run_regression.py ... --dump-candidates dump.json   # 근거 문장 선택 방식 비교용 기록 저장
 """
 import argparse
 import hashlib
@@ -35,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "scripts"
 from kiwipiepy import Kiwi  # noqa: E402
 import misinfo_infer  # noqa: E402
 from misinfo_infer import judge_sentence  # noqa: E402
-from nli_check import NliModel, default_model_path  # noqa: E402
+from nli_check import NliModel, candidate_sentences, default_model_path  # noqa: E402
 
 HERE = Path(__file__).parent
 
@@ -63,7 +64,61 @@ def use_llm_cache(path: Path) -> None:
     misinfo_infer.ask_ollama = cached_ask
 
 
-def run_group(name: str, cases: list[dict], kiwi, conn, ollama_url: str, model: str, evidence_count: int, nli) -> None:
+class CandidateRecorder:
+    """근거 문장 선택 방식을 데스크탑 밖에서 비교하려고, 판정 과정을 그대로 두고 옆에서 기록한다.
+    문장마다 1차 판정, 검색된 문단, LLM이 고른 문장, 그리고 검색된 문단의 모든 후보 문장에 대한
+    실제 NLI 모순 점수를 남긴다 - 노트북에서는 이 파일과 e5만으로 선택 방식을 바꿔 가며 비교한다."""
+
+    def __init__(self, nli):
+        self.nli = nli
+        self.records: list[dict] = []
+        self.current: dict = {}
+        self._patch()
+
+    def _patch(self) -> None:
+        build_judge_prompt = misinfo_infer.build_judge_prompt
+        parse_judge_response = misinfo_infer.parse_judge_response
+        parse_select_response = misinfo_infer.parse_select_response
+        build_select_prompt = misinfo_infer.build_select_prompt
+
+        def record_blocks(sentence, blocks):
+            self.current["evidence_blocks"] = [list(b) for b in blocks]
+            return build_judge_prompt(sentence, blocks)
+
+        def record_first(raw, count):
+            self.current["first"] = parse_judge_response(raw, count)
+            return self.current["first"]
+
+        def record_select_prompt(claim, candidates):
+            self.current["llm_candidates"] = [list(c) for c in candidates]
+            return build_select_prompt(claim, candidates)
+
+        def record_picked(raw, count):
+            self.current["llm_picked_ids"] = parse_select_response(raw, count)
+            return self.current["llm_picked_ids"]
+
+        misinfo_infer.build_judge_prompt = record_blocks
+        misinfo_infer.parse_judge_response = record_first
+        misinfo_infer.build_select_prompt = record_select_prompt
+        misinfo_infer.parse_select_response = record_picked
+
+    def start(self) -> None:
+        self.current = {}
+
+    def finish(self, case: dict, claim: dict | None) -> None:
+        record = {**case, **self.current, "shown": claim["evidence"] if claim else []}
+        first = self.current.get("first")
+        if first is not None:
+            candidates = candidate_sentences([tuple(b) for b in self.current.get("evidence_blocks", [])])
+            scores = self.nli([s for _, s in candidates], first["core_claim"]) if candidates else []
+            record["all_candidates"] = [
+                {"title": t, "sentence": s, "nli": round(float(v), 4)} for (t, s), v in zip(candidates, scores)
+            ]
+        self.records.append(record)
+
+
+def run_group(name: str, cases: list[dict], kiwi, conn, ollama_url: str, model: str, evidence_count: int, nli,
+              recorder: CandidateRecorder | None = None) -> None:
     correct = 0
     dangerous = 0
     bad_evidence = 0
@@ -71,8 +126,12 @@ def run_group(name: str, cases: list[dict], kiwi, conn, ollama_url: str, model: 
     start = time.time()
     for case in cases:
         t0 = time.time()
+        if recorder:
+            recorder.start()
         claim = judge_sentence(kiwi, conn, case["sentence"], ollama_url, model, evidence_count, nli)
         took = time.time() - t0
+        if recorder:
+            recorder.finish(case, claim)
         slowest = max(slowest, took)
         got = "contradiction" if claim is not None else "not_contradiction"
         expected_is_contradiction = case["expected"] == "contradiction"
@@ -104,6 +163,7 @@ def main() -> None:
     parser.add_argument("--evidence-count", type=int, default=5)
     parser.add_argument("--nli-model", default=default_model_path())
     parser.add_argument("--llm-cache", type=Path, help="LLM 응답 캐시 파일(프롬프트 수정 반복 시험용)")
+    parser.add_argument("--dump-candidates", type=Path, help="근거 문장 선택 방식 비교용 기록 파일(JSON)")
     parser.add_argument(
         "--include-nli-legacy",
         action="store_true",
@@ -122,14 +182,20 @@ def main() -> None:
     conn = sqlite3.connect(args.wiki_index)
     kiwi = Kiwi()
     nli = NliModel(args.nli_model).contradiction_scores
+    recorder = CandidateRecorder(nli) if args.dump_candidates else None
 
-    run_group("cases_e2e", load_cases("cases_e2e.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli)
-    run_group("cases_grounding", load_cases("cases_grounding.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli)
-    run_group("cases_heldout", load_cases("cases_heldout.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli)
-
+    groups = [("cases_e2e", "cases_e2e.json"), ("cases_grounding", "cases_grounding.json"), ("cases_heldout", "cases_heldout.json")]
     if args.include_nli_legacy:
-        run_group("cases_basic (참고용, NLI 벤치마크 - 머지 게이트 아님)", load_cases("cases_basic.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli)
-        run_group("cases_hard (참고용, NLI 벤치마크 - 머지 게이트 아님)", load_cases("cases_hard.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli)
+        groups += [
+            ("cases_basic (참고용, NLI 벤치마크 - 머지 게이트 아님)", "cases_basic.json"),
+            ("cases_hard (참고용, NLI 벤치마크 - 머지 게이트 아님)", "cases_hard.json"),
+        ]
+    for name, file in groups:
+        run_group(name, load_cases(file), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli, recorder)
+
+    if recorder:
+        args.dump_candidates.write_text(json.dumps(recorder.records, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(f"근거 문장 비교용 기록 {len(recorder.records)}건 저장: {args.dump_candidates}")
 
 
 if __name__ == "__main__":
