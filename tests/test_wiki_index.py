@@ -237,3 +237,10 @@ def test_expand_returns_empty_for_no_chunks(tmp_path):
     conn = _index_with(tmp_path, [("A", "a1")])
 
     assert expand_with_neighbors(conn, []) == []
+
+
+def test_search_excludes_disambiguation_pages(tmp_path):
+    """동음이의 문서는 이름이 같은 대상의 목록이라 근거가 될 수 없다(2026-10-01: "주식회사 세종" 문장이 근거로 나감)."""
+    conn = _index_with(tmp_path, [("세종 (동음이의)", "주식회사 세종 금융 기업"), ("세종", "세종 조선 제4대 왕")])
+
+    assert [c.title for c in search(conn, "세종", limit=5)] == ["세종"]

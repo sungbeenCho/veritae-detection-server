@@ -119,6 +119,12 @@ class Chunk(NamedTuple):
     rowid: int
 
 
+# 동음이의 문서("세종 (동음이의)")는 이름이 같은 대상을 나열만 하는 안내 페이지라 사실 근거가 될 수 없다.
+# 근거 후보에 두면 "주식회사 세종은 금융 기업이다" 같은 문장이 "세종대왕은 고려의 왕" 반박 근거로
+# 표시됐다(2026-10-01 데스크탑 실측). 위키 기반 사실검증(FEVER 등)에서도 표준적으로 제외한다.
+DISAMBIGUATION_SUFFIX = "(동음이의)"
+
+
 def search(conn: sqlite3.Connection, keywords: str, limit: int = 50) -> list[Chunk]:
     if not keywords.strip():
         return []
@@ -128,8 +134,8 @@ def search(conn: sqlite3.Connection, keywords: str, limit: int = 50) -> list[Chu
     # 랭킹(ORDER BY rank)으로 일부만 일치해도 후보를 찾고 관련도 순으로 정렬한다.
     quoted = " OR ".join(_quote_fts5_token(t) for t in keywords.split())
     rows = conn.execute(
-        "SELECT title, text, rowid FROM chunks WHERE keywords MATCH ? ORDER BY rank LIMIT ?",
-        (quoted, limit),
+        "SELECT title, text, rowid FROM chunks WHERE keywords MATCH ? AND title NOT LIKE ? ORDER BY rank LIMIT ?",
+        (quoted, f"%{DISAMBIGUATION_SUFFIX}", limit),
     ).fetchall()
     return [Chunk(*row) for row in rows]
 

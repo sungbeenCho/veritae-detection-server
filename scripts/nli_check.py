@@ -17,6 +17,11 @@ from wiki_index import split_sentences
 # 진짜 반박 문장은 0.81~0.999, 반박이 아닌 문장은 대부분 0.05 미만이었다.
 NLI_THRESHOLD = 0.8
 
+# 이보다 긴 "문장"은 확인하지 않는다. 위키 표가 글자로 풀리면 마침표 없이 수백~천 자 덩어리가 되는데
+# (예: 에펠탑 복제품 목록 표), NLI가 여기에 반응해 표가 반박 근거로 표시됐다(2026-10-01 데스크탑 실측).
+# 실제 근거 문장은 길어야 200~300자 수준이다.
+MAX_SENTENCE_CHARS = 300
+
 ContradictionScorer = Callable[[list[str], str], list[float]]
 
 
@@ -68,7 +73,7 @@ def refuting_blocks(
     결과: [{"title", "text", "sentence", "score"}] - 입력 순서 유지."""
     confirmed = []
     for title, text in blocks:
-        sentences = [s for s in split_sentences(text) if len(s) > 4]
+        sentences = [s for s in split_sentences(text) if 4 < len(s) <= MAX_SENTENCE_CHARS]
         scores = score(sentences, claim)
         if not scores:
             continue

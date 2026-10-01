@@ -43,3 +43,21 @@ def test_passes_core_claim_as_hypothesis_and_skips_tiny_fragments():
 
 def test_block_without_sentences_is_ignored():
     assert refuting_blocks(_scorer({}), [("A", "")], "주장") == []
+
+
+def test_skips_table_like_fragments_longer_than_a_real_sentence():
+    """위키 표가 풀린 마침표 없는 긴 덩어리(2026-10-01: 에펠탑 복제품 목록)는 문장으로 확인하지 않는다."""
+    from scripts.nli_check import MAX_SENTENCE_CHARS
+
+    table = "에펠탑 미국 23 m 1:14 스케일 " * 40
+    seen = []
+
+    def score(premises, hypothesis):
+        seen.extend(premises)
+        return [0.99] * len(premises)
+
+    confirmed = refuting_blocks(score, [("에펠탑의 레플리카", table.strip() + ". 짧은 문장입니다.")], "에펠탑은 런던에 있다.")
+
+    assert len(table) > MAX_SENTENCE_CHARS
+    assert seen == ["짧은 문장입니다."]
+    assert confirmed[0]["sentence"] == "짧은 문장입니다."
