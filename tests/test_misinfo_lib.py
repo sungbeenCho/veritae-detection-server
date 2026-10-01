@@ -5,8 +5,10 @@ from scripts.misinfo_lib import (
     PREMISE_MAX_CHARS,
     build_claim,
     build_judge_prompt,
+    build_select_prompt,
     fit_blocks,
     parse_judge_response,
+    parse_select_response,
     replace_block_numbers,
 )
 
@@ -139,3 +141,27 @@ def test_build_claim_uses_given_reason_and_blocks():
             }
         ],
     }
+
+
+def test_select_prompt_numbers_sentences_with_titles_and_shows_claim():
+    prompt = build_select_prompt(
+        "선풍기를 틀고 자면 사망한다.",
+        [("선풍기 사망설", "선풍기를 켜고 자면 사망한다는 가설이 있다."), ("선풍기 사망설", "이 속설은 과학적 근거가 없다.")],
+    )
+
+    assert "[1] (선풍기 사망설) 선풍기를 켜고 자면 사망한다는 가설이 있다." in prompt
+    assert "[2] (선풍기 사망설) 이 속설은 과학적 근거가 없다." in prompt
+    assert prompt.rstrip().endswith("선풍기를 틀고 자면 사망한다.")
+
+
+def test_parse_select_keeps_valid_ids_and_allows_empty_selection():
+    raw = lambda ids: json.dumps({"analysis": "분석", "sentence_ids": ids})
+
+    assert parse_select_response(raw([2, 2, 0, 5, "1", True, 1]), candidate_count=3) == [2, 1]
+    assert parse_select_response(raw([]), candidate_count=3) == []
+
+
+def test_parse_select_rejects_malformed_responses():
+    assert parse_select_response('{"sentence_ids": [1]}', candidate_count=3) is None
+    assert parse_select_response('{"analysis": "분석", "sentence_ids": "1"}', candidate_count=3) is None
+    assert parse_select_response("", candidate_count=3) is None

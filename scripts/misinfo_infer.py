@@ -15,8 +15,18 @@ from pathlib import Path
 
 from kiwipiepy import Kiwi
 
-from misinfo_lib import JUDGE_SCHEMA, build_claim, build_judge_prompt, fit_blocks, parse_judge_response, replace_block_numbers
-from nli_check import ContradictionScorer, NliModel, default_model_path, refuting_blocks
+from misinfo_lib import (
+    JUDGE_SCHEMA,
+    SELECT_SCHEMA,
+    build_claim,
+    build_judge_prompt,
+    build_select_prompt,
+    fit_blocks,
+    parse_judge_response,
+    parse_select_response,
+    replace_block_numbers,
+)
+from nli_check import ContradictionScorer, NliModel, candidate_sentences, confirm_sentences, default_model_path
 from wiki_index import Chunk, expand_with_neighbors, extract_keywords, get_snapshot, search
 
 # 이름 있는 로거를 쓴다 - 회귀 테스트가 이 로거만 자세히 보여주고 httpx/HuggingFace 로그는 끌 수 있게.
@@ -162,18 +172,27 @@ def judge_sentence(
     if first is None or first["label"] != "반박" or not first["evidence_ids"]:
         return None
 
-    # 반박은 사용자에게 "이 문장은 거짓"이라고 보여주는 유일한 판정이라, 1차가 인용한 문단을 NLI
-    # 분류기로 문장 단위로 다시 확인한다. 주장과 모순되는 문장이 실제로 들어 있는 문단만 근거로
-    # 표시하고, 그런 문단이 하나도 없으면 반박을 버린다(nli_check.py 모듈 설명 참고).
+    # 반박은 사용자에게 "이 문장은 거짓"이라고 보여주는 유일한 판정이라, 인용 문단에서 근거 문장을
+    # LLM이 고르고(관련성), 고른 문장만 NLI가 모순인지 확인한다(판정). 둘 다 통과한 문장만 근거로
+    # 표시하고, 하나도 없으면 반박을 버린다(misinfo_lib.py 모듈 설명 참고).
     cited = [evidence_blocks[i - 1] for i in first["evidence_ids"]]
-    confirmed = refuting_blocks(nli, cited, first["core_claim"])
+    candidates = candidate_sentences(cited)
+    if not candidates:
+        return None
+    claim = first["core_claim"]
+    raw_selection = ask_ollama(ollama_url, model, build_select_prompt(claim, candidates), SELECT_SCHEMA)
+    picked_ids = parse_select_response(raw_selection, len(candidates))
+    if picked_ids is None:
+        logger.warning("근거 문장 선택 응답 형식 오류로 판단불가 처리함: sentence=%r raw_response=%r", sentence, raw_selection)
+        return None
+    picked = [candidates[i - 1] for i in picked_ids]
+    confirmed = confirm_sentences(nli, picked, claim)
     logger.debug(
-        "NLI 확인: sentence=%r claim=%r confirmed=%r cited_titles=%r",
-        sentence, first["core_claim"],
-        [(c["title"], c["sentence"], round(c["score"], 3)) for c in confirmed], [title for title, _ in cited],
+        "근거 문장 선택/NLI 확인: sentence=%r claim=%r picked=%r confirmed=%r",
+        sentence, claim, picked, [(c["title"], c["sentence"], round(c["score"], 3)) for c in confirmed],
     )
     if not confirmed:
-        logger.info("1차 반박을 NLI가 확인하지 못해 제외함: sentence=%r first_reason=%r", sentence, first["reason"])
+        logger.info("1차 반박의 근거 문장이 확인되지 않아 제외함: sentence=%r first_reason=%r", sentence, first["reason"])
         return None
     # 1차 판정의 번호는 evidence_blocks 기준이다.
     reason = replace_block_numbers(first["reason"], evidence_blocks)

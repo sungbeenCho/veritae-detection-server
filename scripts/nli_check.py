@@ -1,10 +1,10 @@
-"""반박 확인 단계: 1차 판정(LLM)이 반박으로 인용한 근거 문단을 문장 단위로 나눠, 문장 두 개의 모순 여부만
-판정하도록 학습된 NLI 분류기로 "이 문장이 주장과 모순되는가"를 확인한다.
+"""반박 확인 단계: 근거 문장 선택(LLM)이 고른 문장이 정말 주장과 모순되는지, 문장 두 개의 모순 여부만
+판정하도록 학습된 NLI 분류기로 확인한다(전체 흐름은 misinfo_lib.py 모듈 설명 참고).
 
 LLM에게 다시 묻는 방식은 같은 모델이 같은 실수를 반복하고 문구를 바꿀 때마다 오류가 옮겨 다녀 쓸 수
 없었다(2026-10-01 데스크탑 실측 3회). NLI 분류기는 판단 방식이 달라 LLM과 독립적이고, 같은 입력이면 항상
-같은 결과를 낸다. 대신 NLI도 혼자서는 참인 문장에 오판할 수 있어("세종대왕은 조선의 왕이다" vs 같은 문단의
-"중국 세종은 상나라 왕의 묘호") LLM이 반박이라고 한 문장에만 쓰고, 둘 다 반박이라고 할 때만 표시한다.
+같은 결과를 낸다. 대신 NLI는 주어만 같고 내용이 무관한 문장에도 높은 모순 점수를 줘서("지구는 평평하다" vs
+"지구의는 받침대에 베어링이 있다" 0.989) 근거 문장을 고르는 일은 맡기지 않고, LLM이 고른 문장의 확인만 맡긴다.
 """
 from __future__ import annotations
 
@@ -66,21 +66,30 @@ class NliModel:
         return probs[:, contradiction].cpu().tolist()
 
 
-def refuting_blocks(
-    score: ContradictionScorer, blocks: list[tuple[str, str]], claim: str, threshold: float = NLI_THRESHOLD,
+def candidate_sentences(blocks: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """인용 문단을 (문서 제목, 문장) 목록으로 나눈다. 근거 문장 선택(LLM)에 번호를 매겨 보여줄 후보다.
+    너무 짧은 조각과 표가 풀린 긴 덩어리(MAX_SENTENCE_CHARS 초과)는 문장으로 치지 않는다."""
+    return [
+        (title, sentence)
+        for title, text in blocks
+        for sentence in split_sentences(text)
+        if 4 < len(sentence) <= MAX_SENTENCE_CHARS
+    ]
+
+
+def confirm_sentences(
+    score: ContradictionScorer, picked: list[tuple[str, str]], claim: str, threshold: float = NLI_THRESHOLD,
 ) -> list[dict]:
-    """각 문단에서 주장과 가장 모순되는 문장을 찾아, 모순 확률이 threshold 이상인 문단만 돌려준다.
-    결과: [{"title", "sentence", "score"}] - 입력 순서 유지. 화면에는 sentence(반박 문장)만 보여준다."""
-    confirmed = []
-    for title, text in blocks:
-        sentences = [s for s in split_sentences(text) if 4 < len(s) <= MAX_SENTENCE_CHARS]
-        scores = score(sentences, claim)
-        if not scores:
-            continue
-        best = max(range(len(scores)), key=scores.__getitem__)
-        if scores[best] >= threshold:
-            confirmed.append({"title": title, "sentence": sentences[best], "score": scores[best]})
-    return confirmed
+    """근거 문장 선택(LLM)이 고른 문장만 NLI로 확인해, 모순 확률이 threshold 이상인 것만 돌려준다.
+    결과: [{"title", "sentence", "score"}] - 입력 순서 유지."""
+    if not picked:
+        return []
+    scores = score([sentence for _, sentence in picked], claim)
+    return [
+        {"title": title, "sentence": sentence, "score": value}
+        for (title, sentence), value in zip(picked, scores)
+        if value >= threshold
+    ]
 
 
 def default_model_path() -> str:

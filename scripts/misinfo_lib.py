@@ -3,8 +3,13 @@
 (docs/superpowers/specs/2026-09-29-misinformation-detection-design.md §5) - 바꾸려면 데스크탑에서
 회귀 테스트셋을 반드시 다시 돌려야 한다.
 
-판정은 두 단계다. 1차 판정(LLM, 이 모듈)이 핵심 주장을 정리하고 반박 후보와 인용 문단을 고르면,
-nli_check.py의 NLI 분류기가 인용 문단을 문장 단위로 확인해 실제로 모순되는 문장이 든 문단만 남긴다.
+판정은 세 단계다(사실검증 표준 구조인 FEVER의 "문서 검색 -> 근거 문장 선택 -> 판정"을 따른다).
+1) 1차 판정(LLM): 핵심 주장을 정리하고 반박 후보와 인용 문단을 고른다.
+2) 근거 문장 선택(LLM): 인용 문단을 문장 단위로 번호 매겨 주고, 주장이 거짓임을 직접 보여주는 문장 번호만 고른다.
+3) 확인(nli_check.py의 NLI 분류기): 2)에서 고른 문장만 주장과 모순인지 확인한다.
+2)를 빼고 NLI가 모순 점수가 가장 높은 문장을 근거로 고르게 했더니, NLI는 주어만 같고 무관한 문장에도 높은
+점수를 줘서 "지구의 받침대 베어링" 같은 문장이 반박 근거로 표시됐다(2026-10-01 데스크탑 실측). FEVER 연구도
+문장 선택 단계를 빼면 정확도가 약 10%p 떨어진다고 보고한다.
 """
 from __future__ import annotations
 
@@ -27,6 +32,16 @@ JUDGE_SCHEMA = {
         "label": {"type": "string", "enum": list(JUDGE_LABELS)},
     },
     "required": ["core_claim", "evidence_ids", "reason", "label"],
+}
+
+# 근거 문장 선택: 왜 그 문장인지(analysis)를 먼저 쓰고 번호는 맨 뒤에 고른다(판정을 먼저 쓰지 않게 하는 것과 같은 이유).
+SELECT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "analysis": {"type": "string"},
+        "sentence_ids": {"type": "array", "items": {"type": "integer"}},
+    },
+    "required": ["analysis", "sentence_ids"],
 }
 
 _GROUNDING_RULE = "[근거 문단]에 적힌 내용만 보고 판정하라. 네가 원래 알고 있는 지식은 쓰지 마라."
@@ -89,6 +104,39 @@ JUDGE_TEMPLATE = f"""너는 사실 검증 도우미다. 아래 [근거 문단]�
 [주장]
 {{hypothesis}}"""
 
+# 근거 문장 선택용 규칙은 1차 판정 규칙과 뜻은 같고 가리키는 단위만 "문장"이다. 1차 판정 문구는 회귀
+# 테스트로 맞춘 그대로 두기 위해 따로 적는다.
+_SELECT_MENTION_RULE = (
+    "어떤 내용을 \"~라는 가설이 있다\", \"~라는 속설이 있다\", \"~라는 주장이 있다\"고 소개만 하는 문장은 "
+    "고르지 않는다. 그 내용을 \"근거 없는 속설\", \"미신\", \"잘못 알려진 것\", \"사실이 아니다\"라고 평가하는 "
+    "문장은 고른다."
+)
+
+# 문장 하나씩 떼어 보면 주어만 같은 무관한 문장이 반박처럼 보이기 쉽다(2026-10-01: "지구는 평평하다"에
+# "지구의는 받침대에 베어링이 있다"). 마지막 예시가 그 경우다. 예시는 회귀 테스트셋 문장과 겹치지 않게 골랐다.
+_SELECT_EXAMPLES = """고르는 예시(아래 [문장]과는 관계없는 예시다):
+- 주장 "불국사는 전라남도에 있다." / 문장 "불국사는 경상북도 경주시에 있다." → 고른다. 한 절이 두 지역에 동시에 있을 수 없다.
+- 주장 "모나리자는 미켈란젤로가 그렸다." / 문장 "모나리자는 레오나르도 다 빈치가 그린 그림이다." → 고른다.
+- 주장 "혈액형으로 성격을 알 수 있다." / 문장 "이는 과학적 근거가 없는 속설이다." → 고른다. 근거 없는 속설이라고 평가한다.
+- 주장 "보름달이 뜨면 범죄가 늘어난다." / 문장 "보름달이 뜨면 범죄가 늘어난다는 속설이 있다." → 고르지 않는다. 속설을 소개만 한다.
+- 주장 "불국사는 전라남도에 있다." / 문장 "불국사의 다보탑은 10원 동전에 새겨져 있다." → 고르지 않는다. 같은 대상이 나오지만 위치와는 관계없다."""
+
+SELECT_TEMPLATE = f"""너는 사실 검증 도우미다. 아래 [문장]들은 위키백과에서 가져온 것이고, 괄호 안은 문서 제목이다. 이 중에서 [주장]이 거짓이라는 것을 보여주는 문장의 번호를 고르라. [문장]에 적힌 내용만 보고 고르라. 네가 원래 알고 있는 지식은 쓰지 마라.
+
+다음 순서대로 답하라.
+1. analysis: 고른 문장이 [주장]의 어느 부분과 어떻게 맞지 않는지 짧게 적는다.
+2. sentence_ids: 고른 문장 번호를 모두 적는다. 그런 문장이 없으면 빈 목록으로 둔다.
+
+고를 문장: 그 문장의 내용이 사실이라면 [주장]은 거짓일 수밖에 없는 문장([주장]을 직접 부정하지 않아도 된다). [주장]과 같은 이름이나 대상이 나오더라도, [주장]이 참인지 거짓인지와 관계없는 내용이면 고르지 않는다. 이름이 비슷한 다른 인물·장소·시대를 같은 것으로 착각하지 않도록 이름을 정확히 비교한다. {_SELECT_MENTION_RULE}
+
+{_SELECT_EXAMPLES}
+
+[문장]
+{{sentences}}
+
+[주장]
+{{claim}}"""
+
 
 # 근거 문단 전체 글자 수 상한. 입력이 모델 컨텍스트(misinfo_infer.OLLAMA_NUM_CTX=8192 토큰)를 넘으면
 # Ollama가 프롬프트 앞부분 - 오반박을 막는 지시문 - 부터 조용히 잘라낸다(2026-10-01 리뷰). 한국어는
@@ -126,6 +174,20 @@ def replace_block_numbers(reason: str, blocks: list[tuple[str, str]]) -> str:
 
 def _format_blocks(blocks: list[tuple[str, str]]) -> str:
     return "\n".join(f"[{i}] ({title}) {text}" for i, (title, text) in enumerate(blocks, start=1))
+
+
+def build_select_prompt(claim: str, candidates: list[tuple[str, str]]) -> str:
+    """candidates: (문서 제목, 문장) 목록. 번호는 1부터."""
+    numbered = "\n".join(f"[{i}] ({title}) {sentence}" for i, (title, sentence) in enumerate(candidates, start=1))
+    return SELECT_TEMPLATE.format(sentences=numbered, claim=claim)
+
+
+def parse_select_response(raw_response: str, candidate_count: int) -> list[int] | None:
+    """형식이 틀리면 None, 고른 문장이 없으면 빈 목록."""
+    data = _load_object(raw_response)
+    if data is None or not isinstance(data.get("analysis"), str) or not isinstance(data.get("sentence_ids"), list):
+        return None
+    return _valid_ids(data["sentence_ids"], candidate_count)
 
 
 def build_judge_prompt(sentence: str, evidence_blocks: list[tuple[str, str]]) -> str:

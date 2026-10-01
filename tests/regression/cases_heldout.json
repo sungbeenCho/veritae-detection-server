@@ -1,0 +1,220 @@
+[
+ {
+  "expected": "contradiction",
+  "category": "false_fact",
+  "sentence": "광화문은 부산에 있다.",
+  "evidence_keys": [
+   [
+    "서울",
+    "종로"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "false_fact",
+  "sentence": "임진왜란은 1392년에 일어났다.",
+  "evidence_keys": [
+   [
+    "1592"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "false_fact",
+  "sentence": "피카소는 독일 화가이다.",
+  "evidence_keys": [
+   [
+    "스페인"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "false_fact",
+  "sentence": "베토벤은 영국에서 태어났다.",
+  "evidence_keys": [
+   [
+    "본에서",
+    "독일",
+    "신성 로마"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "false_fact",
+  "sentence": "고래는 어류이다.",
+  "evidence_keys": [
+   [
+    "포유"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "false_fact",
+  "sentence": "후지산은 중국에 있다.",
+  "evidence_keys": [
+   [
+    "일본",
+    "시즈오카",
+    "야마나시"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "false_fact",
+  "sentence": "토마토의 원산지는 중국이다.",
+  "evidence_keys": [
+   [
+    "남아메리카",
+    "안데스",
+    "남미",
+    "중앙아메리카",
+    "멕시코",
+    "페루"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "false_fact",
+  "sentence": "달은 스스로 빛을 낸다.",
+  "evidence_keys": [
+   [
+    "반사"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "myth",
+  "sentence": "금붕어의 기억력은 3초밖에 되지 않는다.",
+  "evidence_keys": [
+   [
+    "기억"
+   ],
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정",
+    "개월",
+    "달"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "myth",
+  "sentence": "번개는 같은 곳에 두 번 치지 않는다.",
+  "evidence_keys": [
+   [
+    "여러",
+    "반복",
+    "두 번",
+    "다시",
+    "자주",
+    "같은"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "hearsay",
+  "sentence": "고래가 물고기라고 들었어요.",
+  "evidence_keys": [
+   [
+    "포유"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "hearsay",
+  "sentence": "임진왜란이 1392년에 일어났다고 배웠어요.",
+  "evidence_keys": [
+   [
+    "1592"
+   ]
+  ]
+ },
+ {
+  "expected": "entailment",
+  "category": "true_fact",
+  "sentence": "고래는 포유류이다."
+ },
+ {
+  "expected": "entailment",
+  "category": "true_fact",
+  "sentence": "피카소는 스페인 출신의 화가이다."
+ },
+ {
+  "expected": "entailment",
+  "category": "true_fact",
+  "sentence": "임진왜란은 1592년에 일어났다."
+ },
+ {
+  "expected": "entailment",
+  "category": "true_fact",
+  "sentence": "광화문은 서울에 있다."
+ },
+ {
+  "expected": "entailment",
+  "category": "true_fact",
+  "sentence": "후지산은 일본에서 가장 높은 산이다."
+ },
+ {
+  "expected": "entailment",
+  "category": "true_fact",
+  "sentence": "베토벤은 독일의 작곡가이다."
+ },
+ {
+  "expected": "entailment",
+  "category": "mention",
+  "sentence": "번개가 같은 곳에 두 번 치지 않는다는 말은 사실이 아니다."
+ },
+ {
+  "expected": "entailment",
+  "category": "mention",
+  "sentence": "금붕어의 기억력이 3초라는 속설이 있다."
+ },
+ {
+  "expected": "entailment",
+  "category": "mention",
+  "sentence": "지구가 평평하다고 주장하는 사람들이 있다."
+ },
+ {
+  "expected": "entailment",
+  "category": "hearsay_true",
+  "sentence": "고래가 포유류라고 들었어요."
+ },
+ {
+  "expected": "neutral",
+  "category": "personal",
+  "sentence": "내일 회사 회식이 있다."
+ },
+ {
+  "expected": "neutral",
+  "category": "personal",
+  "sentence": "우리 집 강아지는 산책을 좋아한다."
+ },
+ {
+  "expected": "neutral",
+  "category": "opinion",
+  "sentence": "이번 주말에는 영화를 보는 것이 좋겠다."
+ }
+]

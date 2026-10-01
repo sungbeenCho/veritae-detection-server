@@ -2,9 +2,15 @@
 pytest가 아니라 독립 스크립트다 - 실제 모델과 인덱스가 있는 데스크탑에서만 돈다.
 프롬프트(scripts/misinfo_lib.py의 PROMPT_TEMPLATE)나 설정값을 바꿀 때마다 이걸로 재확인한다.
 
-기본 실행 대상은 cases_e2e.json(20건, 실제 위키 검색 기반 파이프라인 그대로 돌리는 세트)과
+기본 실행 대상은 cases_e2e.json(20건, 실제 위키 검색 기반 파이프라인 그대로 돌리는 세트),
 cases_grounding.json(14건, 전해 들은 말/OCR 오타/속설을 소개만 하는 참인 문장/근거 두 개를
-이어 봐야 하는 문장)이다. cases_basic.json/cases_hard.json은 원래 위키 검색이
+이어 봐야 하는 문장), cases_heldout.json(25건, 프롬프트를 고칠 때 보지 않는 확인용 세트 -
+앞의 두 세트에만 맞춰진 수정인지 가려낸다)이다.
+
+반박 판정은 라벨뿐 아니라 화면에 나가는 근거 문장도 채점한다. 반박이어야 하는 문장에는
+evidence_keys(단어 묶음 목록)가 있고, 표시된 근거 문장이 모든 묶음에서 단어를 하나 이상 포함해야
+맞는 근거로 본다(2026-10-01: 라벨은 맞는데 "지구의 베어링" 같은 무관한 문장이 근거로 나간 사례).
+BAD-EVIDENCE로 찍힌 문장은 자동 채점이 놓친 표현일 수도 있으니 사람이 직접 읽어 확인한다. cases_basic.json/cases_hard.json은 원래 위키 검색이
 아니라 premise(근거 문단)가 함께 주어지는 NLI 분류기 실험 데이터였는데, 이 브랜치로 옮겨오며
 premise가 빠져 실제 검색 기반 파이프라인과는 맞지 않는다(자세한 사유는 이 디렉터리의
 README.md 참고) - 그래서 기본 실행에서 빼고 --include-nli-legacy를 줬을 때만 참고용으로 돈다.
@@ -12,8 +18,10 @@ README.md 참고) - 그래서 기본 실행에서 빼고 --include-nli-legacy를
 사용:
   python run_regression.py --wiki-index <db경로> --ollama-url http://localhost:11434 --ollama-model qwen3.5:4b
   python run_regression.py ... --include-nli-legacy   # cases_basic/cases_hard도 참고용으로 같이 돌림
+  python run_regression.py ... --llm-cache cache.json   # 같은 프롬프트의 LLM 응답을 재사용(temperature 0)
 """
 import argparse
+import hashlib
 import json
 import logging
 import sqlite3
@@ -23,6 +31,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "scripts"))
 from kiwipiepy import Kiwi  # noqa: E402
+import misinfo_infer  # noqa: E402
 from misinfo_infer import judge_sentence  # noqa: E402
 from nli_check import NliModel, default_model_path  # noqa: E402
 
@@ -33,9 +42,29 @@ def load_cases(name: str) -> list[dict]:
     return json.loads((HERE / name).read_text(encoding="utf-8"))
 
 
+def evidence_ok(text: str, keys: list[list[str]]) -> bool:
+    return all(any(word in text for word in group) for group in keys)
+
+
+def use_llm_cache(path: Path) -> None:
+    """temperature 0이라 같은 프롬프트면 같은 응답이 나온다 - 프롬프트를 고친 단계만 다시 묻는다."""
+    cache = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    ask = misinfo_infer.ask_ollama
+
+    def cached_ask(url, model, prompt, schema):
+        key = hashlib.sha256(json.dumps([model, prompt, schema], ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+        if key not in cache:
+            cache[key] = ask(url, model, prompt, schema)
+            path.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+        return cache[key]
+
+    misinfo_infer.ask_ollama = cached_ask
+
+
 def run_group(name: str, cases: list[dict], kiwi, conn, ollama_url: str, model: str, evidence_count: int, nli) -> None:
     correct = 0
     dangerous = 0
+    bad_evidence = 0
     slowest = 0.0
     start = time.time()
     for case in cases:
@@ -70,6 +99,7 @@ def main() -> None:
     parser.add_argument("--ollama-model", required=True)
     parser.add_argument("--evidence-count", type=int, default=5)
     parser.add_argument("--nli-model", default=default_model_path())
+    parser.add_argument("--llm-cache", type=Path, help="LLM 응답 캐시 파일(프롬프트 수정 반복 시험용)")
     parser.add_argument(
         "--include-nli-legacy",
         action="store_true",
@@ -83,12 +113,15 @@ def main() -> None:
     logging.basicConfig(level=logging.WARNING, format="    [%(levelname)s] %(message)s")
     logging.getLogger("misinfo").setLevel(logging.DEBUG)
     logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
+    if args.llm_cache:
+        use_llm_cache(args.llm_cache)
     conn = sqlite3.connect(args.wiki_index)
     kiwi = Kiwi()
     nli = NliModel(args.nli_model).contradiction_scores
 
     run_group("cases_e2e", load_cases("cases_e2e.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli)
     run_group("cases_grounding", load_cases("cases_grounding.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli)
+    run_group("cases_heldout", load_cases("cases_heldout.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli)
 
     if args.include_nli_legacy:
         run_group("cases_basic (참고용, NLI 벤치마크 - 머지 게이트 아님)", load_cases("cases_basic.json"), kiwi, conn, args.ollama_url, args.ollama_model, args.evidence_count, nli)
