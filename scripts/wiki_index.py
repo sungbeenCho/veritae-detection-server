@@ -140,13 +140,34 @@ def search(conn: sqlite3.Connection, keywords: str, limit: int = 50) -> list[Chu
     return [Chunk(*row) for row in rows]
 
 
-def expand_with_neighbors(conn: sqlite3.Connection, chunks: list[Chunk]) -> list[tuple[str, str]]:
+def lead_rowid(conn: sqlite3.Connection, title: str) -> int | None:
+    """문서의 첫 조각(정의 문단) rowid. 한 문서의 조각은 연속된 rowid로 저장되므로 가장 작은 rowid가 첫 조각이다."""
+    try:
+        row = conn.execute(
+            "SELECT min(rowid) FROM chunks WHERE chunks MATCH ? AND title = ?",
+            (f"title : {_quote_fts5_token(title)}", title),
+        ).fetchone()
+    except sqlite3.OperationalError:
+        # 제목이 문장부호뿐이라 검색어가 비는 경우 등 - 첫 문단 없이 진행한다.
+        return None
+    return row[0] if row else None
+
+
+def expand_with_neighbors(
+    conn: sqlite3.Connection, chunks: list[Chunk], include_lead: bool = True,
+) -> list[tuple[str, str]]:
     """각 조각에 같은 문서의 바로 앞뒤 조각을 붙여 (제목, 본문) 묶음으로 돌려준다.
 
     약 200자 조각 하나만 보면 "이런 가설이 있다"까지만 담기고 바로 뒤의 "과학적 근거가
     없다"가 잘려, 판정도 근거 표시도 틀어진다(2026-10-01 선풍기 사망설 실측). 구축 시 한
     문서의 조각은 연속된 rowid로 저장되므로 인덱스를 다시 만들지 않고 rowid±1로 찾는다.
     겹치거나 맞닿는 묶음은 하나로 합치고, 묶음 순서는 그 안에 든 선택 조각의 순위를 따른다.
+
+    include_lead면 문서마다 첫 조각(정의 문단)도 붙인다. 위키 문서는 첫 문단에 "에펠탑은 프랑스
+    파리에 있는…", "고래는 … 포유류의 총칭이다" 같은 정의가 있는데, 키워드 검색은 이 문단 대신
+    다른 조각을 가져오는 경우가 많아 쉬운 거짓 문장도 놓쳤다(2026-10-01 데스크탑 실측: 에펠탑
+    런던, 고래 어류, 세종 고려). 첫 문단은 그 문서의 가장 높은 순위 묶음 바로 앞에 둔다 - 글자 수
+    상한(fit_blocks)에 걸려도 첫 문단만 따로 밀려나지 않게.
     """
     if not chunks:
         return []
@@ -154,13 +175,24 @@ def expand_with_neighbors(conn: sqlite3.Connection, chunks: list[Chunk]) -> list
     for chunk in chunks:
         for rowid in (chunk.rowid - 1, chunk.rowid, chunk.rowid + 1):
             wanted.setdefault(rowid, set()).add(chunk.title)
+
+    rank = {chunk.rowid: i for i, chunk in enumerate(chunks)}
+    if include_lead:
+        best_rank: dict[str, int] = {}
+        for i, chunk in enumerate(chunks):
+            best_rank.setdefault(chunk.title, i)
+        for title, i in best_rank.items():
+            lead = lead_rowid(conn, title)
+            if lead is not None:
+                wanted.setdefault(lead, set()).add(title)
+                rank.setdefault(lead, i)
+
     placeholders = ",".join("?" * len(wanted))
     rows = conn.execute(
         f"SELECT rowid, title, text FROM chunks WHERE rowid IN ({placeholders})", list(wanted)
     ).fetchall()
     kept = {rowid: (title, text) for rowid, title, text in rows if title in wanted[rowid]}
 
-    rank = {chunk.rowid: i for i, chunk in enumerate(chunks)}
     runs: list[list[int]] = []
     for rowid in sorted(kept):
         if runs and runs[-1][-1] == rowid - 1 and kept[runs[-1][-1]][0] == kept[rowid][0]:

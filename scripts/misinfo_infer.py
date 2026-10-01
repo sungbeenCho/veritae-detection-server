@@ -1,6 +1,6 @@
 # scripts/misinfo_infer.py
-"""문장 목록 -> 위키 검색 -> e5 재정렬 -> 앞뒤 문맥 붙이기 -> LLM 1차 판정 -> 반박 후보는 인용 문단을
-NLI 분류기로 문장 단위 확인 -> 둘 다 반박이라고 한 문장만, 모순이 확인된 근거 문단과 함께 결과로.
+"""문장 목록 -> 위키 검색 -> e5 재정렬 -> 앞뒤 문맥과 문서 첫 문단 붙이기 -> LLM 1차 판정 -> 반박이면
+e5로 후보 문장 추리기 -> LLM이 근거 문장 선택 -> NLI 분류기로 모순 확인 -> 확인된 문장과 링크만 결과로.
 text-extraction conda env(kiwipiepy, mwparserfromhell, torch, transformers 설치됨)에서
 실행되어야 한다. veritae-detection-server(FastAPI)는 이 스크립트를 subprocess로 호출하고
 --output 경로의 JSON만 읽는다 - scam_infer.py와 동일한 패턴.
@@ -83,6 +83,24 @@ def rerank(sentence: str, candidates: list[Chunk], top_k: int) -> list[Chunk]:
     passage_vecs = embed([f"passage: {c.title} {c.text}" for c in candidates])
     scores = (passage_vecs @ query_vec.T).squeeze(-1)
     return pick_diverse([candidates[i] for i in scores.argsort(descending=True).tolist()], top_k)
+
+
+# 근거 문장 선택(LLM)에 보여줄 후보 문장 수. 검색 문단 전체를 문장으로 쪼개면 수십 개가 되는데,
+# 4B 모델은 그중에서 "레플리카 에펠탑의 높이는 330 m이다", "고래상어의 수명은 70년" 같은 무관한
+# 문장을 골라 맞는 반박을 버렸다(2026-10-01 데스크탑 실측: 놓친 19개 중 5개가 이 경우). e5로 주장과
+# 가까운 문장만 먼저 추린다. e5만으로 고르면 "부산은 임시 수도가 되었다" 같은 틀린 근거가 섞여
+# (같은 날 비교), 고르는 판단은 LLM에 남겨 둔다.
+SELECT_SHORTLIST_SIZE = 5
+
+
+def shortlist_sentences(claim: str, candidates: list[tuple[str, str]], size: int = SELECT_SHORTLIST_SIZE) -> list[tuple[str, str]]:
+    """(제목, 문장) 후보 중 claim과 의미가 가까운 순으로 size개."""
+    if len(candidates) <= size:
+        return candidates
+    query_vec = embed(["query: " + claim])
+    passage_vecs = embed([f"passage: {sentence}" for _, sentence in candidates])
+    scores = (passage_vecs @ query_vec.T).squeeze(-1)
+    return [candidates[i] for i in scores.argsort(descending=True).tolist()[:size]]
 
 
 def pick_diverse(ranked: list[Chunk], top_k: int, per_title: int = MAX_CHUNKS_PER_TITLE) -> list[Chunk]:
@@ -172,14 +190,16 @@ def judge_sentence(
     if first is None or first["label"] != "반박" or not first["evidence_ids"]:
         return None
 
-    # 반박은 사용자에게 "이 문장은 거짓"이라고 보여주는 유일한 판정이라, 인용 문단에서 근거 문장을
-    # LLM이 고르고(관련성), 고른 문장만 NLI가 모순인지 확인한다(판정). 둘 다 통과한 문장만 근거로
-    # 표시하고, 하나도 없으면 반박을 버린다(misinfo_lib.py 모듈 설명 참고).
-    cited = [evidence_blocks[i - 1] for i in first["evidence_ids"]]
-    candidates = candidate_sentences(cited)
+    # 반박은 사용자에게 "이 문장은 거짓"이라고 보여주는 유일한 판정이라, e5가 주장과 가까운 문장을
+    # 추리고 그중에서 LLM이 근거 문장을 고르고(관련성), 고른 문장만 NLI가 모순인지 확인한다(판정).
+    # 둘 다 통과한 문장만 근거로 표시하고, 하나도 없으면 반박을 버린다(misinfo_lib.py 모듈 설명 참고).
+    # 후보는 1차 판정이 인용한 문단만이 아니라 검색된 문단 전체에서 고른다 - 1차 판정이 엉뚱한 문단을
+    # 인용해 맞는 근거("학계의 중론은 … 자폐증 발생률을 증가시키지 않았으며")를 놓친 경우가 있었다
+    # (2026-10-01 비교). 1차 판정은 반박 여부를 거르는 관문으로 쓴다.
+    claim = first["core_claim"]
+    candidates = shortlist_sentences(claim, candidate_sentences(evidence_blocks))
     if not candidates:
         return None
-    claim = first["core_claim"]
     raw_selection = ask_ollama(ollama_url, model, build_select_prompt(claim, candidates), SELECT_SCHEMA)
     picked_ids = parse_select_response(raw_selection, len(candidates))
     if picked_ids is None:

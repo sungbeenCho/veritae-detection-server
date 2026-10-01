@@ -8,6 +8,7 @@ from scripts.wiki_index import (
     add_chunk,
     create_index,
     expand_with_neighbors,
+    lead_rowid,
     extract_keywords,
     get_snapshot,
     search,
@@ -244,3 +245,44 @@ def test_search_excludes_disambiguation_pages(tmp_path):
     conn = _index_with(tmp_path, [("세종 (동음이의)", "주식회사 세종 금융 기업"), ("세종", "세종 조선 제4대 왕")])
 
     assert [c.title for c in search(conn, "세종", limit=5)] == ["세종"]
+
+
+def test_expand_adds_lead_chunk_of_each_article_before_its_chunks(tmp_path):
+    """키워드 검색이 정의 문단 대신 다른 조각을 가져와 "에펠탑은 런던에 있다"를 놓쳤다(2026-10-01)."""
+    conn = _index_with(tmp_path, [
+        ("에펠탑", "에펠탑은 프랑스 파리에 있는 철탑이다."),
+        ("에펠탑", "e2"), ("에펠탑", "e3"), ("에펠탑", "e4"), ("에펠탑", "e5"),
+        ("고래", "고래는 포유류의 총칭이다."), ("고래", "w2"), ("고래", "w3"),
+    ])
+
+    blocks = expand_with_neighbors(conn, [_chunk(conn, "w3"), _chunk(conn, "e4")])
+
+    assert blocks == [
+        ("고래", "고래는 포유류의 총칭이다. w2 w3"),
+        ("에펠탑", "에펠탑은 프랑스 파리에 있는 철탑이다."),
+        ("에펠탑", "e3 e4 e5"),
+    ]
+
+
+def test_expand_lead_comes_only_from_the_exact_title(tmp_path):
+    conn = _index_with(tmp_path, [
+        ("에펠탑의 레플리카", "레플리카 첫 문단"),
+        ("에펠탑", "에펠탑은 파리에 있다."), ("에펠탑", "t2"), ("에펠탑", "t3"), ("에펠탑", "t4"),
+    ])
+
+    blocks = expand_with_neighbors(conn, [_chunk(conn, "t4")])
+
+    assert blocks == [("에펠탑", "에펠탑은 파리에 있다."), ("에펠탑", "t3 t4")]
+
+
+def test_expand_without_lead_keeps_only_neighbors(tmp_path):
+    conn = _index_with(tmp_path, [("A", "a1"), ("A", "a2"), ("A", "a3"), ("A", "a4")])
+
+    assert expand_with_neighbors(conn, [_chunk(conn, "a4")], include_lead=False) == [("A", "a3 a4")]
+
+
+def test_lead_rowid_survives_titles_with_fts_syntax_characters(tmp_path):
+    conn = _index_with(tmp_path, [("SPEC: 경시청 (공안부)", "첫 문단"), ("SPEC: 경시청 (공안부)", "둘째")])
+
+    assert lead_rowid(conn, "SPEC: 경시청 (공안부)") == 1
+    assert lead_rowid(conn, "없는 문서") is None

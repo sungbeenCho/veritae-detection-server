@@ -67,7 +67,7 @@ class NliModel:
 
 
 def candidate_sentences(blocks: list[tuple[str, str]]) -> list[tuple[str, str]]:
-    """인용 문단을 (문서 제목, 문장) 목록으로 나눈다. 근거 문장 선택(LLM)에 번호를 매겨 보여줄 후보다.
+    """검색된 문단을 (문서 제목, 문장) 목록으로 나눈다. 근거 문장 선택(e5로 추린 뒤 LLM)의 후보다.
     너무 짧은 조각과 표가 풀린 긴 덩어리(MAX_SENTENCE_CHARS 초과)는 문장으로 치지 않는다."""
     return [
         (title, sentence)

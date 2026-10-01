@@ -1,4 +1,4 @@
-"""judge_sentence의 판정 흐름: LLM 1차 판정 → 반박이면 인용 문단의 문장 중 근거 문장을 LLM이 고름 →
+"""judge_sentence의 판정 흐름: LLM 1차 판정 → 반박이면 검색 문단의 문장을 e5로 추리고 그중 근거 문장을 LLM이 고름 →
 고른 문장만 NLI로 모순 확인 → 확인된 문장만 근거로.
 Ollama, e5 임베딩, NLI 모델은 가짜로 바꾸고, 위키 인덱스는 임시 SQLite로 만든다."""
 import json
@@ -111,16 +111,36 @@ def test_refutation_without_cited_evidence_is_not_shown(kiwi, conn, llm):
     assert nli.seen == []
 
 
-def test_selection_sees_only_sentences_of_cited_blocks_against_core_claim(kiwi, conn, llm):
+def test_selection_sees_sentences_of_all_retrieved_blocks_against_core_claim(kiwi, conn, llm):
+    """1차 판정이 엉뚱한 문단을 인용해도 맞는 근거를 놓치지 않도록, 검색된 문단 전체가 후보다."""
     calls, answer = llm
-    answer.update(label="반박", cite=("선풍기 사망설",), pick=(REFUTING,))
+    answer.update(label="반박", cite=("케니 맥코믹",), pick=(REFUTING,))
 
-    _run(kiwi, conn, _nli({REFUTING}))
+    claim = _run(kiwi, conn, _nli({REFUTING}))
 
     [select_prompt] = _prompts(calls, misinfo_infer.SELECT_SCHEMA)
-    assert set(_sentence_ids(select_prompt)) == {"선풍기를 켜고 자면 사망한다는 가설이 있다.", REFUTING}
+    assert set(_sentence_ids(select_prompt)) == {
+        "선풍기를 켜고 자면 사망한다는 가설이 있다.", REFUTING, "선풍기에 말려서 사망하는 장면이 나온다.",
+    }
     assert CLAIM in select_prompt
     assert SENTENCE not in select_prompt
+    assert claim["evidence"][0]["text"] == REFUTING
+
+
+def test_shortlist_keeps_sentences_closest_to_claim(monkeypatch):
+    import torch
+
+    vectors = {"query: 주장": [1.0, 0.0], "passage: 가까움": [0.9, 0.1], "passage: 중간": [0.5, 0.5], "passage: 멂": [0.0, 1.0]}
+    monkeypatch.setattr(misinfo_infer, "embed", lambda texts: torch.tensor([vectors[t] for t in texts]))
+    candidates = [("A", "멂"), ("B", "중간"), ("C", "가까움")]
+
+    assert misinfo_infer.shortlist_sentences("주장", candidates, size=2) == [("C", "가까움"), ("B", "중간")]
+
+
+def test_shortlist_returns_all_when_few_candidates(monkeypatch):
+    monkeypatch.setattr(misinfo_infer, "embed", lambda texts: (_ for _ in ()).throw(AssertionError("호출되면 안 된다")))
+
+    assert misinfo_infer.shortlist_sentences("주장", [("A", "문장")], size=5) == [("A", "문장")]
 
 
 def test_nli_checks_only_selected_sentences(kiwi, conn, llm):
