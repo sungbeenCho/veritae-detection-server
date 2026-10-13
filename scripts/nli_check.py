@@ -1,10 +1,14 @@
-"""반박 확인 단계: 근거 문장 선택(LLM)이 고른 문장이 정말 주장과 모순되는지, 문장 두 개의 모순 여부만
-판정하도록 학습된 NLI 분류기로 확인한다(전체 흐름은 misinfo_lib.py 모듈 설명 참고).
+"""반박 확인·근거 선택 단계: LLM이 1차로 "반박"이라고 판정한 문장에 대해, 위키 문단의 문장 중 주장과 모순인 것을
+문장 두 개의 모순 여부만 판정하도록 학습된 NLI 분류기로 찾는다(전체 흐름은 misinfo_lib.py 모듈 설명 참고).
 
 LLM에게 다시 묻는 방식은 같은 모델이 같은 실수를 반복하고 문구를 바꿀 때마다 오류가 옮겨 다녀 쓸 수
 없었다(2026-10-01 데스크탑 실측 3회). NLI 분류기는 판단 방식이 달라 LLM과 독립적이고, 같은 입력이면 항상
-같은 결과를 낸다. 대신 NLI는 주어만 같고 내용이 무관한 문장에도 높은 모순 점수를 줘서("지구는 평평하다" vs
-"지구의는 받침대에 베어링이 있다" 0.989) 근거 문장을 고르는 일은 맡기지 않고, LLM이 고른 문장의 확인만 맡긴다.
+같은 결과를 낸다.
+
+근거 문장도 NLI 점수로 고른다(2026-10-13). 10-01에는 NLI가 주어만 같고 내용이 무관한 문장에도 높은 점수를 줘서
+("지구는 평평하다" vs "지구의는 받침대에 베어링이 있다" 0.989) LLM이 근거 문장을 고르게 하고 NLI는 확인만 시켰는데,
+LLM이 엉뚱한 문장을 골라 맞는 반박 7개를 버렸다(59문장 기록 대조). 대신 주장과 의미가 가까운 상위 15개 문장만
+NLI로 채점하고, LLM의 "반박" 판정이 먼저 있어야 한다는 조건으로 무관한 문장이 표시되는 위험을 줄였다.
 """
 from __future__ import annotations
 
@@ -80,27 +84,21 @@ def candidate_sentences(blocks: list[tuple[str, str]]) -> list[tuple[str, str]]:
     ]
 
 
-def score_and_confirm(
-    score: ContradictionScorer, picked: list[tuple[str, str]], claim: str, threshold: float = NLI_THRESHOLD,
-) -> tuple[list[dict], list[dict]]:
-    """고른 문장 전부에 NLI 점수를 매겨 (통과한 문장, 점수가 매겨진 전체)를 돌려준다. 입력 순서 유지.
-    탈락한 문장의 점수도 돌려주는 이유: 탐지가 비었을 때 NLI가 몇 점을 줬는지 알아야 원인을 찾는다(2026-10-13)."""
-    if not picked:
-        return [], []
-    scores = score([sentence for _, sentence in picked], claim)
+def pick_best_contradiction(
+    score: ContradictionScorer, candidates: list[tuple[str, str]], claim: str, threshold: float = NLI_THRESHOLD,
+) -> tuple[dict | None, list[dict]]:
+    """후보 문장 전부에 NLI 점수를 매겨 (모순 점수가 가장 높고 threshold 이상인 문장 하나 또는 None, 점수가 매겨진 전체)를
+    돌려준다. 점수가 같으면 앞 후보(주장과 의미가 더 가까운 문장)를 쓴다.
+    탈락했을 때도 점수를 돌려주는 이유: 탐지가 비었을 때 NLI가 몇 점을 줬는지 알아야 원인을 찾는다(2026-10-13)."""
+    if not candidates:
+        return None, []
+    scores = score([sentence for _, sentence in candidates], claim)
     scored = [
         {"title": title, "sentence": sentence, "score": value}
-        for (title, sentence), value in zip(picked, scores)
+        for (title, sentence), value in zip(candidates, scores)
     ]
-    return [item for item in scored if item["score"] >= threshold], scored
-
-
-def confirm_sentences(
-    score: ContradictionScorer, picked: list[tuple[str, str]], claim: str, threshold: float = NLI_THRESHOLD,
-) -> list[dict]:
-    """근거 문장 선택(LLM)이 고른 문장만 NLI로 확인해, 모순 확률이 threshold 이상인 것만 돌려준다.
-    결과: [{"title", "sentence", "score"}] - 입력 순서 유지."""
-    return score_and_confirm(score, picked, claim, threshold)[0]
+    best = max(scored, key=lambda item: item["score"])
+    return (best if best["score"] >= threshold else None), scored
 
 
 def default_model_path() -> str:

@@ -1,4 +1,4 @@
-from scripts.nli_check import MAX_SENTENCE_CHARS, NLI_THRESHOLD, candidate_sentences, confirm_sentences
+from scripts.nli_check import MAX_SENTENCE_CHARS, NLI_THRESHOLD, candidate_sentences, pick_best_contradiction
 
 
 def _scorer(table: dict[str, float]):
@@ -32,59 +32,58 @@ def test_candidates_skip_table_like_fragments_longer_than_a_real_sentence():
     assert candidates == [("에펠탑의 레플리카", "짧은 문장입니다.")]
 
 
-def test_confirm_keeps_only_picked_sentences_reaching_threshold():
-    picked = [("에펠탑", "에펠탑은 프랑스 파리에 있다."), ("대관람차", "대관람차는 박람회에서 처음 등장했다.")]
-    score = _scorer({"에펠탑은 프랑스 파리에 있다.": 0.99, "대관람차는 박람회에서 처음 등장했다.": 0.3})
+def test_pick_best_returns_the_highest_scoring_sentence_reaching_threshold():
+    candidates = [("대관람차", "대관람차는 박람회에서 처음 등장했다."), ("에펠탑", "에펠탑은 프랑스 파리에 있다."), ("A", "무관한 문장입니다.")]
+    score = _scorer({"에펠탑은 프랑스 파리에 있다.": 0.99, "대관람차는 박람회에서 처음 등장했다.": 0.9})
 
-    assert confirm_sentences(score, picked, "에펠탑은 독일에 있다.") == [
-        {"title": "에펠탑", "sentence": "에펠탑은 프랑스 파리에 있다.", "score": 0.99},
+    best, scored = pick_best_contradiction(score, candidates, "에펠탑은 독일에 있다.")
+
+    assert best == {"title": "에펠탑", "sentence": "에펠탑은 프랑스 파리에 있다.", "score": 0.99}
+    assert [(s["title"], s["score"]) for s in scored] == [("대관람차", 0.9), ("에펠탑", 0.99), ("A", 0.0)]
+
+
+def test_pick_best_threshold_is_inclusive_and_below_it_is_none():
+    candidates = [("A", "문장 하나입니다.")]
+
+    assert pick_best_contradiction(_scorer({"문장 하나입니다.": NLI_THRESHOLD}), candidates, "주장")[0] is not None
+    assert pick_best_contradiction(_scorer({"문장 하나입니다.": NLI_THRESHOLD - 0.001}), candidates, "주장")[0] is None
+
+
+def test_pick_best_returns_scores_even_when_nothing_reaches_threshold():
+    """탐지가 비었을 때 NLI가 몇 점을 줬는지 알아야 원인을 안다(2026-10-13) - 탈락해도 점수는 돌려준다."""
+    candidates = [("A 문서", "첫 문장입니다."), ("B 문서", "둘째 문장입니다.")]
+
+    best, scored = pick_best_contradiction(lambda premises, hypothesis: [0.12, 0.40], candidates, "주장")
+
+    assert best is None
+    assert [(s["title"], s["sentence"], s["score"]) for s in scored] == [
+        ("A 문서", "첫 문장입니다.", 0.12), ("B 문서", "둘째 문장입니다.", 0.40),
     ]
 
 
-def test_confirm_threshold_is_inclusive_and_below_it_is_dropped():
-    picked = [("A", "문장 하나입니다.")]
+def test_pick_best_keeps_the_earlier_candidate_on_a_tie():
+    """동점이면 앞 후보(주장과 의미가 더 가까운 문장)를 쓴다."""
+    candidates = [("A", "먼저 나온 문장입니다."), ("B", "나중에 나온 문장입니다.")]
 
-    assert confirm_sentences(_scorer({"문장 하나입니다.": NLI_THRESHOLD}), picked, "주장")
-    assert confirm_sentences(_scorer({"문장 하나입니다.": NLI_THRESHOLD - 0.001}), picked, "주장") == []
+    best, _ = pick_best_contradiction(lambda premises, hypothesis: [0.95, 0.95], candidates, "주장")
+
+    assert best["title"] == "A"
 
 
-def test_confirm_passes_core_claim_as_hypothesis():
+def test_pick_best_passes_core_claim_as_hypothesis_in_one_batch():
     seen = []
 
     def score(premises, hypothesis):
         seen.append((premises, hypothesis))
         return [0.0] * len(premises)
 
-    confirm_sentences(score, [("A", "충분히 긴 문장입니다.")], "핵심 주장")
+    pick_best_contradiction(score, [("A", "충분히 긴 문장입니다."), ("B", "또 다른 문장입니다.")], "핵심 주장")
 
-    assert seen == [(["충분히 긴 문장입니다."], "핵심 주장")]
+    assert seen == [(["충분히 긴 문장입니다.", "또 다른 문장입니다."], "핵심 주장")]
 
 
-def test_confirm_with_nothing_picked_does_not_call_nli():
+def test_pick_best_with_no_candidates_does_not_call_nli():
     def score(premises, hypothesis):
         raise AssertionError("호출되면 안 된다")
 
-    assert confirm_sentences(score, [], "주장") == []
-
-
-def test_score_and_confirm_returns_scores_of_rejected_sentences_too():
-    """탐지가 비었을 때 NLI가 몇 점을 줬는지 알아야 원인을 안다(2026-10-13) - 통과한 문장만이 아니라 고른 문장 전부의 점수."""
-    from scripts.nli_check import score_and_confirm
-
-    picked = [("A 문서", "통과 문장"), ("B 문서", "탈락 문장")]
-
-    confirmed, scored = score_and_confirm(lambda premises, hypothesis: [0.95, 0.12], picked, "주장")
-
-    assert [c["sentence"] for c in confirmed] == ["통과 문장"]
-    assert [(s["title"], s["sentence"], s["score"]) for s in scored] == [
-        ("A 문서", "통과 문장", 0.95), ("B 문서", "탈락 문장", 0.12),
-    ]
-
-
-def test_score_and_confirm_with_nothing_picked_does_not_call_nli():
-    from scripts.nli_check import score_and_confirm
-
-    def boom(premises, hypothesis):
-        raise AssertionError("호출되면 안 된다")
-
-    assert score_and_confirm(boom, [], "주장") == ([], [])
+    assert pick_best_contradiction(score, [], "주장") == (None, [])

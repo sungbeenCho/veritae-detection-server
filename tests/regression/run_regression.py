@@ -66,8 +66,9 @@ def use_llm_cache(path: Path) -> None:
 
 class CandidateRecorder:
     """근거 문장 선택 방식을 데스크탑 밖에서 비교하려고, 판정 과정을 그대로 두고 옆에서 기록한다.
-    문장마다 1차 판정, 검색된 문단, LLM이 고른 문장, 그리고 검색된 문단의 모든 후보 문장에 대한
-    실제 NLI 모순 점수를 남긴다 - 노트북에서는 이 파일과 e5만으로 선택 방식을 바꿔 가며 비교한다."""
+    문장마다 1차 판정, 검색된 문단, 화면에 나간 근거, 그리고 검색된 문단의 모든 후보 문장에 대한
+    실제 NLI 모순 점수를 남긴다 - 노트북에서는 이 파일과 e5만으로 선택 방식을 바꿔 가며 비교한다.
+    (2026-10-13: LLM이 근거 문장을 고르는 단계를 없애서 llm_candidates/llm_picked_ids 기록은 없다.)"""
 
     def __init__(self, nli):
         self.nli = nli
@@ -78,8 +79,6 @@ class CandidateRecorder:
     def _patch(self) -> None:
         build_judge_prompt = misinfo_infer.build_judge_prompt
         parse_judge_response = misinfo_infer.parse_judge_response
-        parse_select_response = misinfo_infer.parse_select_response
-        build_select_prompt = misinfo_infer.build_select_prompt
 
         def record_blocks(sentence, blocks):
             self.current["evidence_blocks"] = [list(b) for b in blocks]
@@ -89,18 +88,8 @@ class CandidateRecorder:
             self.current["first"] = parse_judge_response(raw, count)
             return self.current["first"]
 
-        def record_select_prompt(claim, candidates):
-            self.current["llm_candidates"] = [list(c) for c in candidates]
-            return build_select_prompt(claim, candidates)
-
-        def record_picked(raw, count):
-            self.current["llm_picked_ids"] = parse_select_response(raw, count)
-            return self.current["llm_picked_ids"]
-
         misinfo_infer.build_judge_prompt = record_blocks
         misinfo_infer.parse_judge_response = record_first
-        misinfo_infer.build_select_prompt = record_select_prompt
-        misinfo_infer.parse_select_response = record_picked
 
     def start(self) -> None:
         self.current = {}
