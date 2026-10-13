@@ -1,11 +1,12 @@
 import io
+import logging
 
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.routers import image as image_router
 from app.services.gpu_queue import GpuQueueFullError
-from app.services.misinfo_runner import MisinfoInferenceError
+from app.services.misinfo_runner import MisinfoInferenceError, MisinfoResult
 from app.services.scam_runner import ScamInferenceError, ScamResult
 from app.services.spai_runner import SpaiInferenceError, SpaiResult
 
@@ -48,6 +49,28 @@ def test_process_image_returns_evidence_image_when_present(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["ai_detection"]["evidence_image"] == "base64data"
+
+
+def test_process_image_logs_time_of_each_stage_and_whole_request(monkeypatch, caplog):
+    """2분이 어느 단계에서 나가는지 서버 로그만으로 알 수 있어야 한다(2026-10-13: 로그가 없어 원인을 못 찾았다)."""
+    monkeypatch.setattr(image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.87, None))
+    monkeypatch.setattr(
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], ["문장 하나."])
+    )
+    monkeypatch.setattr(
+        image_router, "run_misinfo_inference", lambda sentences: MisinfoResult("qwen3.5:4b", "2026-09-01", [])
+    )
+
+    with caplog.at_level(logging.INFO, logger="app"):
+        response = client.post(
+            "/process/image",
+            files={"file": ("test.jpg", io.BytesIO(b"fake-image-bytes"), "image/jpeg")},
+        )
+
+    assert response.status_code == 200
+    for stage in ("spai", "scam", "misinfo"):
+        assert f"stage_done label={stage} seconds=" in caplog.text
+    assert "request_done method=POST path=/process/image status=200 seconds=" in caplog.text
 
 
 def test_process_image_rejects_unsupported_content_type():

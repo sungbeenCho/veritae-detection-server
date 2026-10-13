@@ -68,6 +68,42 @@ def test_gpu_queue_settings_have_sane_defaults(monkeypatch):
     assert settings.gpu_queue_max_depth == 10
 
 
+def _set_required_repo_dirs(monkeypatch):
+    monkeypatch.setenv("SPAI_REPO_DIR", "C:/fake/spai")
+    monkeypatch.setenv("ANTIDEEPFAKE_REPO_DIR", "C:/fake/antideepfake")
+    monkeypatch.setenv("DFDC_REPO_DIR", "C:/fake/dfdc")
+
+
+def test_misinfo_nli_model_defaults_to_augmented_model(monkeypatch):
+    """서버 기본 NLI는 보충 학습한 모델(data/nli_model_aug)이어야 한다. 옛 모델(data/nli_model)은 "~라는 이야기를
+    들었어요" 같은 전해 들은 말의 정답 근거에 0.058점을 줘서 반박을 버렸다(2026-10-13 실측 기록 비교)."""
+    _set_required_repo_dirs(monkeypatch)
+    monkeypatch.delenv("MISINFO_NLI_MODEL", raising=False)
+
+    path = Settings().misinfo_nli_model
+
+    assert path.name == "nli_model_aug"
+    assert path.parent.name == "data"
+
+
+def test_misinfo_nli_model_env_override_is_respected(monkeypatch):
+    _set_required_repo_dirs(monkeypatch)
+    monkeypatch.setenv("MISINFO_NLI_MODEL", "D:/models/custom_nli")
+
+    assert Settings().misinfo_nli_model == Path("D:/models/custom_nli")
+
+
+def test_misinfo_nli_model_default_is_same_for_server_and_regression_script(monkeypatch):
+    """회귀 테스트(nli_check.default_model_path)와 실서버(Settings)의 기본 모델이 어긋나면, 테스트는 통과하는데
+    서버는 다른 모델로 도는 일이 생긴다(2026-10-13: 테스트 21/30, 서버는 옛 모델이라 탐지 실패)."""
+    from nli_check import default_model_path
+
+    _set_required_repo_dirs(monkeypatch)
+    monkeypatch.delenv("MISINFO_NLI_MODEL", raising=False)
+
+    assert Path(default_model_path()) == Settings().misinfo_nli_model
+
+
 def test_misinfo_wiki_search_is_off_unless_explicitly_enabled(monkeypatch):
     """위키백과 검색은 사용자 문장의 핵심 단어를 외부로 보내므로 기본은 꺼짐이어야 한다(2026-10-01)."""
     monkeypatch.setenv("SPAI_REPO_DIR", "C:/fake/spai")

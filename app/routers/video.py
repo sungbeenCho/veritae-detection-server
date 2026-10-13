@@ -14,6 +14,7 @@ from app.schemas import (
 from app.services.dfdc_runner import DfdcInferenceError, NoFaceDetectedError, run_dfdc_inference
 from app.services.misinfo_runner import MisinfoInferenceError, run_misinfo_inference
 from app.services.scam_runner import ScamInferenceError, ScamResult, run_scam_inference_video
+from app.services.timing import timed
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +35,8 @@ async def process_video(file: UploadFile = File(...)) -> VideoAnalysisResponse:
         raise HTTPException(status_code=400, detail="empty file")
 
     filename = file.filename or "input.mp4"
-    ai_task = asyncio.create_task(asyncio.to_thread(run_dfdc_inference, video_bytes, filename))
-    scam_task = asyncio.create_task(asyncio.to_thread(run_scam_inference_video, video_bytes, filename))
+    ai_task = asyncio.create_task(asyncio.to_thread(timed("dfdc", run_dfdc_inference), video_bytes, filename))
+    scam_task = asyncio.create_task(asyncio.to_thread(timed("scam", run_scam_inference_video), video_bytes, filename))
 
     error_code = None
     try:
@@ -71,7 +72,7 @@ async def process_video(file: UploadFile = File(...)) -> VideoAnalysisResponse:
     misinformation_detection = None
     if scam_result.sentences:
         try:
-            misinfo_result = await asyncio.to_thread(run_misinfo_inference, scam_result.sentences)
+            misinfo_result = await asyncio.to_thread(timed("misinfo", run_misinfo_inference), scam_result.sentences)
         except MisinfoInferenceError as e:
             logger.exception("가짜정보 판정 파이프라인 실패")
             raise HTTPException(status_code=502, detail="가짜정보 판정 처리 중 오류가 발생했습니다.") from e

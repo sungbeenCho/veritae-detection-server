@@ -15,6 +15,7 @@ from app.services.antideepfake_runner import AntiDeepfakeInferenceError, run_ant
 from app.services.media_probe import probe_audio_duration_seconds
 from app.services.misinfo_runner import MisinfoInferenceError, run_misinfo_inference
 from app.services.scam_runner import ScamInferenceError, run_scam_inference_audio
+from app.services.timing import timed
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +45,8 @@ async def process_audio(file: UploadFile = File(...)) -> AudioAnalysisResponse:
             detail={"code": "AUDIO_TOO_LONG", "message": "음성 길이가 5분을 초과합니다."},
         )
 
-    ai_task = asyncio.create_task(asyncio.to_thread(run_antideepfake_inference, audio_bytes, filename))
-    scam_task = asyncio.create_task(asyncio.to_thread(run_scam_inference_audio, audio_bytes, filename))
+    ai_task = asyncio.create_task(asyncio.to_thread(timed("antideepfake", run_antideepfake_inference), audio_bytes, filename))
+    scam_task = asyncio.create_task(asyncio.to_thread(timed("scam", run_scam_inference_audio), audio_bytes, filename))
 
     try:
         ai_result = await ai_task
@@ -86,7 +87,7 @@ async def process_audio(file: UploadFile = File(...)) -> AudioAnalysisResponse:
     misinformation_detection = None
     if scam_result.sentences:
         try:
-            misinfo_result = await asyncio.to_thread(run_misinfo_inference, scam_result.sentences)
+            misinfo_result = await asyncio.to_thread(timed("misinfo", run_misinfo_inference), scam_result.sentences)
         except MisinfoInferenceError as e:
             logger.exception("가짜정보 판정 파이프라인 실패")
             raise HTTPException(status_code=502, detail="가짜정보 판정 처리 중 오류가 발생했습니다.") from e

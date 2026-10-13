@@ -10,9 +10,13 @@ docs(veritae-server 레포): docs/superpowers/specs/2026-09-29-misinformation-de
 import argparse
 import json
 import logging
+import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
+
+# 프로세스 시작 직후 시각 - 아래 무거운 임포트(kiwipiepy 등)에 걸린 시간을 startup으로 잰다.
+_PROCESS_START = time.perf_counter()
 
 from kiwipiepy import Kiwi
 
@@ -27,6 +31,7 @@ from misinfo_lib import (
     parse_select_response,
     replace_block_numbers,
 )
+from misinfo_timing import StepTimer, configure_script_logging, format_ollama_stats, logged_step
 from nli_check import ContradictionScorer, NliModel, candidate_sentences, confirm_sentences, default_model_path
 from wiki_index import (
     Chunk,
@@ -55,14 +60,16 @@ _embed_device = "cpu"
 def _load_embed_model():
     global _embed_tokenizer, _embed_model, _embed_device
     if _embed_model is None:
-        import torch
-        from transformers import AutoModel, AutoTokenizer
+        # torch/transformers 임포트와 모델 읽기 시간을 함께 잰다 - 요청마다 새 프로세스라 매번 든다(2026-10-13).
+        with logged_step("load_e5"):
+            import torch
+            from transformers import AutoModel, AutoTokenizer
 
-        _embed_tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL_ID)
-        _embed_model = AutoModel.from_pretrained(EMBEDDING_MODEL_ID)
-        _embed_model.eval()
-        _embed_device = "cuda" if torch.cuda.is_available() else "cpu"
-        _embed_model.to(_embed_device)
+            _embed_tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL_ID)
+            _embed_model = AutoModel.from_pretrained(EMBEDDING_MODEL_ID)
+            _embed_model.eval()
+            _embed_device = "cuda" if torch.cuda.is_available() else "cpu"
+            _embed_model.to(_embed_device)
     return _embed_tokenizer, _embed_model, _embed_device
 
 
@@ -149,8 +156,12 @@ def ask_ollama(ollama_url: str, model: str, prompt: str, schema: dict) -> str:
         data=json.dumps(body).encode("utf-8"),
         headers={"Content-Type": "application/json"},
     )
+    start = time.perf_counter()
     with urllib.request.urlopen(req, timeout=180) as resp:
-        return json.loads(resp.read())["response"]
+        data = json.loads(resp.read())
+    # Ollama가 알려주는 모델 로드 / 근거 읽기(prompt_eval) / 생성 시간 - 문장당 시간이 어디서 나가는지 보여준다.
+    logger.info("ollama %s", format_ollama_stats(data, time.perf_counter() - start))
+    return data["response"]
 
 
 def unload_ollama_model(ollama_url: str, model: str) -> None:
@@ -167,7 +178,7 @@ def unload_ollama_model(ollama_url: str, model: str) -> None:
         headers={"Content-Type": "application/json"},
     )
     try:
-        with urllib.request.urlopen(req, timeout=30):
+        with logged_step("unload_ollama"), urllib.request.urlopen(req, timeout=30):
             pass
     except Exception:
         # 언로드 실패는 이번 요청 자체를 실패시킬 이유가 아니다(best-effort) - 다만 조용히
@@ -205,24 +216,31 @@ def wiki_search_titles(terms: str, limit: int = WIKI_SEARCH_TITLES) -> list[str]
 
 def judge_sentence(
     kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str, evidence_count: int, nli: ContradictionScorer,
-    wiki_search: bool = False,
+    wiki_search: bool = False, timer: StepTimer | None = None,
 ) -> dict | None:
-    keywords = extract_keywords(kiwi, sentence)
-    candidates = search(conn, keywords, limit=50) if keywords else []
-    if wiki_search:
-        seen = {c.rowid for c in candidates}
-        for title in wiki_search_titles(web_search_terms(kiwi, sentence)):
-            for chunk in title_chunks(conn, title, keywords):
-                if chunk.rowid not in seen:
-                    seen.add(chunk.rowid)
-                    candidates.append(chunk)
+    # timer에는 단계별 시간(search, rerank, judge_llm, shortlist, select_llm, nli)과, 결과가 비었을 때 그 이유
+    # (outcome)가 담긴다 - 판정 결과 자체에는 영향이 없다. 안 넘기면(회귀 테스트 등) 쓰고 버린다.
+    timer = timer or StepTimer()
+    with timer.step("search"):
+        keywords = extract_keywords(kiwi, sentence)
+        candidates = search(conn, keywords, limit=50) if keywords else []
+        if wiki_search:
+            seen = {c.rowid for c in candidates}
+            for title in wiki_search_titles(web_search_terms(kiwi, sentence)):
+                for chunk in title_chunks(conn, title, keywords):
+                    if chunk.rowid not in seen:
+                        seen.add(chunk.rowid)
+                        candidates.append(chunk)
     if not candidates:
+        timer.outcome = "no_evidence_found"
         return None
 
-    top_chunks = rerank(sentence, candidates, top_k=evidence_count)
-    evidence_blocks = fit_blocks(expand_with_neighbors(conn, top_chunks))
+    with timer.step("rerank"):
+        top_chunks = rerank(sentence, candidates, top_k=evidence_count)
+        evidence_blocks = fit_blocks(expand_with_neighbors(conn, top_chunks))
 
-    raw_response = ask_ollama(ollama_url, model, build_judge_prompt(sentence, evidence_blocks), JUDGE_SCHEMA)
+    with timer.step("judge_llm"):
+        raw_response = ask_ollama(ollama_url, model, build_judge_prompt(sentence, evidence_blocks), JUDGE_SCHEMA)
     first = parse_judge_response(raw_response, len(evidence_blocks))
     if first is None:
         # 형식 오류 - 이 문장은 판단불가로 취급(§10), 결과에 포함하지 않는다. 다만 조용히
@@ -232,7 +250,11 @@ def judge_sentence(
         "1차 판정: sentence=%r verdict=%r evidence_titles=%r",
         sentence, first, [title for title, _ in evidence_blocks],
     )
-    if first is None or first["label"] != "반박" or not first["evidence_ids"]:
+    if first is None:
+        timer.outcome = "judge_format_error"
+        return None
+    if first["label"] != "반박" or not first["evidence_ids"]:
+        timer.outcome = "not_refuted"
         return None
 
     # 반박은 사용자에게 "이 문장은 거짓"이라고 보여주는 유일한 판정이라, e5가 주장과 가까운 문장을
@@ -242,23 +264,31 @@ def judge_sentence(
     # 인용해 맞는 근거("학계의 중론은 … 자폐증 발생률을 증가시키지 않았으며")를 놓친 경우가 있었다
     # (2026-10-01 비교). 1차 판정은 반박 여부를 거르는 관문으로 쓴다.
     claim = first["core_claim"]
-    candidates = shortlist_sentences(claim, candidate_sentences(evidence_blocks))
+    with timer.step("shortlist"):
+        candidates = shortlist_sentences(claim, candidate_sentences(evidence_blocks))
     if not candidates:
+        timer.outcome = "no_candidate_sentences"
         return None
-    raw_selection = ask_ollama(ollama_url, model, build_select_prompt(claim, candidates), SELECT_SCHEMA)
+    with timer.step("select_llm"):
+        raw_selection = ask_ollama(ollama_url, model, build_select_prompt(claim, candidates), SELECT_SCHEMA)
     picked_ids = parse_select_response(raw_selection, len(candidates))
     if picked_ids is None:
         logger.warning("근거 문장 선택 응답 형식 오류로 판단불가 처리함: sentence=%r raw_response=%r", sentence, raw_selection)
+        timer.outcome = "select_format_error"
         return None
     picked = [candidates[i - 1] for i in picked_ids]
-    confirmed = confirm_sentences(nli, picked, claim)
+    with timer.step("nli"):
+        confirmed = confirm_sentences(nli, picked, claim)
     logger.debug(
         "근거 문장 선택/NLI 확인: sentence=%r claim=%r picked=%r confirmed=%r",
         sentence, claim, picked, [(c["title"], c["sentence"], round(c["score"], 3)) for c in confirmed],
     )
     if not confirmed:
+        # LLM이 고른 문장이 없었는지(llm_picked_none), 골랐는데 NLI가 모순으로 보지 않았는지(nli_rejected)를 구분한다.
+        timer.outcome = "nli_rejected" if picked else "llm_picked_none"
         logger.info("1차 반박의 근거 문장이 확인되지 않아 제외함: sentence=%r first_reason=%r", sentence, first["reason"])
         return None
+    timer.outcome = "refuted"
     # 1차 판정의 번호는 evidence_blocks 기준이다.
     reason = replace_block_numbers(first["reason"], evidence_blocks)
     # 화면에는 반박 문장 하나와 문서 링크만 보여준다 - 판정에 쓴 긴 문맥(앞뒤 문단)을 그대로 내보내면
@@ -279,6 +309,10 @@ def main() -> None:
     parser.add_argument("--nli-model", default=default_model_path())
     parser.add_argument("--wiki-search", action="store_true", help="위키백과 검색 기능도 함께 쓴다(핵심 단어만 외부 전송)")
     args = parser.parse_args()
+    # 서버(misinfo_runner.py)가 이 프로세스의 stderr를 서버 로그로 올린다 - 단계별 시간과 경고가 거기 보인다.
+    configure_script_logging()
+    setup_start = time.perf_counter()
+    startup_seconds = setup_start - _PROCESS_START
 
     sentences = json.loads(args.sentences.read_text(encoding="utf-8"))
     nli = NliModel(args.nli_model)
@@ -293,19 +327,38 @@ def main() -> None:
     conn = sqlite3.connect(wiki_index_uri, uri=True)
     snapshot = get_snapshot(conn)
 
-    kiwi = Kiwi()
+    with logged_step("load_kiwi"):
+        kiwi = Kiwi()
+    setup_seconds = time.perf_counter() - setup_start
     claims = []
+    sentences_start = time.perf_counter()
+    unload_seconds = 0.0
     try:
-        for sentence in sentences:
+        for index, sentence in enumerate(sentences, start=1):
+            timer = StepTimer()
+            sentence_start = time.perf_counter()
             claim = judge_sentence(
                 kiwi, conn, sentence, args.ollama_url, args.ollama_model, args.evidence_count, nli.contradiction_scores,
-                wiki_search=args.wiki_search,
+                wiki_search=args.wiki_search, timer=timer,
+            )
+            # 사용자 문장 본문은 싣지 않고 번호만 남긴다.
+            logger.info(
+                "sentence %d/%d total=%.1fs outcome=%s %s",
+                index, len(sentences), time.perf_counter() - sentence_start, timer.outcome, timer.summary(),
             )
             if claim is not None:
                 claims.append(claim)
     finally:
         # 도중에 예외가 나도(Ollama 호출 실패 등) 반드시 모델을 내린다(스펙 §5, 2026-09-30 리뷰).
+        unload_start = time.perf_counter()
         unload_ollama_model(args.ollama_url, args.ollama_model)
+        unload_seconds = time.perf_counter() - unload_start
+    logger.info(
+        "misinfo_summary sentences=%d refuted=%d startup=%.1fs setup=%.1fs sentences_total=%.1fs unload=%.1fs total=%.1fs",
+        len(sentences), len(claims), startup_seconds, setup_seconds,
+        time.perf_counter() - sentences_start - unload_seconds, unload_seconds,
+        time.perf_counter() - _PROCESS_START,
+    )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     result = {"model": args.ollama_model, "wiki_snapshot": snapshot, "claims": claims}

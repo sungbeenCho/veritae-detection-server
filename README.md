@@ -606,7 +606,17 @@ cd C:\ai\veritae-detection-server\scripts
 python -c "from nli_check import NliModel; print(NliModel(r'C:\ai\veritae-detection-server\data\nli_model').contradiction_scores(['에펠탑은 프랑스 파리에 있다.'], '에펠탑은 독일에 있다.'))"
 ```
 
-모델 폴더는 기본적으로 레포의 `data\nli_model`을 쓴다. 다른 곳에 두면 환경변수 `MISINFO_NLI_MODEL`로 경로를 지정한다. 학습 결과는 원재료(KLUE 데이터셋, KLUE-RoBERTa)의 라이선스인 CC BY-SA 4.0을 따른다.
+#### 보충 학습 (필수, 약 8분) - 서버가 실제로 쓰는 모델은 이쪽이다
+
+위 모델(`data\nli_model`)만으로는 "~라는 이야기를 들었어요" 같은 전해 들은 말이나 "근거 없는 미신이다" 같은 평가형 반박 문장을 모순으로 보지 못한다(예: "선풍기를 틀고 자면 사망한다는 이야기를 들었어요."의 정답 근거 점수 0.058, 통과 기준 0.8). 그래서 위 모델에서 이어서 평가형 반박 문장을 보충해 한 번 더 학습한 `data\nli_model_aug`가 **서버의 기본 모델**이다. 이 폴더가 없으면 가짜정보 판정 요청은 시작 시점에 `NLI 모델 폴더를 찾을 수 없습니다` 오류(502)로 실패한다(옛 모델로 대신 돌지 않는다).
+
+```powershell
+conda activate nli-train
+cd C:\ai\veritae-detection-server\scripts
+python train_nli.py --init-model C:\ai\veritae-detection-server\data\nli_model --augment --epochs 1 --output C:\ai\veritae-detection-server\data\nli_model_aug
+```
+
+끝나면 KLUE 검증 정확도와 평가형 반박 문장 정확도가 학습 전후로 찍힌다(KLUE 정확도가 0.89 안팎으로 크게 떨어지지 않았는지 본다). 모델 폴더 위치를 바꾸려면 환경변수 `MISINFO_NLI_MODEL`로 경로를 지정한다. 환경변수는 설정 **이후에 새로 연 창**에서 띄운 서버에만 적용된다. 학습 결과는 원재료(KLUE 데이터셋, KLUE-RoBERTa)의 라이선스인 CC BY-SA 4.0을 따른다.
 
 ### 3. 위키 인덱스 구축 (최초 1회, 이후 원할 때 재실행)
 
@@ -652,6 +662,40 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 가짜정보탐지가 실제로 잘 되는지, 프롬프트나 설정을 바꾼 뒤에도 정확도가 떨어지지 않았는지는 `tests/regression/README.md`의 회귀 테스트셋으로 확인한다.
+
+**서버를 통한 확인(필수).** 회귀 테스트는 판정 함수를 직접 부르고 모델을 한 번만 올려 둔다. 실서버는 요청마다 새 프로세스로 돌고 설정도 환경변수로 정해져서, 회귀 테스트가 통과해도 서버 결과가 다를 수 있다(2026-10-13: 테스트 21/30인데 서버는 옛 NLI 모델이라 탐지 실패). 설정을 바꾸거나 서버를 재시작한 뒤에는 서버를 띄워 둔 채 **다른 창**에서 아래를 실행한다. 사용자 앱과 같은 길(`POST /process/image`)로 샘플 이미지를 보내, 선풍기 문장이 거짓으로 탐지되는지와 걸린 시간을 한 번에 보여준다(성공하면 종료 코드 0).
+
+```powershell
+conda activate text-extraction
+cd C:\ai\veritae-detection-server
+python scripts\check_image_e2e.py --url http://localhost:8000
+```
+
+### 로그 읽는 법
+
+서버 콘솔에 요청 하나당 아래 줄들이 찍힌다(INFO). 문장 본문은 싣지 않는다.
+
+- `request_done method=POST path=/process/image status=200 seconds=..` : 요청 전체 시간과 결과 코드
+- `stage_done label=spai|scam|misinfo seconds=..` : 이미지 판독(SPAI), 글자 추출+사기감지, 가짜정보 판정 각각의 시간
+- `gpu_queue_acquired/released ... wait_seconds=.. run_seconds=..` : GPU 대기열 대기·점유 시간
+- `misinfo_infer 로그:` 아래 줄들(가짜정보 하위 프로세스):
+  - `load_kiwi / load_e5 / load_nli seconds=..` : 모델을 읽는 시간(요청마다 새 프로세스라 매번 든다)
+  - `ollama wall=.. load=.. prompt_eval=..(N tok) eval=..(N tok)` : LLM 호출 한 번의 총 시간 / 모델 로드 / 근거 읽기 / 답 쓰기
+  - `sentence i/N total=..s outcome=.. search=.. rerank=.. judge_llm=.. shortlist=.. select_llm=.. nli=..` : 문장별 단계 시간과 **결과**
+  - `misinfo_summary ... startup= setup= sentences_total= unload= total=` : 전체 요약
+
+`outcome`은 탐지가 비었을 때 이유를 알려준다.
+
+| outcome | 뜻 |
+|---|---|
+| `refuted` | 거짓으로 탐지됨(화면에 나감) |
+| `no_evidence_found` | 위키 검색에서 근거 문서를 못 찾음 |
+| `not_refuted` | LLM이 반박이 아니라고(지지/판단불가) 판정 |
+| `judge_format_error` | LLM 1차 판정의 답 형식이 깨짐 |
+| `no_candidate_sentences` | 검색된 문단에서 근거 후보 문장을 못 만듦 |
+| `select_format_error` | LLM 근거 문장 선택의 답 형식이 깨짐 |
+| `llm_picked_none` | LLM이 근거 문장을 하나도 고르지 않음 |
+| `nli_rejected` | LLM이 근거를 골랐지만 NLI가 모순으로 확인하지 않음(**NLI 모델이 옛 모델이면 여기로 빠진다**) |
 
 ### GPU 자원 큐
 

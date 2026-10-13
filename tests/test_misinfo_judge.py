@@ -2,6 +2,7 @@
 고른 문장만 NLI로 모순 확인 → 확인된 문장만 근거로.
 Ollama, e5 임베딩, NLI 모델은 가짜로 바꾸고, 위키 인덱스는 임시 SQLite로 만든다."""
 import json
+import logging
 
 import pytest
 from kiwipiepy import Kiwi
@@ -308,3 +309,138 @@ def test_ollama_request_fixes_context_size_and_disables_thinking(monkeypatch):
     assert sent["think"] is False
     assert sent["format"] == misinfo_infer.JUDGE_SCHEMA
     assert sent["options"]["num_ctx"] == misinfo_infer.OLLAMA_NUM_CTX
+
+
+# --- 단계별 시간과 결과(outcome) 기록(2026-10-13) -----------------------------------------------------
+# 이미지 한 장이 2분 걸렸고 탐지가 비었는데, 어느 단계가 느린지 / 왜 비었는지(LLM 판단불가인지, NLI 탈락인지)를
+# 로그로 알 수 없었다. 문장마다 단계 시간과 결과를 남긴다. 판정 동작 자체는 바꾸지 않는다.
+
+def _judge_with_timer(kiwi, conn, nli, sentence=SENTENCE):
+    from misinfo_timing import StepTimer
+
+    timer = StepTimer()
+    claim = misinfo_infer.judge_sentence(kiwi, conn, sentence, "http://ollama", "qwen", 5, nli, timer=timer)
+    return claim, timer
+
+
+def test_timer_records_every_step_of_a_confirmed_refutation(kiwi, conn, llm):
+    _, answer = llm
+    answer.update(label="반박", cite=("선풍기 사망설",), pick=(REFUTING,))
+
+    claim, timer = _judge_with_timer(kiwi, conn, _nli({REFUTING}))
+
+    assert claim is not None
+    assert timer.outcome == "refuted"
+    assert list(timer.seconds) == ["search", "rerank", "judge_llm", "shortlist", "select_llm", "nli"]
+
+
+def test_outcome_is_no_evidence_found_when_search_finds_nothing(kiwi, conn, llm):
+    claim, timer = _judge_with_timer(kiwi, conn, _nli(set()), sentence="!!!")
+
+    assert claim is None
+    assert timer.outcome == "no_evidence_found"
+    assert "judge_llm" not in timer.seconds
+
+
+def test_outcome_is_not_refuted_when_llm_says_cannot_decide(kiwi, conn, llm):
+    _, answer = llm
+    answer.update(label="판단불가", cite=())
+
+    claim, timer = _judge_with_timer(kiwi, conn, _nli({REFUTING}))
+
+    assert claim is None
+    assert timer.outcome == "not_refuted"
+    assert "select_llm" not in timer.seconds
+
+
+def test_outcome_is_judge_format_error_when_llm_answer_is_broken(kiwi, conn, monkeypatch):
+    monkeypatch.setattr(misinfo_infer, "ask_ollama", lambda url, model, prompt, schema: "형식 깨짐")
+    monkeypatch.setattr(misinfo_infer, "rerank", lambda sentence, candidates, top_k: candidates[:top_k])
+
+    claim, timer = _judge_with_timer(kiwi, conn, _nli(set()))
+
+    assert claim is None
+    assert timer.outcome == "judge_format_error"
+
+
+def test_outcome_is_select_format_error_when_selection_answer_is_broken(kiwi, conn, llm, monkeypatch):
+    _, answer = llm
+    answer.update(label="반박", cite=("선풍기 사망설",))
+    real_fake = misinfo_infer.ask_ollama
+    monkeypatch.setattr(
+        misinfo_infer, "ask_ollama",
+        lambda url, model, prompt, schema: "형식 깨짐" if schema is misinfo_infer.SELECT_SCHEMA else real_fake(url, model, prompt, schema),
+    )
+
+    claim, timer = _judge_with_timer(kiwi, conn, _nli({REFUTING}))
+
+    assert claim is None
+    assert timer.outcome == "select_format_error"
+
+
+def test_outcome_is_llm_picked_none_when_selection_chooses_no_sentence(kiwi, conn, llm):
+    _, answer = llm
+    answer.update(label="반박", cite=("선풍기 사망설",), pick=())
+    nli = _nli({REFUTING})
+
+    claim, timer = _judge_with_timer(kiwi, conn, nli)
+
+    assert claim is None
+    assert timer.outcome == "llm_picked_none"
+    assert nli.seen == []
+
+
+def test_outcome_is_nli_rejected_when_nli_does_not_confirm_the_picked_sentence(kiwi, conn, llm):
+    """오늘(2026-10-13) 이미지에서 일어난 일: LLM은 반박이라고 맞게 판정하고 근거도 골랐지만 NLI 점수가 낮아 탈락."""
+    _, answer = llm
+    answer.update(label="반박", cite=("선풍기 사망설",), pick=(REFUTING,))
+
+    claim, timer = _judge_with_timer(kiwi, conn, _nli(set()))
+
+    assert claim is None
+    assert timer.outcome == "nli_rejected"
+    assert "nli" in timer.seconds
+
+
+def test_judge_sentence_still_works_without_a_timer(kiwi, conn, llm):
+    """회귀 테스트 등 기존 호출부는 timer를 넘기지 않는다."""
+    _, answer = llm
+    answer.update(label="반박", cite=("선풍기 사망설",), pick=(REFUTING,))
+
+    assert _run(kiwi, conn, _nli({REFUTING})) is not None
+
+
+def test_main_logs_each_sentence_and_a_summary_without_sentence_text(kiwi, conn, llm, monkeypatch, tmp_path, capsys):
+    """서버가 하위 프로세스의 stderr를 서버 로그로 올린다 - 문장 번호와 단계 시간, 결과, 전체 요약이 보여야 한다.
+    사용자 문장 본문은 로그에 싣지 않는다."""
+    import sys
+    import types
+
+    _, answer = llm
+    answer.update(label="반박", cite=("선풍기 사망설",), pick=(REFUTING,))
+    sentences_file = tmp_path / "sentences.json"
+    sentences_file.write_text(json.dumps([SENTENCE, "!!!"], ensure_ascii=False), encoding="utf-8")
+    output_file = tmp_path / "result.json"
+    index_path = conn.execute("PRAGMA database_list").fetchone()[2]
+    monkeypatch.setattr(misinfo_infer, "NliModel", lambda path: types.SimpleNamespace(contradiction_scores=_nli({REFUTING})))
+    monkeypatch.setattr(misinfo_infer, "unload_ollama_model", lambda url, model: None)
+    monkeypatch.setattr(
+        sys, "argv",
+        ["misinfo_infer.py", "--sentences", str(sentences_file), "--output", str(output_file),
+         "--wiki-index", index_path, "--ollama-url", "http://ollama", "--ollama-model", "qwen"],
+    )
+    logger = logging.getLogger("misinfo")
+    handlers, level = list(logger.handlers), logger.level
+    logger.handlers.clear()
+    try:
+        misinfo_infer.main()
+    finally:
+        logger.handlers[:] = handlers
+        logger.setLevel(level)
+
+    err = capsys.readouterr().err
+    assert "sentence 1/2 total=" in err and "outcome=refuted" in err
+    assert "sentence 2/2 total=" in err and "outcome=no_evidence_found" in err
+    assert "misinfo_summary sentences=2 refuted=1 startup=" in err
+    assert SENTENCE not in err.replace("outcome", "")  # 본문은 싣지 않는다
+    assert json.loads(output_file.read_text(encoding="utf-8"))["claims"][0]["sentence"] == SENTENCE

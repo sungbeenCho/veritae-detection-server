@@ -137,9 +137,12 @@ class Settings:
         self.ollama_model = os.environ.get("OLLAMA_MODEL", "qwen3.5:4b")
         self.misinfo_evidence_chunk_count = int(os.environ.get("MISINFO_EVIDENCE_CHUNK_COUNT", "5"))
         self.misinfo_timeout_seconds = int(os.environ.get("MISINFO_TIMEOUT_SECONDS", "300"))
-        # 반박 확인용 NLI 분류기(scripts/train_nli.py로 학습한 모델 폴더, 2026-10-01 결정).
+        # 반박 확인용 NLI 분류기(scripts/train_nli.py로 학습한 모델 폴더, 2026-10-01 결정). 기본은 보충 학습한
+        # nli_model_aug - 옛 nli_model은 "~라는 이야기를 들었어요" 같은 전해 들은 말의 정답 근거에 낮은 점수를
+        # 줘서 맞는 반박을 버렸다(2026-10-13). scripts/nli_check.default_model_path()와 같은 값이어야 한다
+        # (tests/test_config.py가 확인) - 회귀 테스트와 실서버가 다른 모델로 돌지 않게.
         self.misinfo_nli_model = Path(
-            os.environ.get("MISINFO_NLI_MODEL", str(Path(__file__).resolve().parent.parent / "data" / "nli_model"))
+            os.environ.get("MISINFO_NLI_MODEL", str(Path(__file__).resolve().parent.parent / "data" / "nli_model_aug"))
         )
         # 위키백과 검색 기능을 같이 쓸지(2026-10-01). 사용자 문장의 핵심 단어가 위키백과(해외)로 전송되므로
         # 기본은 꺼짐 - 켜려면 MISINFO_WIKI_SEARCH=1.

@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
+from misinfo_timing import logged_step
 from wiki_index import split_sentences
 
 # 이 값 이상이면 모순으로 본다. 2026-10-01 노트북 시험(klue/roberta-large KLUE-NLI 모델, 실제 위키 문단)에서
@@ -34,20 +35,22 @@ class NliModel:
 
     def _load(self):
         if self._loaded is None:
-            import torch
-            from transformers import AutoModelForSequenceClassification, AutoTokenizer
+            # 반박이 나온 문장에서 처음 쓸 때 읽는다 - 이 시간을 서버 로그에서 볼 수 있게 잰다(2026-10-13).
+            with logged_step("load_nli"):
+                import torch
+                from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-            tokenizer = AutoTokenizer.from_pretrained(self._model_path)
-            model = AutoModelForSequenceClassification.from_pretrained(self._model_path).eval()
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            model.to(device)
-            labels = {i: str(label).lower() for i, label in model.config.id2label.items()}
-            if not any("contra" in label for label in labels.values()):
-                # 라벨 이름이 LABEL_0.. 으로만 저장된 모델은 KLUE-NLI 순서(함의, 중립, 모순)를 따른다.
-                labels = {0: "entailment", 1: "neutral", 2: "contradiction"}
-            contradiction = next(i for i, label in labels.items() if "contra" in label)
-            drop_token_type_ids = getattr(model.config, "type_vocab_size", 2) <= 1
-            self._loaded = (torch, tokenizer, model, device, contradiction, drop_token_type_ids)
+                tokenizer = AutoTokenizer.from_pretrained(self._model_path)
+                model = AutoModelForSequenceClassification.from_pretrained(self._model_path).eval()
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+                model.to(device)
+                labels = {i: str(label).lower() for i, label in model.config.id2label.items()}
+                if not any("contra" in label for label in labels.values()):
+                    # 라벨 이름이 LABEL_0.. 으로만 저장된 모델은 KLUE-NLI 순서(함의, 중립, 모순)를 따른다.
+                    labels = {0: "entailment", 1: "neutral", 2: "contradiction"}
+                contradiction = next(i for i, label in labels.items() if "contra" in label)
+                drop_token_type_ids = getattr(model.config, "type_vocab_size", 2) <= 1
+                self._loaded = (torch, tokenizer, model, device, contradiction, drop_token_type_ids)
         return self._loaded
 
     def contradiction_scores(self, premises: list[str], hypothesis: str) -> list[float]:
@@ -93,5 +96,7 @@ def confirm_sentences(
 
 
 def default_model_path() -> str:
-    """detection-server 레포의 data/nli_model(scripts/train_nli.py 출력 위치)."""
-    return str(Path(__file__).resolve().parent.parent / "data" / "nli_model")
+    """detection-server 레포의 data/nli_model_aug(scripts/train_nli.py --init-model --augment 출력 위치).
+    app/config.py의 MISINFO_NLI_MODEL 기본값과 같아야 한다 - 회귀 테스트와 실서버가 같은 모델로 돌게
+    tests/test_config.py가 둘을 비교한다."""
+    return str(Path(__file__).resolve().parent.parent / "data" / "nli_model_aug")
