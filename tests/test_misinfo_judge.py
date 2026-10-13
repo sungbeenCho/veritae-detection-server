@@ -427,7 +427,8 @@ def test_main_logs_each_sentence_and_a_summary_without_sentence_text(kiwi, conn,
     monkeypatch.setattr(
         sys, "argv",
         ["misinfo_infer.py", "--sentences", str(sentences_file), "--output", str(output_file),
-         "--wiki-index", index_path, "--ollama-url", "http://ollama", "--ollama-model", "qwen"],
+         "--wiki-index", index_path, "--ollama-url", "http://ollama", "--ollama-model", "qwen",
+         "--nli-model", str(tmp_path / "nli_aug")],
     )
     logger = logging.getLogger("misinfo")
     handlers, level = list(logger.handlers), logger.level
@@ -442,5 +443,32 @@ def test_main_logs_each_sentence_and_a_summary_without_sentence_text(kiwi, conn,
     assert "sentence 1/2 total=" in err and "outcome=refuted" in err
     assert "sentence 2/2 total=" in err and "outcome=no_evidence_found" in err
     assert "misinfo_summary sentences=2 refuted=1 startup=" in err
+    assert f"misinfo_config nli_model={tmp_path / 'nli_aug'} ollama_model=qwen wiki_search=False" in err
     assert SENTENCE not in err.replace("outcome", "")  # 본문은 싣지 않는다
     assert json.loads(output_file.read_text(encoding="utf-8"))["claims"][0]["sentence"] == SENTENCE
+
+
+def test_refutation_check_log_shows_claim_picked_sentences_and_nli_scores(kiwi, conn, llm, caplog):
+    """탐지가 비었는데 왜인지 몰랐다(2026-10-13: nli_rejected인데 핵심 주장·고른 문장·NLI 점수가 안 보임).
+    LLM이 반박이라고 한 문장은 핵심 주장, 고른 문장, NLI 점수를 INFO 로그에 남긴다. 탈락한 문장의 점수도 포함."""
+    _, answer = llm
+    answer.update(label="반박", cite=("선풍기 사망설",), pick=(REFUTING,))
+
+    with caplog.at_level(logging.INFO, logger="misinfo"):
+        claim, timer = _judge_with_timer(kiwi, conn, _nli(set()))
+
+    assert claim is None and timer.outcome == "nli_rejected"
+    assert "refutation_check" in caplog.text
+    assert f"core_claim={CLAIM!r}" in caplog.text
+    assert "nli=0.01" in caplog.text and "선풍기 사망설" in caplog.text and REFUTING in caplog.text
+    assert "threshold=0.8" in caplog.text
+
+
+def test_refutation_check_is_not_logged_when_llm_did_not_say_refuted(kiwi, conn, llm, caplog):
+    _, answer = llm
+    answer.update(label="판단불가", cite=())
+
+    with caplog.at_level(logging.INFO, logger="misinfo"):
+        _judge_with_timer(kiwi, conn, _nli(set()))
+
+    assert "refutation_check" not in caplog.text

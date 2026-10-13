@@ -80,19 +80,27 @@ def candidate_sentences(blocks: list[tuple[str, str]]) -> list[tuple[str, str]]:
     ]
 
 
+def score_and_confirm(
+    score: ContradictionScorer, picked: list[tuple[str, str]], claim: str, threshold: float = NLI_THRESHOLD,
+) -> tuple[list[dict], list[dict]]:
+    """고른 문장 전부에 NLI 점수를 매겨 (통과한 문장, 점수가 매겨진 전체)를 돌려준다. 입력 순서 유지.
+    탈락한 문장의 점수도 돌려주는 이유: 탐지가 비었을 때 NLI가 몇 점을 줬는지 알아야 원인을 찾는다(2026-10-13)."""
+    if not picked:
+        return [], []
+    scores = score([sentence for _, sentence in picked], claim)
+    scored = [
+        {"title": title, "sentence": sentence, "score": value}
+        for (title, sentence), value in zip(picked, scores)
+    ]
+    return [item for item in scored if item["score"] >= threshold], scored
+
+
 def confirm_sentences(
     score: ContradictionScorer, picked: list[tuple[str, str]], claim: str, threshold: float = NLI_THRESHOLD,
 ) -> list[dict]:
     """근거 문장 선택(LLM)이 고른 문장만 NLI로 확인해, 모순 확률이 threshold 이상인 것만 돌려준다.
     결과: [{"title", "sentence", "score"}] - 입력 순서 유지."""
-    if not picked:
-        return []
-    scores = score([sentence for _, sentence in picked], claim)
-    return [
-        {"title": title, "sentence": sentence, "score": value}
-        for (title, sentence), value in zip(picked, scores)
-        if value >= threshold
-    ]
+    return score_and_confirm(score, picked, claim, threshold)[0]
 
 
 def default_model_path() -> str:

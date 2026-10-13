@@ -65,3 +65,26 @@ def test_confirm_with_nothing_picked_does_not_call_nli():
         raise AssertionError("호출되면 안 된다")
 
     assert confirm_sentences(score, [], "주장") == []
+
+
+def test_score_and_confirm_returns_scores_of_rejected_sentences_too():
+    """탐지가 비었을 때 NLI가 몇 점을 줬는지 알아야 원인을 안다(2026-10-13) - 통과한 문장만이 아니라 고른 문장 전부의 점수."""
+    from scripts.nli_check import score_and_confirm
+
+    picked = [("A 문서", "통과 문장"), ("B 문서", "탈락 문장")]
+
+    confirmed, scored = score_and_confirm(lambda premises, hypothesis: [0.95, 0.12], picked, "주장")
+
+    assert [c["sentence"] for c in confirmed] == ["통과 문장"]
+    assert [(s["title"], s["sentence"], s["score"]) for s in scored] == [
+        ("A 문서", "통과 문장", 0.95), ("B 문서", "탈락 문장", 0.12),
+    ]
+
+
+def test_score_and_confirm_with_nothing_picked_does_not_call_nli():
+    from scripts.nli_check import score_and_confirm
+
+    def boom(premises, hypothesis):
+        raise AssertionError("호출되면 안 된다")
+
+    assert score_and_confirm(boom, [], "주장") == ([], [])

@@ -32,7 +32,7 @@ from misinfo_lib import (
     replace_block_numbers,
 )
 from misinfo_timing import StepTimer, configure_script_logging, format_ollama_stats, logged_step
-from nli_check import ContradictionScorer, NliModel, candidate_sentences, confirm_sentences, default_model_path
+from nli_check import NLI_THRESHOLD, ContradictionScorer, NliModel, candidate_sentences, default_model_path, score_and_confirm
 from wiki_index import (
     Chunk,
     expand_with_neighbors,
@@ -278,7 +278,13 @@ def judge_sentence(
         return None
     picked = [candidates[i - 1] for i in picked_ids]
     with timer.step("nli"):
-        confirmed = confirm_sentences(nli, picked, claim)
+        confirmed, scored = score_and_confirm(nli, picked, claim)
+    # LLM이 반박이라고 한 문장은 핵심 주장, 고른 문장, NLI 점수를 남긴다(탈락한 것 포함) - 탐지가 비었을 때 어느
+    # 단계에서 왜 탈락했는지 서버 로그만으로 알 수 있게(2026-10-13). 사용자 문장에서 나온 내용이 들어간다.
+    logger.info(
+        "refutation_check core_claim=%r threshold=%s picked=%s", claim, NLI_THRESHOLD,
+        "; ".join(f"({c['title']}) nli={c['score']:.2f} {c['sentence'][:80]}" for c in scored) or "(없음)",
+    )
     logger.debug(
         "근거 문장 선택/NLI 확인: sentence=%r claim=%r picked=%r confirmed=%r",
         sentence, claim, picked, [(c["title"], c["sentence"], round(c["score"], 3)) for c in confirmed],
@@ -311,6 +317,10 @@ def main() -> None:
     args = parser.parse_args()
     # 서버(misinfo_runner.py)가 이 프로세스의 stderr를 서버 로그로 올린다 - 단계별 시간과 경고가 거기 보인다.
     configure_script_logging()
+    # 어떤 NLI 모델 폴더와 설정으로 돌았는지 - 회귀 테스트와 실서버가 다른 모델로 돌던 문제(2026-10-13)를 로그로 확인한다.
+    logger.info(
+        "misinfo_config nli_model=%s ollama_model=%s wiki_search=%s", args.nli_model, args.ollama_model, args.wiki_search,
+    )
     setup_start = time.perf_counter()
     startup_seconds = setup_start - _PROCESS_START
 
