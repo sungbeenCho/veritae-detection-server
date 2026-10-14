@@ -1,4 +1,30 @@
-from scripts.nli_check import MAX_SENTENCE_CHARS, NLI_THRESHOLD, candidate_sentences, pick_best_contradiction
+import pytest
+
+from scripts.nli_check import (
+    MAX_SENTENCE_CHARS,
+    NLI_THRESHOLD,
+    candidate_sentences,
+    label_indices,
+    pick_best_contradiction,
+)
+
+
+def test_label_indices_reads_named_labels_in_any_order():
+    assert label_indices({0: "CONTRADICTION", 1: "neutral", 2: "Entailment"}) == {
+        "entailment": 2, "neutral": 1, "contradiction": 0,
+    }
+
+
+def test_label_indices_falls_back_to_klue_order_for_unnamed_labels():
+    """라벨 이름이 LABEL_0.. 으로만 저장된 모델은 KLUE-NLI 순서(함의, 중립, 모순)를 따른다."""
+    assert label_indices({0: "LABEL_0", 1: "LABEL_1", 2: "LABEL_2"}) == {
+        "entailment": 0, "neutral": 1, "contradiction": 2,
+    }
+
+
+def test_label_indices_rejects_a_model_without_all_three_labels():
+    with pytest.raises(ValueError):
+        label_indices({0: "contradiction", 1: "not_contradiction"})
 
 
 def _scorer(table: dict[str, float]):

@@ -29,6 +29,20 @@ MAX_SENTENCE_CHARS = 300
 
 ContradictionScorer = Callable[[list[str], str], list[float]]
 
+LABELS = ("entailment", "neutral", "contradiction")
+
+
+def label_indices(id2label: dict[int, str]) -> dict[str, int]:
+    """모델 설정의 라벨 이름으로 함의/중립/모순의 출력 위치를 찾는다. 라벨 이름이 LABEL_0.. 으로만 저장된
+    모델은 KLUE-NLI 순서(함의, 중립, 모순)를 따른다."""
+    names = {i: str(label).lower() for i, label in id2label.items()}
+    if all(name.startswith("label_") for name in names.values()) and len(names) == len(LABELS):
+        return {label: i for i, label in enumerate(LABELS)}
+    found = {label: next((i for i, name in names.items() if name.startswith(label[:5])), None) for label in LABELS}
+    if None in found.values():
+        raise ValueError(f"함의/중립/모순 세 라벨을 가진 NLI 모델이 아니다: {id2label}")
+    return found
+
 
 class NliModel:
     """모델은 처음 쓸 때 한 번만 올린다 - 반박 후보가 없는 요청은 로딩 비용을 내지 않는다."""
@@ -48,19 +62,16 @@ class NliModel:
                 model = AutoModelForSequenceClassification.from_pretrained(self._model_path).eval()
                 device = "cuda" if torch.cuda.is_available() else "cpu"
                 model.to(device)
-                labels = {i: str(label).lower() for i, label in model.config.id2label.items()}
-                if not any("contra" in label for label in labels.values()):
-                    # 라벨 이름이 LABEL_0.. 으로만 저장된 모델은 KLUE-NLI 순서(함의, 중립, 모순)를 따른다.
-                    labels = {0: "entailment", 1: "neutral", 2: "contradiction"}
-                contradiction = next(i for i, label in labels.items() if "contra" in label)
+                indices = label_indices(model.config.id2label)
                 drop_token_type_ids = getattr(model.config, "type_vocab_size", 2) <= 1
-                self._loaded = (torch, tokenizer, model, device, contradiction, drop_token_type_ids)
+                self._loaded = (torch, tokenizer, model, device, indices, drop_token_type_ids)
         return self._loaded
 
-    def contradiction_scores(self, premises: list[str], hypothesis: str) -> list[float]:
+    def label_probabilities(self, premises: list[str], hypothesis: str) -> list[dict[str, float]]:
+        """전제마다 {"entailment", "neutral", "contradiction"} 확률."""
         if not premises:
             return []
-        torch, tokenizer, model, device, contradiction, drop_token_type_ids = self._load()
+        torch, tokenizer, model, device, indices, drop_token_type_ids = self._load()
         inputs = tokenizer(
             premises, [hypothesis] * len(premises),
             padding=True, truncation=True, max_length=256, return_tensors="pt",
@@ -69,8 +80,11 @@ class NliModel:
             inputs.pop("token_type_ids", None)
         inputs = {k: v.to(device) for k, v in inputs.items()}
         with torch.no_grad():
-            probs = torch.softmax(model(**inputs).logits, dim=-1)
-        return probs[:, contradiction].cpu().tolist()
+            probs = torch.softmax(model(**inputs).logits, dim=-1).cpu().tolist()
+        return [{label: row[i] for label, i in indices.items()} for row in probs]
+
+    def contradiction_scores(self, premises: list[str], hypothesis: str) -> list[float]:
+        return [p["contradiction"] for p in self.label_probabilities(premises, hypothesis)]
 
 
 def candidate_sentences(blocks: list[tuple[str, str]]) -> list[tuple[str, str]]:
