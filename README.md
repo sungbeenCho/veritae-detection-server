@@ -578,7 +578,7 @@ pip install kiwipiepy mwparserfromhell
 
 ### 2-1. 반박 확인용 NLI 모델 학습 (최초 1회, 약 1~2시간)
 
-LLM이 "거짓"이라고 판정한 문장은, 문장 두 개의 모순 여부만 판정하는 NLI 분류기가 위키 문단의 문장들을 채점해 모순 점수(0.8 이상)가 가장 높은 문장 하나를 근거로 찾은 경우에만 표시한다(`scripts/nli_check.py`). 라이선스가 명시된 한국어 NLI 모델이 없어 `klue/roberta-large`를 KLUE-NLI로 직접 학습한다. 학습에는 GPU가 필요한데 `text-extraction` 환경의 PyTorch는 CPU 전용이라, 학습 전용 환경을 따로 만든다. 기존 환경은 건드리지 않는다.
+LLM이 "거짓"이라고 판정한 문장의 화면 근거는, 문장 두 개의 모순 여부만 판정하는 NLI 분류기가 위키 문단의 문장들을 채점해 모순 점수(0.8 이상)가 가장 높은 문장 하나로 고른다(`scripts/nli_check.py`). 그런 문장이 없으면 판정이 인용한 문단에서 판정 이유와 가장 가까운 문장을 쓴다 - NLI는 판정을 버리지 않는다(2026-10-14). 라이선스가 명시된 한국어 NLI 모델이 없어 `klue/roberta-large`를 KLUE-NLI로 직접 학습한다. 학습에는 GPU가 필요한데 `text-extraction` 환경의 PyTorch는 CPU 전용이라, 학습 전용 환경을 따로 만든다. 기존 환경은 건드리지 않는다.
 
 먼저 `text-extraction`의 transformers 버전을 확인한다. 학습 환경도 같은 버전으로 맞춰야 학습한 모델을 판정 쪽에서 문제없이 읽는다.
 
@@ -680,22 +680,24 @@ python scripts\check_image_e2e.py --url http://localhost:8000
 - `gpu_queue_acquired/released ... wait_seconds=.. run_seconds=..` : GPU 대기열 대기·점유 시간
 - `misinfo_infer 로그:` 아래 줄들(가짜정보 하위 프로세스):
   - `load_kiwi / load_e5 / load_nli seconds=..` : 모델을 읽는 시간(요청마다 새 프로세스라 매번 든다)
-  - `ollama wall=.. load=.. prompt_eval=..(N tok) eval=..(N tok)` : LLM 호출 한 번의 총 시간 / 모델 로드 / 근거 읽기 / 답 쓰기
-  - `sentence i/N total=..s outcome=.. search=.. rerank=.. judge_llm=.. shortlist=.. nli=..` : 문장별 단계 시간과 **결과**
+  - `ollama wall=.. load=.. prompt_eval=..(N tok) eval=..(N tok)` : LLM 호출 한 번의 총 시간 / 모델 로드 / 근거 읽기 / 답 쓰기. 확인할 문장 하나에 두 번(주장 정리, 판정) 찍힌다
+  - `sentence i/N total=..s outcome=.. extract_llm=.. search=.. rerank=.. judge_llm=.. shortlist=.. nli=.. reason_match=..` : 문장별 단계 시간과 **결과**
   - `misinfo_config nli_model=.. ollama_model=.. wiki_search=..` : 이번 요청이 **어떤 NLI 모델 폴더**와 설정으로 돌았는지(옛 모델로 도는지 바로 확인)
-  - `refutation_check core_claim=.. threshold=0.8 top=(문서) nli=0.xx 문장; ...` : LLM이 반박이라 한 문장의 핵심 주장과, NLI 점수가 높은 후보 문장 3개(탈락한 경우 포함)
+  - `refutation_check claim=.. threshold=0.8 evidence_by=nli|reason_match top=(문서) nli=0.xx 문장; ...` : 거짓으로 판정된 문장의 정리된 주장, 근거를 고른 방식, NLI 점수가 높은 후보 문장 3개
   - `misinfo_summary ... startup= setup= sentences_total= unload= total=` : 전체 요약
 
-`outcome`은 탐지가 비었을 때 이유를 알려준다.
+판정 순서는 문장마다 ① 주장 정리(LLM이 문장만 보고 "사실이라고 전하는 내용"을 한 문장으로 정리, 확인할 사실이 없으면 끝) ② 정리된 주장으로 위키 검색 ③ 판정(LLM이 정리된 주장만 위키와 대조) ④ 거짓이면 근거 문장 고르기다. `outcome`은 문장이 어디서 끝났는지 알려준다.
 
 | outcome | 뜻 |
 |---|---|
-| `refuted` | 거짓으로 탐지됨(화면에 나감) |
+| `refuted` | 거짓으로 탐지됨(화면에 나감). 근거 문장은 NLI 모순 점수 0.8 이상 중 최고점 |
+| `refuted_reason_match` | 거짓으로 탐지됨(화면에 나감). NLI가 0.8을 넘는 문장을 못 찾아, 판정이 인용한 문단에서 판정 이유와 가장 가까운 문장을 근거로 씀 |
+| `not_checkable` | 인사·의견·개인 일정처럼 확인할 사실이 없는 문장(위키 검색·판정을 건너뜀) |
+| `extract_format_error` | LLM 주장 정리의 답 형식이 깨짐 |
 | `no_evidence_found` | 위키 검색에서 근거 문서를 못 찾음 |
 | `not_refuted` | LLM이 반박이 아니라고(지지/판단불가) 판정 |
-| `judge_format_error` | LLM 1차 판정의 답 형식이 깨짐 |
+| `judge_format_error` | LLM 판정의 답 형식이 깨짐 |
 | `no_candidate_sentences` | 검색된 문단에서 근거 후보 문장을 못 만듦 |
-| `nli_rejected` | LLM은 반박이라 했지만, 근거 후보 문장 15개 중 NLI 모순 점수가 기준(0.8)을 넘는 문장이 없음(**NLI 모델이 옛 모델이면 여기로 빠진다**) |
 
 ### GPU 자원 큐
 

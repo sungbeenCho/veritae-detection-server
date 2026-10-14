@@ -5,7 +5,9 @@ pytest가 아니라 독립 스크립트다 - 실제 모델과 인덱스가 있�
 기본 실행 대상은 cases_e2e.json(20건, 실제 위키 검색 기반 파이프라인 그대로 돌리는 세트),
 cases_grounding.json(14건, 전해 들은 말/OCR 오타/속설을 소개만 하는 참인 문장/근거 두 개를
 이어 봐야 하는 문장), cases_heldout.json(25건, 프롬프트를 고칠 때 보지 않는 확인용 세트 -
-앞의 두 세트에만 맞춰진 수정인지 가려낸다)이다.
+앞의 두 세트에만 맞춰진 수정인지 가려낸다), cases_realistic.json(60건, 2026-10-14 추가 - 카톡·구어체 거짓 주장,
+이미 맞는 말을 하는 문장, 구어체 참인 사실, 일상 대화, 위키로 확인할 수 없는 소식, OCR 오타 문장. 앞의 세트가
+짧은 교과서 문장뿐이라 실제 입력을 대표하지 못해서 만들었다. 프롬프트를 이 세트 결과에 맞춰 고치지 않는다)이다.
 
 반박 판정은 라벨뿐 아니라 화면에 나가는 근거 문장도 채점한다. 반박이어야 하는 문장에는
 evidence_keys(단어 묶음 목록)가 있고, 표시된 근거 문장이 모든 묶음에서 단어를 하나 이상 포함해야
@@ -36,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "scripts"
 from kiwipiepy import Kiwi  # noqa: E402
 import misinfo_infer  # noqa: E402
 from misinfo_infer import judge_sentence  # noqa: E402
+from misinfo_timing import StepTimer  # noqa: E402
 from nli_check import NliModel, candidate_sentences, default_model_path  # noqa: E402
 
 HERE = Path(__file__).parent
@@ -66,9 +69,8 @@ def use_llm_cache(path: Path) -> None:
 
 class CandidateRecorder:
     """근거 문장 선택 방식을 데스크탑 밖에서 비교하려고, 판정 과정을 그대로 두고 옆에서 기록한다.
-    문장마다 1차 판정, 검색된 문단, 화면에 나간 근거, 그리고 검색된 문단의 모든 후보 문장에 대한
-    실제 NLI 모순 점수를 남긴다 - 노트북에서는 이 파일과 e5만으로 선택 방식을 바꿔 가며 비교한다.
-    (2026-10-13: LLM이 근거 문장을 고르는 단계를 없애서 llm_candidates/llm_picked_ids 기록은 없다.)"""
+    문장마다 주장 정리 결과(extracted), 판정(verdict), 검색된 문단, 화면에 나간 근거, 결과(outcome), 그리고 검색된
+    문단의 모든 후보 문장에 대한 실제 NLI 모순 점수를 남긴다 - 노트북에서는 이 파일과 e5만으로 비교한다."""
 
     def __init__(self, nli):
         self.nli = nli
@@ -79,27 +81,33 @@ class CandidateRecorder:
     def _patch(self) -> None:
         build_judge_prompt = misinfo_infer.build_judge_prompt
         parse_judge_response = misinfo_infer.parse_judge_response
+        parse_extract_response = misinfo_infer.parse_extract_response
 
-        def record_blocks(sentence, blocks):
+        def record_extract(raw):
+            self.current["extracted"] = parse_extract_response(raw)
+            return self.current["extracted"]
+
+        def record_blocks(claim, blocks):
             self.current["evidence_blocks"] = [list(b) for b in blocks]
-            return build_judge_prompt(sentence, blocks)
+            return build_judge_prompt(claim, blocks)
 
-        def record_first(raw, count):
-            self.current["first"] = parse_judge_response(raw, count)
-            return self.current["first"]
+        def record_verdict(raw, count):
+            self.current["verdict"] = parse_judge_response(raw, count)
+            return self.current["verdict"]
 
+        misinfo_infer.parse_extract_response = record_extract
         misinfo_infer.build_judge_prompt = record_blocks
-        misinfo_infer.parse_judge_response = record_first
+        misinfo_infer.parse_judge_response = record_verdict
 
     def start(self) -> None:
         self.current = {}
 
-    def finish(self, case: dict, claim: dict | None) -> None:
-        record = {**case, **self.current, "shown": claim["evidence"] if claim else []}
-        first = self.current.get("first")
-        if first is not None:
+    def finish(self, case: dict, claim: dict | None, outcome: str | None = None) -> None:
+        record = {**case, **self.current, "outcome": outcome, "shown": claim["evidence"] if claim else []}
+        verdict, extracted = self.current.get("verdict"), self.current.get("extracted")
+        if verdict is not None and extracted is not None:
             candidates = candidate_sentences([tuple(b) for b in self.current.get("evidence_blocks", [])])
-            scores = self.nli([s for _, s in candidates], first["core_claim"]) if candidates else []
+            scores = self.nli([s for _, s in candidates], extracted["claim"]) if candidates else []
             record["all_candidates"] = [
                 {"title": t, "sentence": s, "nli": round(float(v), 4)} for (t, s), v in zip(candidates, scores)
             ]
@@ -112,15 +120,20 @@ def run_group(name: str, cases: list[dict], kiwi, conn, ollama_url: str, model: 
     dangerous = 0
     bad_evidence = 0
     slowest = 0.0
+    outcomes: dict[str, int] = {}
     start = time.time()
     for case in cases:
         t0 = time.time()
         if recorder:
             recorder.start()
-        claim = judge_sentence(kiwi, conn, case["sentence"], ollama_url, model, evidence_count, nli, wiki_search=wiki_search)
+        timer = StepTimer()
+        claim = judge_sentence(
+            kiwi, conn, case["sentence"], ollama_url, model, evidence_count, nli, wiki_search=wiki_search, timer=timer,
+        )
         took = time.time() - t0
+        outcomes[timer.outcome] = outcomes.get(timer.outcome, 0) + 1
         if recorder:
-            recorder.finish(case, claim)
+            recorder.finish(case, claim, timer.outcome)
         slowest = max(slowest, took)
         got = "contradiction" if claim is not None else "not_contradiction"
         expected_is_contradiction = case["expected"] == "contradiction"
@@ -130,7 +143,7 @@ def run_group(name: str, cases: list[dict], kiwi, conn, ollama_url: str, model: 
         dangerous += int(danger)
         tag = "OK" if ok else ("DANGER" if danger else "MISS")
         print(f"[{tag}] {case['category']:12s} expected={case['expected']:13s} got={got:16s} "
-              f"({took:.1f}s) | {case['sentence']}", flush=True)
+              f"({took:.1f}s, {timer.outcome}) | {case['sentence']}", flush=True)
         if claim is not None:
             # 반박으로 나온 건은 라벨만 보지 말고 이유와 인용된 근거가 실제로 반박 내용인지
             # 사람이 직접 읽어서 확인한다(2026-10-01: 라벨은 반박인데 근거는 속설을 뒷받침한 사례).
@@ -141,7 +154,8 @@ def run_group(name: str, cases: list[dict], kiwi, conn, ollama_url: str, model: 
                 print(f"    {'근거' if good else '[BAD-EVIDENCE] 근거'}: ({evidence['title']}) {evidence['text']}")
     elapsed = time.time() - start
     print(f"\n##### {name}: {correct}/{len(cases)} 정확, 위험 오답 {dangerous}건, 잘못된 근거 문장 {bad_evidence}건, "
-          f"총 {elapsed:.0f}s(문장당 {elapsed / len(cases):.1f}s, 가장 느린 문장 {slowest:.1f}s)\n")
+          f"총 {elapsed:.0f}s(문장당 {elapsed / len(cases):.1f}s, 가장 느린 문장 {slowest:.1f}s)")
+    print(f"      결과별 문장 수: {', '.join(f'{k}={v}' for k, v in sorted(outcomes.items()))}\n")
 
 
 def main() -> None:
@@ -174,7 +188,10 @@ def main() -> None:
     nli = NliModel(args.nli_model).contradiction_scores
     recorder = CandidateRecorder(nli) if args.dump_candidates else None
 
-    groups = [("cases_e2e", "cases_e2e.json"), ("cases_grounding", "cases_grounding.json"), ("cases_heldout", "cases_heldout.json")]
+    groups = [
+        ("cases_e2e", "cases_e2e.json"), ("cases_grounding", "cases_grounding.json"),
+        ("cases_heldout", "cases_heldout.json"), ("cases_realistic", "cases_realistic.json"),
+    ]
     if args.include_nli_legacy:
         groups += [
             ("cases_basic (참고용, NLI 벤치마크 - 머지 게이트 아님)", "cases_basic.json"),

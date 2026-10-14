@@ -1,6 +1,6 @@
-"""judge_sentence의 판정 흐름: LLM 1차 판정 → 반박이면 검색 문단의 문장 중 주장과 가까운 15개를 NLI로 채점해
-모순 점수가 가장 높은 문장 하나(0.8 이상)를 근거로. LLM이 근거 문장을 고르는 단계는 없다(2026-10-13).
-Ollama, e5 임베딩, NLI 모델은 가짜로 바꾸고, 위키 인덱스는 임시 SQLite로 만든다."""
+"""judge_sentence의 판정 흐름(2026-10-14): 주장 정리(LLM, 문장만) → 정리된 주장으로 위키 검색 → 판정(LLM, 정리된
+주장만) → 반박이면 근거 문장 고르기(NLI 0.8 이상 중 최고점, 없으면 판정이 인용한 문단에서 이유와 가장 가까운 문장).
+NLI는 판정을 버리지 않는다. Ollama, e5 임베딩, NLI 모델은 가짜로 바꾸고, 위키 인덱스는 임시 SQLite로 만든다."""
 import json
 import logging
 
@@ -8,9 +8,11 @@ import pytest
 from kiwipiepy import Kiwi
 
 import misinfo_infer
+from misinfo_lib import EXTRACT_SCHEMA
 from wiki_index import add_chunk, create_index, extract_keywords
 
 SENTENCE = "선풍기를 틀고 자면 사망한다는 이야기를 들었어요."
+GARBLED = "선풍기틀 틀고 자면 사망하다는 이야기틀 들없어요"
 CLAIM = "선풍기를 틀고 자면 사망한다."
 INTRO = "선풍기를 켜고 자면 사망한다는 가설이 있다."
 REFUTING = "그러나 이 속설은 과학적 근거가 없다."
@@ -43,15 +45,22 @@ def _block_ids(prompt: str) -> dict[str, int]:
 
 @pytest.fixture
 def llm(monkeypatch):
-    """LLM 1차 판정 응답을 정한다. 인용할 문단은 제목으로 지정한다(번호는 검색 순위로 정해진다)."""
+    """LLM 응답을 정한다. 주장 정리는 claim/checkable(문장별로 다르게 하려면 claims={문장: (claim, checkable)}),
+    판정은 label과 인용할 문단 제목(cite)으로 정한다(번호는 검색 순위로 정해진다)."""
     calls = []
     answer = {}
 
     def fake_ask(url, model, prompt, schema):
         calls.append((schema, prompt))
+        if schema == EXTRACT_SCHEMA:
+            sentence = prompt.split("[문장]\n", 1)[1]
+            claim, checkable = answer.get("claims", {}).get(
+                sentence, (answer.get("claim", CLAIM), answer.get("checkable", True)),
+            )
+            return json.dumps({"claim": claim, "checkable": checkable}, ensure_ascii=False)
         ids = _block_ids(prompt)
         return json.dumps(
-            {"core_claim": CLAIM, "evidence_ids": [ids[t] for t in answer["cite"] if t in ids],
+            {"evidence_ids": [ids[t] for t in answer["cite"] if t in ids],
              "reason": answer.get("reason", "[1] 문서는 근거가 없다고 한다."), "label": answer["label"]},
             ensure_ascii=False,
         )
@@ -73,9 +82,90 @@ def _nli(scores: dict[str, float]):
     return score
 
 
-def _run(kiwi, conn, nli):
-    return misinfo_infer.judge_sentence(kiwi, conn, SENTENCE, "http://ollama", "qwen", 5, nli)
+@pytest.fixture
+def embed_prefers(monkeypatch):
+    """가짜 e5: 지정한 문장만 질의와 가깝게 만든다(근거 문장 고르기의 '이유와 가장 가까운 문장' 확인용)."""
+    import torch
 
+    chosen = {}
+
+    def fake_embed(texts):
+        return torch.tensor([
+            [1.0, 0.0] if text.startswith("query: ") or text == f"passage: {chosen.get('text')}" else [0.0, 1.0]
+            for text in texts
+        ])
+
+    monkeypatch.setattr(misinfo_infer, "embed", fake_embed)
+    return chosen
+
+
+def _run(kiwi, conn, nli, sentence=SENTENCE):
+    return misinfo_infer.judge_sentence(kiwi, conn, sentence, "http://ollama", "qwen", 5, nli)
+
+
+# --- 1단계: 주장 정리 ----------------------------------------------------------------------------------------
+
+def test_claim_is_extracted_first_from_the_sentence_alone(kiwi, conn, llm):
+    """주장 정리는 위키 문단을 보기 전에 한다 - 위키 내용에 끌려 깨진 문장을 "속설이 있다"로 정리했다(2026-10-13)."""
+    calls, answer = llm
+    answer.update(label="판단불가", cite=())
+
+    _run(kiwi, conn, _nli({}))
+
+    schema, prompt = calls[0]
+    assert schema == EXTRACT_SCHEMA
+    assert SENTENCE in prompt
+    assert "근거 문단" not in prompt
+
+
+def test_sentence_without_checkable_fact_stops_before_search_and_judgment(kiwi, conn, llm):
+    """인사·의견·개인 일정 같은 문장은 위키 검색과 판정을 건너뛴다(문장당 판정 시간이 빠진다)."""
+    calls, answer = llm
+    answer.update(claim="", checkable=False)
+
+    claim, timer = _judge_with_timer(kiwi, conn, _nli({}))
+
+    assert claim is None
+    assert timer.outcome == "not_checkable"
+    assert len(calls) == 1
+    assert list(timer.seconds) == ["extract_llm"]
+
+
+def test_broken_extract_answer_is_treated_as_cannot_decide(kiwi, conn, monkeypatch, caplog):
+    monkeypatch.setattr(misinfo_infer, "ask_ollama", lambda url, model, prompt, schema: "형식 깨짐")
+
+    with caplog.at_level(logging.WARNING, logger="misinfo"):
+        claim, timer = _judge_with_timer(kiwi, conn, _nli({}))
+
+    assert claim is None
+    assert timer.outcome == "extract_format_error"
+    assert "search" not in timer.seconds
+    assert "주장 정리 응답 형식 오류" in caplog.text
+
+
+def test_search_and_judgment_use_the_extracted_claim_not_the_raw_sentence(kiwi, conn, llm):
+    """깨진 OCR 문장의 오타 단어("선풍기틀")로 검색하지 않고, 판정에도 원래 문장을 보여주지 않는다."""
+    calls, answer = llm
+    answer.update(label="판단불가", cite=())
+
+    _run(kiwi, conn, _nli({}), sentence=GARBLED)
+
+    _, judge_prompt = calls[1]
+    assert f"[주장]\n{CLAIM}" in judge_prompt
+    assert GARBLED not in judge_prompt
+    assert FAN_DEATH_BLOCK in judge_prompt  # 정리된 주장의 "선풍기"로 찾은 문서
+
+
+def test_shown_sentence_is_the_original_even_though_judgment_used_the_claim(kiwi, conn, llm):
+    _, answer = llm
+    answer.update(label="반박", cite=("선풍기 사망설",))
+
+    claim = _run(kiwi, conn, _nli({REFUTING: 0.99}), sentence=GARBLED)
+
+    assert claim["sentence"] == GARBLED
+
+
+# --- 2단계: 판정 ----------------------------------------------------------------------------------------------
 
 def test_non_refutation_does_not_call_nli(kiwi, conn, llm):
     _, answer = llm
@@ -95,9 +185,39 @@ def test_refutation_without_cited_evidence_is_not_shown(kiwi, conn, llm):
     assert nli.seen == []
 
 
-def test_nli_scores_sentences_of_all_retrieved_blocks_against_core_claim(kiwi, conn, llm):
-    """1차 판정이 엉뚱한 문단을 인용해도 맞는 근거를 놓치지 않도록, 검색된 문단 전체의 문장이 후보다.
-    가설은 사용자 문장 원문이 아니라 LLM이 정리한 핵심 주장이다."""
+def test_llm_is_called_twice_extract_then_judge(kiwi, conn, llm):
+    """LLM이 근거 문장을 고르던 단계는 없앴다(2026-10-13). 호출은 주장 정리와 판정 두 번뿐이다."""
+    calls, answer = llm
+    answer.update(label="반박", cite=("선풍기 사망설",))
+
+    _run(kiwi, conn, _nli({REFUTING: 0.99}))
+
+    assert [schema for schema, _ in calls] == [EXTRACT_SCHEMA, misinfo_infer.JUDGE_SCHEMA]
+
+
+def test_block_numbers_in_reason_become_titles(kiwi, conn, llm):
+    calls, answer = llm
+    answer.update(label="반박", cite=("선풍기 사망설",))
+
+    claim = _run(kiwi, conn, _nli({REFUTING: 0.99}))
+
+    first_title = next(iter(_block_ids(calls[1][1])))
+    assert claim["reason"] == f"'{first_title}' 문서는 근거가 없다고 한다."
+
+
+def test_neighbor_context_is_included_in_judge_prompt(kiwi, conn, llm):
+    calls, answer = llm
+    answer.update(label="판단불가", cite=())
+
+    _run(kiwi, conn, _nli({}))
+
+    assert FAN_DEATH_BLOCK in calls[1][1]
+
+
+# --- 3단계: 근거 문장 고르기 -----------------------------------------------------------------------------------
+
+def test_nli_scores_sentences_of_all_retrieved_blocks_against_the_claim(kiwi, conn, llm):
+    """판정이 엉뚱한 문단을 인용해도 맞는 근거를 놓치지 않도록, 검색된 문단 전체의 문장이 후보다."""
     _, answer = llm
     answer.update(label="반박", cite=("케니 맥코믹",))
     nli = _nli({REFUTING: 0.99})
@@ -122,48 +242,56 @@ def test_only_the_highest_scoring_sentence_is_shown(kiwi, conn, llm):
     assert claim["sentence"] == SENTENCE
 
 
-def test_sentence_scoring_below_threshold_is_not_shown(kiwi, conn, llm):
+def test_sentence_scoring_exactly_threshold_is_used(kiwi, conn, llm):
     _, answer = llm
     answer.update(label="반박", cite=("선풍기 사망설",))
 
-    assert _run(kiwi, conn, _nli({REFUTING: 0.79})) is None
+    claim, timer = _judge_with_timer(kiwi, conn, _nli({REFUTING: 0.8}))
+
+    assert claim["evidence"][0]["text"] == REFUTING
+    assert timer.outcome == "refuted"
 
 
-def test_sentence_scoring_exactly_threshold_is_shown(kiwi, conn, llm):
+def test_refutation_is_kept_when_nli_finds_no_sentence(kiwi, conn, llm, embed_prefers):
+    """NLI가 0.8을 넘는 문장을 못 찾아도 판정을 버리지 않는다. 위키가 "…라는 미신이다"라고만 쓰면 NLI가 0.06을 줘서
+    맞는 판정이 버려졌다(2026-10-13 이미지 실측). 근거는 판정이 인용한 문단에서 이유와 가장 가까운 문장이다."""
+    _, answer = llm
+    answer.update(label="반박", cite=("선풍기 사망설",), reason="선풍기 사망설은 과학적 근거가 없는 미신이다.")
+    embed_prefers["text"] = REFUTING
+
+    claim, timer = _judge_with_timer(kiwi, conn, _nli({REFUTING: 0.06, UNRELATED: 0.5}))
+
+    assert [(e["title"], e["text"]) for e in claim["evidence"]] == [("선풍기 사망설", REFUTING)]
+    assert claim["reason"] == "선풍기 사망설은 과학적 근거가 없는 미신이다."
+    assert timer.outcome == "refuted_reason_match"
+    assert list(timer.seconds) == ["extract_llm", "search", "rerank", "judge_llm", "shortlist", "nli", "reason_match"]
+
+
+def test_reason_match_only_looks_at_blocks_the_judgment_cited(kiwi, conn, llm, embed_prefers):
+    """인용하지 않은 문단의 문장(UNRELATED)은 이유와 가까워도 근거로 쓰지 않는다."""
     _, answer = llm
     answer.update(label="반박", cite=("선풍기 사망설",))
+    embed_prefers["text"] = UNRELATED
 
-    assert _run(kiwi, conn, _nli({REFUTING: 0.8})) is not None
+    claim = _run(kiwi, conn, _nli({}))
 
-
-def test_evidence_is_not_chosen_by_an_llm_call(kiwi, conn, llm):
-    """LLM이 근거 문장을 엉뚱하게 골라 맞는 반박을 버렸다(2026-10-13 기록 대조: 거짓 7개) - 그 단계를 없앴으므로
-    LLM 호출은 1차 판정 한 번뿐이다."""
-    calls, answer = llm
-    answer.update(label="반박", cite=("선풍기 사망설",))
-
-    _run(kiwi, conn, _nli({REFUTING: 0.99}))
-
-    assert len(calls) == 1
+    assert claim["evidence"][0]["title"] == "선풍기 사망설"
+    assert claim["evidence"][0]["text"] in {INTRO, REFUTING}
 
 
-def test_block_numbers_in_reason_become_titles(kiwi, conn, llm):
-    calls, answer = llm
-    answer.update(label="반박", cite=("선풍기 사망설",))
+def test_closest_to_reason_picks_the_nearest_sentence(monkeypatch):
+    import torch
 
-    claim = _run(kiwi, conn, _nli({REFUTING: 0.99}))
+    vectors = {"query: 이유": [1.0, 0.0], "passage: 가까움": [0.9, 0.1], "passage: 멂": [0.0, 1.0]}
+    monkeypatch.setattr(misinfo_infer, "embed", lambda texts: torch.tensor([vectors[t] for t in texts]))
 
-    first_title = next(iter(_block_ids(calls[0][1])))
-    assert claim["reason"] == f"'{first_title}' 문서는 근거가 없다고 한다."
+    assert misinfo_infer.closest_to_reason("이유", [("A", "멂"), ("B", "가까움")]) == ("B", "가까움")
 
 
-def test_neighbor_context_is_included_in_judge_prompt(kiwi, conn, llm):
-    calls, answer = llm
-    answer.update(label="판단불가", cite=())
+def test_closest_to_reason_with_one_candidate_does_not_embed(monkeypatch):
+    monkeypatch.setattr(misinfo_infer, "embed", lambda texts: (_ for _ in ()).throw(AssertionError("호출되면 안 된다")))
 
-    _run(kiwi, conn, _nli({}))
-
-    assert FAN_DEATH_BLOCK in calls[0][1]
+    assert misinfo_infer.closest_to_reason("이유", [("A", "문장")]) == ("A", "문장")
 
 
 def test_shortlist_keeps_sentences_closest_to_claim(monkeypatch):
@@ -183,8 +311,7 @@ def test_shortlist_returns_all_when_few_candidates(monkeypatch):
 
 
 def test_shortlist_default_size_is_fifteen(monkeypatch):
-    """15개 기준: 2026-10-13 기록 대조(59문장)에서 5개는 24, 15개는 26개를 잡았고 20개나 전체도 26개로 같았다.
-    참을 거짓으로 띄운 건은 어느 크기에서도 0건."""
+    """15개 기준: 2026-10-13 기록 대조(59문장)에서 5개는 24, 15개는 26개를 잡았고 20개나 전체도 26개로 같았다."""
     import torch
 
     assert misinfo_infer.NLI_SHORTLIST_SIZE == 15
@@ -199,8 +326,11 @@ def test_shortlist_default_size_is_fifteen(monkeypatch):
     assert result == candidates[:15]
 
 
+# --- 위키 검색 기능 / 검색 / Ollama 요청 ----------------------------------------------------------------------
+
 def test_wiki_search_adds_articles_local_keyword_search_missed(kiwi, tmp_path, llm, monkeypatch):
-    """로컬 키워드 검색은 단어가 다르면 못 찾는다("조작" vs "음모론") - 위키백과 검색이 찾은 문서를 후보에 더한다."""
+    """로컬 키워드 검색은 단어가 다르면 못 찾는다("조작" vs "음모론") - 위키백과 검색이 찾은 문서를 후보에 더한다.
+    보내는 단어는 정리된 주장에서 뽑는다."""
     conn = create_index(tmp_path / "w.sqlite3", snapshot="2026-09-01")
     for title, text in [("아폴로 11호", "아폴로 11호는 1969년 달에 착륙했다."),
                         ("달착륙 음모론", "달착륙 음모론은 아폴로 계획이 날조되었다는 주장이다. 과학자들은 이를 반박했다.")]:
@@ -209,11 +339,11 @@ def test_wiki_search_adds_articles_local_keyword_search_missed(kiwi, tmp_path, l
     sent = []
     monkeypatch.setattr(misinfo_infer, "wiki_search_titles", lambda terms: sent.append(terms) or ["달착륙 음모론"])
     calls, answer = llm
-    answer.update(label="판단불가", cite=())
+    answer.update(claim="아폴로 11호의 달 착륙은 조작되었다.", label="판단불가", cite=())
 
-    misinfo_infer.judge_sentence(kiwi, conn, "아폴로 11호의 달 착륙은 조작되었다.", "u", "m", 5, _nli({}), wiki_search=True)
+    misinfo_infer.judge_sentence(kiwi, conn, "아폴로 11호 달 착륙이 조작됐대요", "u", "m", 5, _nli({}), wiki_search=True)
 
-    judge_prompt = calls[0][1]
+    judge_prompt = calls[1][1]
     assert "(달착륙 음모론)" in judge_prompt
     assert sent == ["아폴로 11 달 착륙 조작"]  # 문장이 아니라 핵심 단어만 보낸다
 
@@ -297,8 +427,8 @@ def test_ollama_request_fixes_context_size_and_disables_thinking(monkeypatch):
 
 
 # --- 단계별 시간과 결과(outcome) 기록(2026-10-13) -----------------------------------------------------
-# 이미지 한 장이 2분 걸렸고 탐지가 비었는데, 어느 단계가 느린지 / 왜 비었는지(LLM 판단불가인지, NLI 탈락인지)를
-# 로그로 알 수 없었다. 문장마다 단계 시간과 결과를 남긴다. 판정 동작 자체는 바꾸지 않는다.
+# 이미지 한 장이 2분 걸렸고 탐지가 비었는데, 어느 단계가 느린지 / 왜 비었는지를 로그로 알 수 없었다.
+# 문장마다 단계 시간과 결과를 남긴다.
 
 def _judge_with_timer(kiwi, conn, nli, sentence=SENTENCE):
     from misinfo_timing import StepTimer
@@ -308,7 +438,7 @@ def _judge_with_timer(kiwi, conn, nli, sentence=SENTENCE):
     return claim, timer
 
 
-def test_timer_records_every_step_of_a_confirmed_refutation(kiwi, conn, llm):
+def test_timer_records_every_step_of_a_refutation(kiwi, conn, llm):
     _, answer = llm
     answer.update(label="반박", cite=("선풍기 사망설",))
 
@@ -316,10 +446,13 @@ def test_timer_records_every_step_of_a_confirmed_refutation(kiwi, conn, llm):
 
     assert claim is not None
     assert timer.outcome == "refuted"
-    assert list(timer.seconds) == ["search", "rerank", "judge_llm", "shortlist", "nli"]
+    assert list(timer.seconds) == ["extract_llm", "search", "rerank", "judge_llm", "shortlist", "nli"]
 
 
 def test_outcome_is_no_evidence_found_when_search_finds_nothing(kiwi, conn, llm):
+    _, answer = llm
+    answer.update(claim="!!!")
+
     claim, timer = _judge_with_timer(kiwi, conn, _nli({}), sentence="!!!")
 
     assert claim is None
@@ -338,26 +471,17 @@ def test_outcome_is_not_refuted_when_llm_says_cannot_decide(kiwi, conn, llm):
     assert "nli" not in timer.seconds
 
 
-def test_outcome_is_judge_format_error_when_llm_answer_is_broken(kiwi, conn, monkeypatch):
-    monkeypatch.setattr(misinfo_infer, "ask_ollama", lambda url, model, prompt, schema: "형식 깨짐")
+def test_outcome_is_judge_format_error_when_judgment_answer_is_broken(kiwi, conn, monkeypatch):
+    def ask(url, model, prompt, schema):
+        return json.dumps({"claim": CLAIM, "checkable": True}) if schema == EXTRACT_SCHEMA else "형식 깨짐"
+
+    monkeypatch.setattr(misinfo_infer, "ask_ollama", ask)
     monkeypatch.setattr(misinfo_infer, "rerank", lambda sentence, candidates, top_k: candidates[:top_k])
 
     claim, timer = _judge_with_timer(kiwi, conn, _nli({}))
 
     assert claim is None
     assert timer.outcome == "judge_format_error"
-
-
-def test_outcome_is_nli_rejected_when_no_sentence_reaches_threshold(kiwi, conn, llm):
-    """LLM은 반박이라고 판정했지만 어떤 문장도 NLI 기준(0.8)을 넘지 못한 경우."""
-    _, answer = llm
-    answer.update(label="반박", cite=("선풍기 사망설",))
-
-    claim, timer = _judge_with_timer(kiwi, conn, _nli({REFUTING: 0.5}))
-
-    assert claim is None
-    assert timer.outcome == "nli_rejected"
-    assert "nli" in timer.seconds
 
 
 def test_judge_sentence_still_works_without_a_timer(kiwi, conn, llm):
@@ -368,22 +492,23 @@ def test_judge_sentence_still_works_without_a_timer(kiwi, conn, llm):
     assert _run(kiwi, conn, _nli({REFUTING: 0.99})) is not None
 
 
-def test_refutation_check_log_shows_claim_and_top_nli_scores(kiwi, conn, llm, caplog):
-    """탐지가 비었는데 왜인지 몰랐다(2026-10-13: nli_rejected인데 핵심 주장·NLI 점수가 안 보임).
-    LLM이 반박이라고 한 문장은 핵심 주장과 NLI 점수가 높은 문장들을 INFO 로그에 남긴다(탈락한 경우 포함)."""
+def test_refutation_check_log_shows_claim_top_nli_scores_and_chosen_path(kiwi, conn, llm, embed_prefers, caplog):
+    """탐지가 비었거나 근거가 이상할 때 원인을 서버 로그로 알 수 있게, 반박 문장은 정리된 주장, NLI 점수가 높은
+    문장들, 근거를 어느 방식으로 골랐는지를 INFO 로그에 남긴다."""
     _, answer = llm
     answer.update(label="반박", cite=("선풍기 사망설",))
+    embed_prefers["text"] = REFUTING
 
     with caplog.at_level(logging.INFO, logger="misinfo"):
         claim, timer = _judge_with_timer(kiwi, conn, _nli({REFUTING: 0.5, UNRELATED: 0.3}))
 
-    assert claim is None and timer.outcome == "nli_rejected"
+    assert timer.outcome == "refuted_reason_match"
     assert "refutation_check" in caplog.text
-    assert f"core_claim={CLAIM!r}" in caplog.text
+    assert f"claim={CLAIM!r}" in caplog.text
     assert "threshold=0.8" in caplog.text
     assert "(선풍기 사망설) nli=0.50" in caplog.text and REFUTING in caplog.text
-    # 점수 높은 순: 0.50이 0.30보다 먼저 나온다
-    assert caplog.text.index("nli=0.50") < caplog.text.index("nli=0.30")
+    assert caplog.text.index("nli=0.50") < caplog.text.index("nli=0.30")  # 점수 높은 순
+    assert "evidence_by=reason_match" in caplog.text
 
 
 def test_refutation_check_is_not_logged_when_llm_did_not_say_refuted(kiwi, conn, llm, caplog):
@@ -403,7 +528,7 @@ def test_main_logs_each_sentence_and_a_summary_without_sentence_text(kiwi, conn,
     import types
 
     _, answer = llm
-    answer.update(label="반박", cite=("선풍기 사망설",))
+    answer.update(label="반박", cite=("선풍기 사망설",), claims={"!!!": ("!!!", True)})
     sentences_file = tmp_path / "sentences.json"
     sentences_file.write_text(json.dumps([SENTENCE, "!!!"], ensure_ascii=False), encoding="utf-8")
     output_file = tmp_path / "result.json"
