@@ -110,16 +110,30 @@ def test_nli_scores_sentences_of_all_retrieved_blocks_against_core_claim(kiwi, c
     assert claim["evidence"][0]["text"] == REFUTING
 
 
-def test_only_the_highest_scoring_sentence_is_shown(kiwi, conn, llm):
-    """기준(0.8)을 넘는 문장이 여러 개여도 화면에는 가장 높은 문장 하나와 문서 링크만 나간다(2026-10-01 사용자 결정)."""
+def test_among_sentences_passing_nli_the_one_closest_to_the_reason_is_shown(kiwi, conn, llm, embed_prefers):
+    """기준(0.8)을 넘는 문장이 여러 개면 판정 이유와 가장 가까운 문장 하나와 문서 링크만 나간다. NLI 최고점만 보면 주제만
+    같은 문장이 뽑혔다(10-15 회귀: "지구는 평평하다" → 지구본 받침대 베어링, "베토벤 출생지" → 모차르트 이사). 기록 46건
+    대조에서 근거 단어 채점 36 → 38, 나빠진 건 0건(10-15)."""
     _, answer = llm
     answer.update(label="반박", cite=("선풍기 사망설",))
+    embed_prefers["text"] = REFUTING
 
-    claim = _run(kiwi, conn, _nli({REFUTING: 0.99, UNRELATED: 0.90}))
+    claim, timer = _judge_with_timer(kiwi, conn, _nli({REFUTING: 0.85, UNRELATED: 0.99}))
 
     assert [(e["title"], e["text"]) for e in claim["evidence"]] == [("선풍기 사망설", REFUTING)]
     assert claim["evidence"][0]["url"] == "https://ko.wikipedia.org/wiki/선풍기_사망설"
     assert claim["sentence"] == SENTENCE
+    assert timer.outcome == "refuted"
+
+
+def test_single_sentence_passing_nli_is_shown_without_reason_matching(kiwi, conn, llm, monkeypatch):
+    monkeypatch.setattr(misinfo_infer, "embed", lambda texts: (_ for _ in ()).throw(AssertionError("호출되면 안 된다")))
+    _, answer = llm
+    answer.update(label="반박", cite=("선풍기 사망설",))
+
+    claim = _run(kiwi, conn, _nli({REFUTING: 0.99}))
+
+    assert claim["evidence"][0]["text"] == REFUTING
 
 
 @pytest.fixture

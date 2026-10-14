@@ -84,12 +84,34 @@ def test_core_claim_rule_states_what_the_sentence_finally_says_about_the_world()
     문장("…이야기틀 들없어요")을 "…라는 속설이 있다"로 정리해 엉뚱한 것을 판단하게 만들었다(이미지 실측)."""
     prompt = build_judge_prompt("주장", [])
 
-    assert "결국 무엇을 말하는지" in prompt
     assert "전해 들은 내용 자체" in prompt
     assert "\"~라는 속설이 있다\"" in prompt and "그 이야기의 내용 자체" in prompt
     assert "\"~는 사실이 아니다\"" in prompt and "부정된 뜻" in prompt
     assert "문장 그대로를 적는다" not in prompt
     assert "들없어요" in prompt  # OCR 오타로 깨진 전해 들은 말
+
+
+def test_core_claim_rule_keeps_a_false_claim_false():
+    """2026-10-15 회귀: "[주장]이 세상에 대해 결국 무엇을 말하는지"라는 문구를 4B 모델이 "실제 사실을 적어라"로 읽어,
+    "에펠탑은 영국 런던에 있다"를 "에펠탑은 프랑스 파리에 있다"로, "1392년"을 "1592년"으로 바꿔 적고 지지로 판정했다
+    (에펠탑·임진왜란·후지산·부산 놓침). 그 문구를 빼고 10-13까지 쓰던 문구(거짓 30개 중 28개 반박)로 되돌리고,
+    틀린 주장을 고치지 말라고 적는다."""
+    prompt = build_judge_prompt("주장", [])
+
+    assert "결국 무엇을 말하는지" not in prompt
+    assert "참/거짓을 따질 핵심 내용" in prompt
+    assert "사실에 맞게 고치지 말고" in prompt
+
+
+def test_judge_rule_treats_requests_and_small_talk_as_cannot_decide():
+    """2026-10-15 회귀: "계좌번호 다시 보내줄 수 있어?"를 "계좌번호를 보내 달라는 요청이 있다"로 바꿔 보이스피싱이라며
+    반박(위험 오답), "엄마 나 오늘 좀 늦어"를 영화 줄거리 주장으로 바꿨다. 따질 사실이 없는 문장은 판단불가다."""
+    prompt = build_judge_prompt("주장", [])
+
+    assert "질문, 부탁, 인사, 감정, 의견, 개인적인 일" in prompt
+    assert "판단불가로 한다" in prompt
+    # 주변 사람에게서 들은 사실 주장("할머니가 그러시는데 선풍기 … 죽을 수도 있대요")까지 판단불가로 넘기면 안 된다.
+    assert "누군가에게서 들은 내용이 사실 주장이면" in prompt
 
 
 def test_examples_do_not_leak_regression_test_sentences():

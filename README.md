@@ -578,7 +578,7 @@ pip install kiwipiepy mwparserfromhell
 
 ### 2-1. 반박 확인용 NLI 모델 학습 (최초 1회, 약 1~2시간)
 
-LLM이 "거짓"이라고 판정한 문장의 화면 근거는, 문장 두 개의 모순 여부만 판정하는 NLI 분류기가 위키 문단의 문장들을 채점해 모순 점수(0.8 이상)가 가장 높은 문장 하나로 고른다(`scripts/nli_check.py`). 그런 문장이 없으면 판정이 인용한 문단에서 판정 이유와 가장 가까운 문장을 쓴다 - NLI는 판정을 버리지 않는다(2026-10-14). 라이선스가 명시된 한국어 NLI 모델이 없어 `klue/roberta-large`를 KLUE-NLI로 직접 학습한다. 학습에는 GPU가 필요한데 `text-extraction` 환경의 PyTorch는 CPU 전용이라, 학습 전용 환경을 따로 만든다. 기존 환경은 건드리지 않는다.
+LLM이 "거짓"이라고 판정한 문장의 화면 근거는, 문장 두 개의 모순 여부만 판정하는 NLI 분류기가 위키 문단의 문장들을 채점해 모순 점수 0.8 이상인 문장 중 판정 이유와 가장 가까운 문장 하나로 고른다(`scripts/nli_check.py`). 그런 문장이 없으면 판정이 인용한 문단에서 판정 이유와 가장 가까운 문장을 쓴다 - NLI는 판정을 버리지 않는다(2026-10-14). 라이선스가 명시된 한국어 NLI 모델이 없어 `klue/roberta-large`를 KLUE-NLI로 직접 학습한다. 학습에는 GPU가 필요한데 `text-extraction` 환경의 PyTorch는 CPU 전용이라, 학습 전용 환경을 따로 만든다. 기존 환경은 건드리지 않는다.
 
 먼저 `text-extraction`의 transformers 버전을 확인한다. 학습 환경도 같은 버전으로 맞춰야 학습한 모델을 판정 쪽에서 문제없이 읽는다.
 
@@ -691,7 +691,7 @@ python scripts\check_image_e2e.py --url http://localhost:8000
 
 | outcome | 뜻 |
 |---|---|
-| `refuted` | 거짓으로 탐지됨(화면에 나감). 근거 문장은 NLI 모순 점수 0.8 이상 중 최고점 |
+| `refuted` | 거짓으로 탐지됨(화면에 나감). 근거 문장은 NLI 모순 점수 0.8 이상인 문장 중 판정 이유와 가장 가까운 문장 |
 | `refuted_reason_match` | 거짓으로 탐지됨(화면에 나감). NLI가 0.8을 넘는 문장을 못 찾아, 판정이 인용한 문단에서 판정 이유와 가장 가까운 문장을 근거로 씀 |
 | `no_evidence_found` | 위키 검색에서 근거 문서를 못 찾음 |
 | `not_refuted` | LLM이 반박이 아니라고(지지/판단불가) 판정 |

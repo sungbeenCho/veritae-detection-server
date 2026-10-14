@@ -1,6 +1,6 @@
 # scripts/misinfo_infer.py
 """문장 목록 -> 위키 검색 -> e5 재정렬 -> 앞뒤 문맥과 문서 첫 문단 붙이기 -> LLM 1차 판정 -> 반박이면 근거 문장 하나와
-링크를 결과로. 근거 문장은 e5로 주장과 가까운 후보 15개를 NLI가 채점해 모순 점수 0.8 이상 중 최고점, 없으면 판정이
+링크를 결과로. 근거 문장은 e5로 주장과 가까운 후보 15개를 NLI가 채점해 모순 점수 0.8 이상인 문장 중 판정 이유와 가장 가까운 문장, 없으면 판정이
 인용한 문단에서 판정 이유와 가장 가까운 문장이다. NLI는 판정을 버리지 않는다(2026-10-14).
 text-extraction conda env(kiwipiepy, mwparserfromhell, torch, transformers 설치됨)에서
 실행되어야 한다. veritae-detection-server(FastAPI)는 이 스크립트를 subprocess로 호출하고
@@ -284,7 +284,7 @@ def judge_sentence(
     # LLM의 반박 판정은 버리지 않는다(2026-10-14 사용자 결정). 예전에는 NLI가 근거 문장을 0.8 이상으로 못 찾으면 판정을
     # 버렸는데, 위키가 "선풍기 사망설이란 … 미신이다"처럼 쓰면 NLI가 0.06을 줘서 LLM이 맞는 근거와 이유를 냈는데도
     # 탐지가 비었다(10-13 이미지 실측 2회). NLI는 화면에 보여줄 근거 문장을 고르는 데만 쓴다:
-    # - e5로 주장과 가까운 후보 15개를 NLI가 채점해 0.8 이상 중 최고점 문장(기록 대조상 이 문장이 가장 정확했다).
+    # - e5로 주장과 가까운 후보 15개를 NLI가 채점해 0.8 이상인 문장(기록 대조상 이유와 가까운 문장보다 정확했다). 여럿이면 그중 판정 이유와 가장 가까운 문장.
     #   후보는 판정이 인용한 문단만이 아니라 검색된 문단 전체에서 고른다 - 판정이 엉뚱한 문단을 인용해 맞는 근거
     #   ("학계의 중론은 … 자폐증 발생률을 증가시키지 않았으며")를 놓친 경우가 있었다(2026-10-01).
     # - 없으면 판정이 인용한 문단에서 판정 이유와 가장 가까운 원문 문장. 인용 문단에 쓸 문장이 없을 때만 전체에서 찾는다.
@@ -299,7 +299,10 @@ def judge_sentence(
     with timer.step("nli"):
         best, scored = pick_best_contradiction(nli, candidates, claim)
     if best is not None:
-        evidence, timer.outcome, evidence_by = (best["title"], best["sentence"]), "refuted", "nli"
+        # 기준을 넘는 문장이 여럿이면 판정 이유와 가장 가까운 문장을 쓴다. NLI 최고점만 보면 주제만 같은 문장이 뽑혔다
+        # (10-15 회귀: "지구는 평평하다" → 지구본 받침대 베어링). 기록 46건 대조에서 근거 단어 채점 36 → 38, 나빠진 건 0건.
+        passing = [(c["title"], c["sentence"]) for c in scored if c["score"] >= NLI_THRESHOLD]
+        evidence, timer.outcome, evidence_by = closest_to_reason(reason, passing), "refuted", "nli"
     else:
         cited = [evidence_blocks[i - 1] for i in first["evidence_ids"]]
         with timer.step("reason_match"):
