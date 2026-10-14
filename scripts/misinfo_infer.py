@@ -1,7 +1,7 @@
 # scripts/misinfo_infer.py
-"""문장 목록 -> 문장마다 LLM 주장 정리(문장만 보고, 확인할 사실이 없으면 끝) -> 정리된 주장으로 위키 검색 -> e5 재정렬
--> 앞뒤 문맥과 문서 첫 문단 붙이기 -> LLM 판정(정리된 주장만) -> 반박이면 근거 문장 하나와 링크를 결과로. 근거 문장은
-NLI 모순 점수 0.8 이상 중 최고점, 없으면 판정이 인용한 문단에서 판정 이유와 가장 가까운 문장(misinfo_lib.py 모듈 설명 참고).
+"""문장 목록 -> 위키 검색 -> e5 재정렬 -> 앞뒤 문맥과 문서 첫 문단 붙이기 -> LLM 1차 판정 -> 반박이면 근거 문장 하나와
+링크를 결과로. 근거 문장은 e5로 주장과 가까운 후보 15개를 NLI가 채점해 모순 점수 0.8 이상 중 최고점, 없으면 판정이
+인용한 문단에서 판정 이유와 가장 가까운 문장이다. NLI는 판정을 버리지 않는다(2026-10-14).
 text-extraction conda env(kiwipiepy, mwparserfromhell, torch, transformers 설치됨)에서
 실행되어야 한다. veritae-detection-server(FastAPI)는 이 스크립트를 subprocess로 호출하고
 --output 경로의 JSON만 읽는다 - scam_infer.py와 동일한 패턴.
@@ -22,13 +22,10 @@ _PROCESS_START = time.perf_counter()
 from kiwipiepy import Kiwi
 
 from misinfo_lib import (
-    EXTRACT_SCHEMA,
     JUDGE_SCHEMA,
     build_claim,
-    build_extract_prompt,
     build_judge_prompt,
     fit_blocks,
-    parse_extract_response,
     parse_judge_response,
     replace_block_numbers,
 )
@@ -238,32 +235,15 @@ def judge_sentence(
     kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str, evidence_count: int, nli: ContradictionScorer,
     wiki_search: bool = False, timer: StepTimer | None = None,
 ) -> dict | None:
-    # timer에는 단계별 시간(extract_llm, search, rerank, judge_llm, shortlist, nli, reason_match)과 결과(outcome)가
-    # 담긴다 - 판정 결과 자체에는 영향이 없다. 안 넘기면(회귀 테스트 등) 쓰고 버린다.
+    # timer에는 단계별 시간(search, rerank, judge_llm, shortlist, nli)과, 결과가 비었을 때 그 이유
+    # (outcome)가 담긴다 - 판정 결과 자체에는 영향이 없다. 안 넘기면(회귀 테스트 등) 쓰고 버린다.
     timer = timer or StepTimer()
-
-    # 1) 주장 정리 - 위키를 보기 전에 문장만 보고 한다(misinfo_lib.py 모듈 설명). 이후 검색과 판정은 정리된 주장으로
-    # 한다: 깨진 OCR 문장의 오타 단어("선풍기틀")로는 검색이 빗나가고, 판정에 원래 문장을 보여주면 다시 속 내용에 끌린다.
-    with timer.step("extract_llm"):
-        raw_extract = ask_ollama(ollama_url, model, build_extract_prompt(sentence), EXTRACT_SCHEMA)
-    extracted = parse_extract_response(raw_extract)
-    logger.debug("주장 정리: sentence=%r extracted=%r", sentence, extracted)
-    if extracted is None:
-        # 형식 오류 - 판단불가로 취급한다(§10). 조용히 넘어가면 LLM 출력이 계속 깨져도 알아챌 수 없어 경고를 남긴다.
-        logger.warning("주장 정리 응답 형식 오류로 문장을 판단불가 처리함: sentence=%r raw_response=%r", sentence, raw_extract)
-        timer.outcome = "extract_format_error"
-        return None
-    if not extracted["checkable"]:
-        timer.outcome = "not_checkable"
-        return None
-    claim = extracted["claim"]
-
     with timer.step("search"):
-        keywords = extract_keywords(kiwi, claim)
+        keywords = extract_keywords(kiwi, sentence)
         candidates = search(conn, keywords, limit=50) if keywords else []
         if wiki_search:
             seen = {c.rowid for c in candidates}
-            for title in wiki_search_titles(web_search_terms(kiwi, claim)):
+            for title in wiki_search_titles(web_search_terms(kiwi, sentence)):
                 for chunk in title_chunks(conn, title, keywords):
                     if chunk.rowid not in seen:
                         seen.add(chunk.rowid)
@@ -273,51 +253,63 @@ def judge_sentence(
         return None
 
     with timer.step("rerank"):
-        top_chunks = rerank(claim, candidates, top_k=evidence_count)
+        top_chunks = rerank(sentence, candidates, top_k=evidence_count)
         evidence_blocks = fit_blocks(expand_with_neighbors(conn, top_chunks))
 
-    # 2) 판정 - 정리된 주장만 보여준다.
     with timer.step("judge_llm"):
-        raw_response = ask_ollama(ollama_url, model, build_judge_prompt(claim, evidence_blocks), JUDGE_SCHEMA)
-    verdict = parse_judge_response(raw_response, len(evidence_blocks))
-    if verdict is None:
-        logger.warning("판정 응답 형식 오류로 문장을 판단불가 처리함: sentence=%r raw_response=%r", sentence, raw_response)
+        raw_response = ask_ollama(ollama_url, model, build_judge_prompt(sentence, evidence_blocks), JUDGE_SCHEMA)
+    first = parse_judge_response(raw_response, len(evidence_blocks))
+    if first is None:
+        # 형식 오류 - 이 문장은 판단불가로 취급(§10), 결과에 포함하지 않는다. 다만 조용히
+        # 넘어가면 LLM 출력이 계속 깨지고 있어도 알아챌 방법이 없으므로 경고 로그를 남긴다.
+        logger.warning("LLM 응답 형식 오류로 문장을 판단불가 처리함: sentence=%r raw_response=%r", sentence, raw_response)
     logger.debug(
-        "판정: sentence=%r claim=%r verdict=%r evidence_titles=%r",
-        sentence, claim, verdict, [title for title, _ in evidence_blocks],
+        "1차 판정: sentence=%r verdict=%r evidence_titles=%r",
+        sentence, first, [title for title, _ in evidence_blocks],
     )
-    if verdict is None:
+    if first is None:
         timer.outcome = "judge_format_error"
         return None
-    if verdict["label"] != "반박" or not verdict["evidence_ids"]:
+    # 모든 판정의 핵심 주장·판정·이유를 남긴다 - 10-14 실측에서 문장이 not_refuted로 끝났는데 LLM이 무엇을 핵심 주장으로
+    # 정리했고 왜 반박이 아니라고 했는지 로그에 없어 원인을 알 수 없었다. 사용자 문장에서 나온 내용이 들어간다.
+    logger.info(
+        "judge_result label=%s core_claim=%r reason=%r cited=%s",
+        first["label"], first["core_claim"], first["reason"],
+        [evidence_blocks[i - 1][0] for i in first["evidence_ids"]],
+    )
+    if first["label"] != "반박" or not first["evidence_ids"]:
         timer.outcome = "not_refuted"
         return None
 
-    # 3) 근거 문장 고르기 - 판정은 버리지 않는다. NLI가 위키의 "…라는 미신이다"에 0.06을 줘서 맞는 판정을 버렸다
-    # (2026-10-13 이미지 실측). NLI 후보는 판정이 인용한 문단만이 아니라 검색된 문단 전체에서 고른다 - 판정이 엉뚱한
-    # 문단을 인용해 맞는 근거("학계의 중론은 … 자폐증 발생률을 증가시키지 않았으며")를 놓친 경우가 있었다(2026-10-01).
-    # NLI 기준을 넘는 문장이 있으면 그것이 가장 정확했다(2026-10-14 기록 대조: 백신·베토벤·세종대왕 사례).
-    reason = replace_block_numbers(verdict["reason"], evidence_blocks)
+    # LLM의 반박 판정은 버리지 않는다(2026-10-14 사용자 결정). 예전에는 NLI가 근거 문장을 0.8 이상으로 못 찾으면 판정을
+    # 버렸는데, 위키가 "선풍기 사망설이란 … 미신이다"처럼 쓰면 NLI가 0.06을 줘서 LLM이 맞는 근거와 이유를 냈는데도
+    # 탐지가 비었다(10-13 이미지 실측 2회). NLI는 화면에 보여줄 근거 문장을 고르는 데만 쓴다:
+    # - e5로 주장과 가까운 후보 15개를 NLI가 채점해 0.8 이상 중 최고점 문장(기록 대조상 이 문장이 가장 정확했다).
+    #   후보는 판정이 인용한 문단만이 아니라 검색된 문단 전체에서 고른다 - 판정이 엉뚱한 문단을 인용해 맞는 근거
+    #   ("학계의 중론은 … 자폐증 발생률을 증가시키지 않았으며")를 놓친 경우가 있었다(2026-10-01).
+    # - 없으면 판정이 인용한 문단에서 판정 이유와 가장 가까운 원문 문장. 인용 문단에 쓸 문장이 없을 때만 전체에서 찾는다.
+    claim = first["core_claim"]
+    # 1차 판정의 번호는 evidence_blocks 기준이다.
+    reason = replace_block_numbers(first["reason"], evidence_blocks)
     with timer.step("shortlist"):
-        shortlisted = shortlist_sentences(claim, candidate_sentences(evidence_blocks))
-    if not shortlisted:
+        candidates = shortlist_sentences(claim, candidate_sentences(evidence_blocks))
+    if not candidates:
         timer.outcome = "no_candidate_sentences"
         return None
     with timer.step("nli"):
-        best, scored = pick_best_contradiction(nli, shortlisted, claim)
+        best, scored = pick_best_contradiction(nli, candidates, claim)
     if best is not None:
         evidence, timer.outcome, evidence_by = (best["title"], best["sentence"]), "refuted", "nli"
     else:
-        # NLI가 못 찾으면 판정이 인용한 문단에서 이유와 가장 가까운 문장을 쓴다. 인용 문단에 쓸 문장이 없을 때만 전체에서 찾는다.
-        cited = [evidence_blocks[i - 1] for i in verdict["evidence_ids"]]
+        cited = [evidence_blocks[i - 1] for i in first["evidence_ids"]]
         with timer.step("reason_match"):
             evidence = closest_to_reason(reason, candidate_sentences(cited) or candidate_sentences(evidence_blocks))
         timer.outcome, evidence_by = "refuted_reason_match", "reason_match"
-    # 반박 문장마다 정리된 주장, NLI 점수가 높은 문장 3개, 근거를 고른 방식을 남긴다 - 탐지가 비었거나 근거가 이상할 때
-    # 서버 로그만으로 원인을 찾을 수 있게(2026-10-13). 사용자 문장에서 나온 내용이 들어간다.
+    # 반박 문장마다 핵심 주장, 근거를 고른 방식, NLI 점수가 높은 문장 3개를 남긴다 - 근거가 이상할 때 서버 로그만으로
+    # 원인을 찾을 수 있게(2026-10-13). 사용자 문장에서 나온 내용이 들어간다.
     top_scored = sorted(scored, key=lambda item: item["score"], reverse=True)[:3]
     logger.info(
-        "refutation_check claim=%r threshold=%s evidence_by=%s top=%s", claim, NLI_THRESHOLD, evidence_by,
+        "refutation_check core_claim=%r threshold=%s evidence_by=%s top=%s", claim, NLI_THRESHOLD, evidence_by,
         "; ".join(f"({c['title']}) nli={c['score']:.2f} {c['sentence'][:80]}" for c in top_scored) or "(없음)",
     )
     # 화면에는 근거 문장 하나와 문서 링크만 보여준다 - 판정에 쓴 긴 문맥(앞뒤 문단)을 그대로 내보내면

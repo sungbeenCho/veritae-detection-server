@@ -184,18 +184,53 @@
  },
  {
   "expected": "entailment",
-  "category": "mention",
+  "category": "negation",
   "sentence": "번개가 같은 곳에 두 번 치지 않는다는 말은 사실이 아니다."
  },
  {
-  "expected": "entailment",
+  "expected": "contradiction",
   "category": "mention",
-  "sentence": "금붕어의 기억력이 3초라는 속설이 있다."
+  "sentence": "금붕어의 기억력이 3초라는 속설이 있다.",
+  "evidence_keys": [
+   [
+    "기억"
+   ],
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정",
+    "개월",
+    "달"
+   ]
+  ]
  },
  {
-  "expected": "entailment",
+  "expected": "contradiction",
   "category": "mention",
-  "sentence": "지구가 평평하다고 주장하는 사람들이 있다."
+  "sentence": "지구가 평평하다고 주장하는 사람들이 있다.",
+  "evidence_keys": [
+   [
+    "구형",
+    "둥근",
+    "둥글",
+    "타원체",
+    "구 모양",
+    "평평하지",
+    "평면설",
+    "구체"
+   ]
+  ]
  },
  {
   "expected": "entailment",

@@ -1,24 +1,14 @@
 import json
 
 from scripts.misinfo_lib import (
-    EXTRACT_SCHEMA,
     JUDGE_SCHEMA,
     PREMISE_MAX_CHARS,
     build_claim,
-    build_extract_prompt,
     build_judge_prompt,
     fit_blocks,
-    parse_extract_response,
     parse_judge_response,
     replace_block_numbers,
 )
-
-# 회귀 테스트셋 문장의 주제. 프롬프트 예시가 이 주제를 담으면 시험 답을 가르치는 셈이라 실측이 무의미해진다.
-REGRESSION_SUBJECTS = [
-    "선풍기", "만리장성", "백신", "에펠탑", "세종", "한글", "부산", "서울", "태양", "지구", "아폴로", "뇌",
-    "에베레스트", "이순신", "커피", "훈민정음", "신라", "고려", "독일", "영국", "런던", "금붕어", "번개", "고래",
-    "피카소", "베토벤", "후지산", "토마토", "광화문", "임진왜란", "달 착륙", "달빛",
-]
 
 
 def test_fit_blocks_keeps_everything_under_the_limit():
@@ -56,59 +46,9 @@ def test_replace_block_numbers_uses_titles_and_leaves_unknown_numbers():
     assert replace_block_numbers("[1] 문서와 [2] 문서, [7]은 모름", blocks) == "'백신' 문서와 '자폐증' 문서, [7]은 모름"
 
 
-# --- 1단계: 주장 정리(위키 없이 문장만 본다, 2026-10-14) -------------------------------------------------
-# 한 번의 질문으로 "주장 정리"와 "위키 대조 판정"을 같이 시켰더니, 4B 모델이 위키 내용("선풍기 사망설")에 끌려
-# 깨진 OCR 문장("…이야기틀 들없어요")을 "…라는 속설이 있다"로 정리했고(이미지 실측), "~는 미신이다"라는 맞는 말을
-# 내용만 보고 반박으로 판정했다(기록 2개). 정리는 위키를 보기 전에 따로 한다.
-
-def _extract_raw(**overrides) -> str:
-    data = {"claim": "선풍기를 틀고 자면 사망한다.", "checkable": True}
-    data.update(overrides)
-    return json.dumps(data, ensure_ascii=False)
-
-
-def test_extract_schema_writes_claim_before_deciding_checkability():
-    assert list(EXTRACT_SCHEMA["properties"]) == ["claim", "checkable"]
-    assert EXTRACT_SCHEMA["properties"]["checkable"]["type"] == "boolean"
-
-
-def test_extract_prompt_carries_sentence_and_rules_without_wiki():
-    prompt = build_extract_prompt("선풍기틀 틀고 자면 사망하다는 이야기틀 들없어요")
-
-    assert "선풍기틀 틀고 자면 사망하다는 이야기틀 들없어요" in prompt
-    assert "전해 들은" in prompt and "전해 들은 내용 자체" in prompt
-    assert "\"~는 미신이다\"" in prompt and "평가까지 포함" in prompt
-    assert "소개만 하는" in prompt
-    assert "오타" in prompt and "들없어요" in prompt
-    assert "checkable" in prompt and "인사" in prompt and "의견" in prompt
-    assert "근거 문단" not in prompt  # 위키 문단은 보여주지 않는다
-    assert "{" not in prompt and "}" not in prompt
-
-
-def test_extract_examples_do_not_leak_regression_test_subjects():
-    prompt = build_extract_prompt("문장")
-    examples = prompt[prompt.index("정리 예시"):prompt.index("[문장]\n")]
-    assert all(subject not in examples for subject in REGRESSION_SUBJECTS)
-
-
-def test_parse_extract_accepts_valid_response():
-    assert parse_extract_response(_extract_raw()) == {"claim": "선풍기를 틀고 자면 사망한다.", "checkable": True}
-    assert parse_extract_response(_extract_raw(claim="", checkable=False)) == {"claim": "", "checkable": False}
-
-
-def test_parse_extract_rejects_malformed_responses():
-    assert parse_extract_response(_extract_raw(claim=" ")) is None  # 확인할 문장인데 주장이 비었다
-    assert parse_extract_response(_extract_raw(checkable="true")) is None
-    assert parse_extract_response(_extract_raw(claim=3)) is None
-    assert parse_extract_response('{"claim": "주장"}') is None
-    assert parse_extract_response("") is None
-    assert parse_extract_response("[1]") is None
-
-
-# --- 2단계: 정리된 주장만 위키와 대조해 판정 -------------------------------------------------------------
-
 def _judge_raw(**overrides) -> str:
     data = {
+        "core_claim": "선풍기를 틀고 자면 사망한다.",
         "evidence_ids": [1],
         "reason": "선풍기 사망설 문서는 이 속설에 과학적 근거가 없다고 설명한다.",
         "label": "반박",
@@ -118,40 +58,50 @@ def _judge_raw(**overrides) -> str:
 
 
 def test_schema_puts_label_last_so_model_reasons_before_judging():
-    assert list(JUDGE_SCHEMA["properties"]) == ["evidence_ids", "reason", "label"]
+    assert list(JUDGE_SCHEMA["properties"]) == ["core_claim", "evidence_ids", "reason", "label"]
 
 
 def test_judge_prompt_numbers_blocks_and_carries_rules():
     prompt = build_judge_prompt(
-        "선풍기를 틀고 자면 사망한다.",
+        "선풍기를 틀고 자면 사망한다는 이야기를 들었어요.",
         [("선풍기 사망설", "과학적 근거가 없는 속설이다."), ("미신", "선풍기 미신이 있다.")],
     )
 
     assert "[1] (선풍기 사망설) 과학적 근거가 없는 속설이다." in prompt
     assert "[2] (미신) 선풍기 미신이 있다." in prompt
-    assert "[주장]\n선풍기를 틀고 자면 사망한다." in prompt
+    assert "선풍기를 틀고 자면 사망한다는 이야기를 들었어요." in prompt
     assert "거짓일 수밖에 없다" in prompt
     assert "소개만 하는 문단" in prompt and "\"미신\"" in prompt
     assert "판정 예시" in prompt and "이름을 정확히 비교" in prompt
-    assert "core_claim" not in prompt  # 주장 정리는 1단계에서 끝났다
     assert "{" not in prompt and "}" not in prompt
 
 
-def test_judge_prompt_judges_a_claim_that_itself_says_something_is_false_as_a_whole():
-    """"~는 근거 없는 속설이다"라는 주장은 그 평가 전체가 참인지 따진다 - 위키도 근거 없다고 하면 지지다.
-    속 내용만 보고 반박하면 맞는 말을 한 사람이 가짜정보로 표시된다(2026-10-01, 10-13 기록)."""
+def test_core_claim_rule_states_what_the_sentence_finally_says_about_the_world():
+    """2026-10-14 사용자 결정: 문장이 결국 무엇을 말하는지로 판단한다.
+    - 전해 들은 말("X라고 들었어요")과 속설 소개("X라는 속설이 있다")는 X 자체를 판단한다.
+    - 부정하는 문장("X는 사실이 아니다")은 부정된 뜻(X가 아니다)을 판단한다.
+    예전 규칙("속설을 소개하는 문장은 문장 그대로" = 속설이 있다는 사실을 판단)은 사용자 결정이 아니었고, 깨진 OCR
+    문장("…이야기틀 들없어요")을 "…라는 속설이 있다"로 정리해 엉뚱한 것을 판단하게 만들었다(이미지 실측)."""
     prompt = build_judge_prompt("주장", [])
 
-    assert "평가 전체" in prompt
-    examples = prompt[prompt.index("판정 예시"):prompt.index("[근거 문단]\n")]
-    assert "근거 없는 속설이다.\" → 지지" in examples
+    assert "결국 무엇을 말하는지" in prompt
+    assert "전해 들은 내용 자체" in prompt
+    assert "\"~라는 속설이 있다\"" in prompt and "그 이야기의 내용 자체" in prompt
+    assert "\"~는 사실이 아니다\"" in prompt and "부정된 뜻" in prompt
+    assert "문장 그대로를 적는다" not in prompt
+    assert "들없어요" in prompt  # OCR 오타로 깨진 전해 들은 말
 
 
 def test_examples_do_not_leak_regression_test_sentences():
-    """예시가 회귀 테스트 문장을 담으면 시험 답을 가르치는 셈이라 실측이 무의미해진다."""
+    """예시가 회귀 테스트 문장을 담으면 시험 답을 가르치는 셈이라 실측이 무의미해진다. 판정 예시뿐 아니라
+    core_claim 규칙 안의 예시까지 프롬프트 전체(근거 문단과 주장 자리를 비운 상태)를 본다."""
+    subjects = [
+        "선풍기", "만리장성", "백신", "에펠탑", "세종", "한글", "부산", "서울", "태양", "지구", "아폴로", "뇌",
+        "에베레스트", "이순신", "커피", "훈민정음", "신라", "고려", "독일", "영국", "런던", "금붕어", "번개",
+        "고래", "피카소", "베토벤", "후지산", "토마토", "광화문", "임진왜란", "달 착륙", "달빛",
+    ]
     prompt = build_judge_prompt("주장", [])
-    examples = prompt[prompt.index("판정 예시"):prompt.index("[근거 문단]\n")]
-    assert all(subject not in examples for subject in REGRESSION_SUBJECTS)
+    assert all(subject not in prompt for subject in subjects)
 
 
 def test_judge_prompt_keeps_braces_inside_evidence_text():
@@ -162,6 +112,7 @@ def test_judge_prompt_keeps_braces_inside_evidence_text():
 
 def test_parse_judge_accepts_valid_response():
     assert parse_judge_response(_judge_raw(evidence_ids=[2, 1]), evidence_count=3) == {
+        "core_claim": "선풍기를 틀고 자면 사망한다.",
         "evidence_ids": [2, 1],
         "reason": "선풍기 사망설 문서는 이 속설에 과학적 근거가 없다고 설명한다.",
         "label": "반박",
@@ -179,6 +130,7 @@ def test_parse_judge_accepts_blank_reason_only_when_not_refutation():
 
 def test_parse_judge_rejects_malformed_responses():
     assert parse_judge_response(_judge_raw(label="모르겠음"), evidence_count=3) is None
+    assert parse_judge_response(_judge_raw(core_claim=" "), evidence_count=3) is None
     assert parse_judge_response(_judge_raw(evidence_ids="1"), evidence_count=3) is None
     assert parse_judge_response('{"label": "반박", "reason": "이유"}', evidence_count=3) is None
     assert parse_judge_response("", evidence_count=3) is None

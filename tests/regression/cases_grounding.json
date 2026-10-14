@@ -156,24 +156,63 @@
   ]
  },
  {
-  "expected": "entailment",
+  "expected": "contradiction",
   "category": "mention",
-  "sentence": "한국에는 선풍기를 틀고 자면 죽는다는 속설이 있다."
+  "sentence": "한국에는 선풍기를 틀고 자면 죽는다는 속설이 있다.",
+  "evidence_keys": [
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정"
+   ]
+  ]
  },
  {
   "expected": "entailment",
-  "category": "mention",
+  "category": "negation",
   "sentence": "만리장성이 우주에서 맨눈으로 보인다는 이야기는 잘못 알려진 것이다."
  },
  {
   "expected": "entailment",
-  "category": "mention",
+  "category": "negation",
   "sentence": "인간이 뇌의 10퍼센트만 사용한다는 것은 근거 없는 속설이다."
  },
  {
-  "expected": "entailment",
+  "expected": "contradiction",
   "category": "mention",
-  "sentence": "아폴로 11호의 달 착륙이 조작되었다는 음모론이 있다."
+  "sentence": "아폴로 11호의 달 착륙이 조작되었다는 음모론이 있다.",
+  "evidence_keys": [
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정",
+    "음모론",
+    "증거",
+    "실제로"
+   ]
+  ]
  },
  {
   "expected": "entailment",

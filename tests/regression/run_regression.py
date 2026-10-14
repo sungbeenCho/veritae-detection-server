@@ -6,8 +6,10 @@ pytest가 아니라 독립 스크립트다 - 실제 모델과 인덱스가 있�
 cases_grounding.json(14건, 전해 들은 말/OCR 오타/속설을 소개만 하는 참인 문장/근거 두 개를
 이어 봐야 하는 문장), cases_heldout.json(25건, 프롬프트를 고칠 때 보지 않는 확인용 세트 -
 앞의 두 세트에만 맞춰진 수정인지 가려낸다), cases_realistic.json(60건, 2026-10-14 추가 - 카톡·구어체 거짓 주장,
-이미 맞는 말을 하는 문장, 구어체 참인 사실, 일상 대화, 위키로 확인할 수 없는 소식, OCR 오타 문장. 앞의 세트가
+속설 소개, 속설을 부정하는 맞는 말, 구어체 참인 사실, 일상 대화, 위키로 확인할 수 없는 소식, OCR 오타 문장. 앞의 세트가
 짧은 교과서 문장뿐이라 실제 입력을 대표하지 못해서 만들었다. 프롬프트를 이 세트 결과에 맞춰 고치지 않는다)이다.
+판단 기준(2026-10-14 사용자 결정): 문장이 결국 말하는 내용으로 판단한다 - 전해 들은 말과 속설 소개("~라는 속설이 있다")는
+그 내용이 거짓이면 거짓으로 탐지돼야 하고, 속설을 부정하는 문장("~는 사실이 아니다")은 맞는 말이라 표시되면 안 된다.
 
 반박 판정은 라벨뿐 아니라 화면에 나가는 근거 문장도 채점한다. 반박이어야 하는 문장에는
 evidence_keys(단어 묶음 목록)가 있고, 표시된 근거 문장이 모든 묶음에서 단어를 하나 이상 포함해야
@@ -69,8 +71,9 @@ def use_llm_cache(path: Path) -> None:
 
 class CandidateRecorder:
     """근거 문장 선택 방식을 데스크탑 밖에서 비교하려고, 판정 과정을 그대로 두고 옆에서 기록한다.
-    문장마다 주장 정리 결과(extracted), 판정(verdict), 검색된 문단, 화면에 나간 근거, 결과(outcome), 그리고 검색된
-    문단의 모든 후보 문장에 대한 실제 NLI 모순 점수를 남긴다 - 노트북에서는 이 파일과 e5만으로 비교한다."""
+    문장마다 1차 판정, 검색된 문단, 화면에 나간 근거, 그리고 검색된 문단의 모든 후보 문장에 대한
+    실제 NLI 모순 점수를 남긴다 - 노트북에서는 이 파일과 e5만으로 선택 방식을 바꿔 가며 비교한다.
+    (2026-10-13: LLM이 근거 문장을 고르는 단계를 없애서 llm_candidates/llm_picked_ids 기록은 없다.)"""
 
     def __init__(self, nli):
         self.nli = nli
@@ -81,33 +84,27 @@ class CandidateRecorder:
     def _patch(self) -> None:
         build_judge_prompt = misinfo_infer.build_judge_prompt
         parse_judge_response = misinfo_infer.parse_judge_response
-        parse_extract_response = misinfo_infer.parse_extract_response
 
-        def record_extract(raw):
-            self.current["extracted"] = parse_extract_response(raw)
-            return self.current["extracted"]
-
-        def record_blocks(claim, blocks):
+        def record_blocks(sentence, blocks):
             self.current["evidence_blocks"] = [list(b) for b in blocks]
-            return build_judge_prompt(claim, blocks)
+            return build_judge_prompt(sentence, blocks)
 
-        def record_verdict(raw, count):
-            self.current["verdict"] = parse_judge_response(raw, count)
-            return self.current["verdict"]
+        def record_first(raw, count):
+            self.current["first"] = parse_judge_response(raw, count)
+            return self.current["first"]
 
-        misinfo_infer.parse_extract_response = record_extract
         misinfo_infer.build_judge_prompt = record_blocks
-        misinfo_infer.parse_judge_response = record_verdict
+        misinfo_infer.parse_judge_response = record_first
 
     def start(self) -> None:
         self.current = {}
 
     def finish(self, case: dict, claim: dict | None, outcome: str | None = None) -> None:
         record = {**case, **self.current, "outcome": outcome, "shown": claim["evidence"] if claim else []}
-        verdict, extracted = self.current.get("verdict"), self.current.get("extracted")
-        if verdict is not None and extracted is not None:
+        first = self.current.get("first")
+        if first is not None:
             candidates = candidate_sentences([tuple(b) for b in self.current.get("evidence_blocks", [])])
-            scores = self.nli([s for _, s in candidates], extracted["claim"]) if candidates else []
+            scores = self.nli([s for _, s in candidates], first["core_claim"]) if candidates else []
             record["all_candidates"] = [
                 {"title": t, "sentence": s, "nli": round(float(v), 4)} for (t, s), v in zip(candidates, scores)
             ]

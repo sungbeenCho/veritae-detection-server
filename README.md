@@ -680,20 +680,19 @@ python scripts\check_image_e2e.py --url http://localhost:8000
 - `gpu_queue_acquired/released ... wait_seconds=.. run_seconds=..` : GPU 대기열 대기·점유 시간
 - `misinfo_infer 로그:` 아래 줄들(가짜정보 하위 프로세스):
   - `load_kiwi / load_e5 / load_nli seconds=..` : 모델을 읽는 시간(요청마다 새 프로세스라 매번 든다)
-  - `ollama wall=.. load=.. prompt_eval=..(N tok) eval=..(N tok)` : LLM 호출 한 번의 총 시간 / 모델 로드 / 근거 읽기 / 답 쓰기. 확인할 문장 하나에 두 번(주장 정리, 판정) 찍힌다
-  - `sentence i/N total=..s outcome=.. extract_llm=.. search=.. rerank=.. judge_llm=.. shortlist=.. nli=.. reason_match=..` : 문장별 단계 시간과 **결과**
+  - `ollama wall=.. load=.. prompt_eval=..(N tok) eval=..(N tok)` : LLM 호출 한 번의 총 시간 / 모델 로드 / 근거 읽기 / 답 쓰기
+  - `judge_result label=.. core_claim=.. reason=.. cited=[문서]` : 문장마다 LLM 판정 결과 - 문장을 무엇으로 정리했고(core_claim) 어떻게 판정했는지(지지/반박/판단불가)와 이유. 탐지가 안 됐을 때 원인을 여기서 본다
+  - `sentence i/N total=..s outcome=.. search=.. rerank=.. judge_llm=.. shortlist=.. nli=.. reason_match=..` : 문장별 단계 시간과 **결과**
   - `misinfo_config nli_model=.. ollama_model=.. wiki_search=..` : 이번 요청이 **어떤 NLI 모델 폴더**와 설정으로 돌았는지(옛 모델로 도는지 바로 확인)
-  - `refutation_check claim=.. threshold=0.8 evidence_by=nli|reason_match top=(문서) nli=0.xx 문장; ...` : 거짓으로 판정된 문장의 정리된 주장, 근거를 고른 방식, NLI 점수가 높은 후보 문장 3개
+  - `refutation_check core_claim=.. threshold=0.8 evidence_by=nli|reason_match top=(문서) nli=0.xx 문장; ...` : 거짓으로 판정된 문장의 근거를 고른 방식과 NLI 점수가 높은 후보 문장 3개
   - `misinfo_summary ... startup= setup= sentences_total= unload= total=` : 전체 요약
 
-판정 순서는 문장마다 ① 주장 정리(LLM이 문장만 보고 "사실이라고 전하는 내용"을 한 문장으로 정리, 확인할 사실이 없으면 끝) ② 정리된 주장으로 위키 검색 ③ 판정(LLM이 정리된 주장만 위키와 대조) ④ 거짓이면 근거 문장 고르기다. `outcome`은 문장이 어디서 끝났는지 알려준다.
+판정 기준(2026-10-14): 문장이 결국 말하는 내용으로 판단한다. 전해 들은 말("~라고 들었어요")과 속설 소개("~라는 속설이 있다")는 그 내용을, 속설을 부정하는 문장("~는 사실이 아니다")은 부정된 뜻을 판단한다. LLM이 "반박"이라고 판정하면 거짓으로 표시하고, NLI는 그 판정을 버리지 않고 화면 근거 문장을 고르는 데만 쓴다. `outcome`은 문장이 어디서 끝났는지 알려준다.
 
 | outcome | 뜻 |
 |---|---|
 | `refuted` | 거짓으로 탐지됨(화면에 나감). 근거 문장은 NLI 모순 점수 0.8 이상 중 최고점 |
 | `refuted_reason_match` | 거짓으로 탐지됨(화면에 나감). NLI가 0.8을 넘는 문장을 못 찾아, 판정이 인용한 문단에서 판정 이유와 가장 가까운 문장을 근거로 씀 |
-| `not_checkable` | 인사·의견·개인 일정처럼 확인할 사실이 없는 문장(위키 검색·판정을 건너뜀) |
-| `extract_format_error` | LLM 주장 정리의 답 형식이 깨짐 |
 | `no_evidence_found` | 위키 검색에서 근거 문서를 못 찾음 |
 | `not_refuted` | LLM이 반박이 아니라고(지지/판단불가) 판정 |
 | `judge_format_error` | LLM 판정의 답 형식이 깨짐 |

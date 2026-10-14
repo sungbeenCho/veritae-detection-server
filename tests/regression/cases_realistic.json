@@ -341,57 +341,90 @@
  },
  {
   "expected": "entailment",
-  "category": "chat_mention",
+  "category": "chat_negation",
   "sentence": "선풍기 틀고 자면 죽는다는 건 다 미신이래요, 걱정 안 해도 돼요"
  },
  {
   "expected": "entailment",
-  "category": "chat_mention",
+  "category": "chat_negation",
   "sentence": "만리장성이 우주에서 맨눈으로 보인다는 건 사실이 아니라고 하더라고요"
  },
  {
   "expected": "entailment",
-  "category": "chat_mention",
+  "category": "chat_negation",
   "sentence": "뇌를 10%만 쓴다는 얘기는 잘못 알려진 거래요"
  },
  {
   "expected": "entailment",
-  "category": "chat_mention",
+  "category": "chat_negation",
   "sentence": "백신이 자폐를 일으킨다는 주장은 근거가 없는 것으로 밝혀졌다"
  },
  {
   "expected": "entailment",
-  "category": "chat_mention",
+  "category": "chat_negation",
   "sentence": "번개가 같은 곳에 두 번 안 친다는 말은 사실이 아니야"
  },
  {
-  "expected": "entailment",
+  "expected": "contradiction",
   "category": "chat_mention",
-  "sentence": "지구가 평평하다고 주장하는 사람들이 아직도 있대"
+  "sentence": "지구가 평평하다고 주장하는 사람들이 아직도 있대",
+  "evidence_keys": [
+   [
+    "구형",
+    "둥근",
+    "둥글",
+    "타원체",
+    "구 모양",
+    "평평하지",
+    "평면설",
+    "구체"
+   ]
+  ]
  },
  {
   "expected": "entailment",
-  "category": "chat_mention",
+  "category": "chat_true",
   "sentence": "고래를 물고기로 아는 사람이 많은데 고래는 포유류예요"
  },
  {
   "expected": "entailment",
+  "category": "chat_negation",
+  "sentence": "금붕어 기억력이 3초라는 건 근거 없는 속설이라던데"
+ },
+ {
+  "expected": "contradiction",
   "category": "chat_mention",
-  "sentence": "금붕어 기억력이 3초라는 건 속설이라던데"
+  "sentence": "달 착륙이 조작됐다는 음모론이 있다",
+  "evidence_keys": [
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정",
+    "음모론",
+    "증거",
+    "실제로"
+   ]
+  ]
  },
  {
   "expected": "entailment",
-  "category": "chat_mention",
-  "sentence": "달 착륙이 조작됐다는 음모론이 있다"
- },
- {
-  "expected": "entailment",
-  "category": "ocr_mention",
+  "category": "ocr_negation",
   "sentence": "선풍기 사망설은 미신이라는 이야기틀 들없어요"
  },
  {
   "expected": "entailment",
-  "category": "ocr_mention",
+  "category": "ocr_negation",
   "sentence": "뇌틀 10%만 쓴다는 건 잘못 알려진 거래요"
  },
  {
