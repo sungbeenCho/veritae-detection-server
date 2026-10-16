@@ -120,7 +120,18 @@ def main() -> None:
     for index, case in enumerate(cases, start=1):
         record = measure(kiwi, conn, case["sentence"], args.evidence_count)
         records.append({**case, **record})
-        print(f"{index}/{len(cases)} 최종 5개: {', '.join(record['final'])}", flush=True)
+        # 결과 파일을 옮기지 못해도 화면 출력만 복사해 보내면 분석할 수 있게 문장마다 한 줄로 남긴다.
+        marks = {"final": "들어감", "dropped_by_rerank": "밀림", "not_in_fts": "검색안됨", "no_doc": "문서없음"}
+        subjects = " ".join(
+            f"{s['title']}={marks[s['where']]}"
+            + (f"(검색{s['best_fts_rank']}위,e5={s['best_e5']:.3f})" if "best_fts_rank" in s else "")
+            for s in record["subjects"]
+        )
+        print(
+            f"{index}/{len(cases)} [{case.get('expected', '')}] {case['sentence']} || 최종: {', '.join(record['final'])}"
+            f" || 주제: {subjects}",
+            flush=True,
+        )
     seconds = time.perf_counter() - start
 
     args.dump.write_text(json.dumps(records, ensure_ascii=False, indent=1), encoding="utf-8")
