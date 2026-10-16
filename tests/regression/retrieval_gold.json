@@ -10,7 +10,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 2,
@@ -24,7 +25,10 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "약함(별도 집계)"
+  "gold_status": "약함(별도 집계)",
+  "related_docs": [
+   "음모론"
+  ]
  },
  {
   "id": 3,
@@ -38,7 +42,10 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "음모론"
+  ]
  },
  {
   "id": 4,
@@ -54,7 +61,8 @@
   "allowed_docs": [
    "국제지평설연구학회"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 5,
@@ -67,7 +75,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "약함(별도 집계)"
+  "gold_status": "약함(별도 집계)",
+  "related_docs": []
  },
  {
   "id": 6,
@@ -78,7 +87,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 7,
@@ -89,7 +99,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 8,
@@ -102,7 +113,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "약함(별도 집계)"
+  "gold_status": "약함(별도 집계)",
+  "related_docs": []
  },
  {
   "id": 9,
@@ -113,7 +125,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 10,
@@ -126,7 +139,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 11,
@@ -140,7 +154,10 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
  },
  {
   "id": 12,
@@ -153,7 +170,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 14,
@@ -164,7 +182,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 19,
@@ -178,7 +197,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 20,
@@ -192,7 +212,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 21,
@@ -206,7 +227,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 22,
@@ -217,7 +239,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 23,
@@ -231,7 +254,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "약함(별도 집계)"
+  "gold_status": "약함(별도 집계)",
+  "related_docs": []
  },
  {
   "id": 24,
@@ -242,7 +266,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 25,
@@ -256,7 +281,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 26,
@@ -267,7 +293,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 27,
@@ -283,7 +310,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 28,
@@ -296,7 +324,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 29,
@@ -309,7 +338,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 30,
@@ -323,7 +353,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 31,
@@ -336,7 +367,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 37,
@@ -352,7 +384,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 39,
@@ -367,7 +400,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 40,
@@ -381,7 +415,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 41,
@@ -395,7 +430,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 42,
@@ -409,7 +445,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 48,
@@ -423,7 +460,10 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "음모론"
+  ]
  },
  {
   "id": 50,
@@ -436,7 +476,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 51,
@@ -451,7 +492,10 @@
   "allowed_docs": [
    "조선의 역사"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "세조 (조선)"
+  ]
  },
  {
   "id": 52,
@@ -466,7 +510,10 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "세조 (조선)"
+  ]
  },
  {
   "id": 53,
@@ -484,7 +531,8 @@
   "allowed_docs": [
    "태양 경로"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 57,
@@ -501,7 +549,10 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
  },
  {
   "id": 58,
@@ -517,7 +568,10 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
  },
  {
   "id": 59,
@@ -532,7 +586,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 60,
@@ -547,7 +602,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 61,
@@ -562,7 +618,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 62,
@@ -575,7 +632,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 63,
@@ -590,7 +648,10 @@
   "allowed_docs": [
    "조선의 역사"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "세조 (조선)"
+  ]
  },
  {
   "id": 64,
@@ -606,7 +667,10 @@
    "소개"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
  },
  {
   "id": 65,
@@ -621,7 +685,8 @@
    "부정"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 66,
@@ -636,7 +701,8 @@
    "부정"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 67,
@@ -652,7 +718,10 @@
    "소개"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "음모론"
+  ]
  },
  {
   "id": 68,
@@ -670,7 +739,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 69,
@@ -685,7 +755,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 70,
@@ -702,7 +773,8 @@
    "OCR"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 71,
@@ -715,7 +787,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "약함(별도 집계)"
+  "gold_status": "약함(별도 집계)",
+  "related_docs": []
  },
  {
   "id": 72,
@@ -729,7 +802,10 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "음모론"
+  ]
  },
  {
   "id": 73,
@@ -740,7 +816,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 74,
@@ -751,7 +828,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 77,
@@ -762,7 +840,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 78,
@@ -773,7 +852,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 79,
@@ -784,7 +864,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 80,
@@ -795,7 +876,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 81,
@@ -806,7 +888,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 83,
@@ -819,7 +902,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "약함(별도 집계)"
+  "gold_status": "약함(별도 집계)",
+  "related_docs": []
  },
  {
   "id": 84,
@@ -830,7 +914,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 85,
@@ -841,7 +926,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "정답 없음"
+  "gold_status": "정답 없음",
+  "related_docs": []
  },
  {
   "id": 87,
@@ -854,7 +940,10 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "광화문광장"
+  ]
  },
  {
   "id": 88,
@@ -870,7 +959,11 @@
    "이순신",
    "조선의 역사"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "한국사 연표",
+   "아시아의 역사"
+  ]
  },
  {
   "id": 89,
@@ -883,7 +976,10 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "스페인의 미술"
+  ]
  },
  {
   "id": 90,
@@ -896,7 +992,10 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "모차르트와 베토벤"
+  ]
  },
  {
   "id": 91,
@@ -909,7 +1008,11 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
  },
  {
   "id": 92,
@@ -922,7 +1025,13 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "환태평양 조산대",
+   "산",
+   "후지",
+   "후지산의 분화사"
+  ]
  },
  {
   "id": 93,
@@ -935,7 +1044,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 94,
@@ -949,7 +1059,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 95,
@@ -962,7 +1073,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 96,
@@ -976,7 +1088,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 97,
@@ -993,7 +1106,11 @@
   "allowed_docs": [
    "물고기"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
  },
  {
   "id": 98,
@@ -1011,7 +1128,11 @@
    "이순신",
    "조선의 역사"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "한국사 연표",
+   "아시아의 역사"
+  ]
  },
  {
   "id": 99,
@@ -1024,7 +1145,11 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
  },
  {
   "id": 100,
@@ -1037,7 +1162,10 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "스페인의 미술"
+  ]
  },
  {
   "id": 101,
@@ -1053,7 +1181,11 @@
    "이순신",
    "조선의 역사"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "한국사 연표",
+   "아시아의 역사"
+  ]
  },
  {
   "id": 102,
@@ -1066,7 +1198,10 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "광화문광장"
+  ]
  },
  {
   "id": 103,
@@ -1079,7 +1214,13 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "환태평양 조산대",
+   "산",
+   "후지",
+   "후지산의 분화사"
+  ]
  },
  {
   "id": 104,
@@ -1092,7 +1233,10 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "모차르트와 베토벤"
+  ]
  },
  {
   "id": 105,
@@ -1108,7 +1252,8 @@
    "부정"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 106,
@@ -1123,7 +1268,8 @@
    "소개"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 107,
@@ -1141,7 +1287,8 @@
   "allowed_docs": [
    "국제지평설연구학회"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 108,
@@ -1156,7 +1303,11 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
  },
  {
   "id": 112,
@@ -1172,7 +1323,10 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
  },
  {
   "id": 113,
@@ -1187,7 +1341,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 114,
@@ -1202,7 +1357,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 115,
@@ -1217,7 +1373,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 116,
@@ -1233,7 +1390,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 117,
@@ -1248,7 +1406,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 118,
@@ -1265,7 +1424,10 @@
   "allowed_docs": [
    "조선의 역사"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "세조 (조선)"
+  ]
  },
  {
   "id": 119,
@@ -1282,7 +1444,10 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "세조 (조선)"
+  ]
  },
  {
   "id": 120,
@@ -1300,7 +1465,11 @@
    "이순신",
    "조선의 역사"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "한국사 연표",
+   "아시아의 역사"
+  ]
  },
  {
   "id": 121,
@@ -1315,7 +1484,10 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "스페인의 미술"
+  ]
  },
  {
   "id": 122,
@@ -1330,7 +1502,10 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "모차르트와 베토벤"
+  ]
  },
  {
   "id": 123,
@@ -1347,7 +1522,11 @@
   "allowed_docs": [
    "물고기"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
  },
  {
   "id": 124,
@@ -1362,7 +1541,13 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "환태평양 조산대",
+   "산",
+   "후지",
+   "후지산의 분화사"
+  ]
  },
  {
   "id": 125,
@@ -1378,7 +1563,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 126,
@@ -1393,7 +1579,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 127,
@@ -1411,7 +1598,8 @@
   "allowed_docs": [
    "국제지평설연구학회"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 128,
@@ -1428,7 +1616,10 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
  },
  {
   "id": 129,
@@ -1444,7 +1635,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 130,
@@ -1460,7 +1652,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 131,
@@ -1477,7 +1670,10 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
  },
  {
   "id": 132,
@@ -1493,7 +1689,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 133,
@@ -1509,7 +1706,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 134,
@@ -1524,7 +1722,8 @@
    "부정"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 135,
@@ -1540,7 +1739,8 @@
    "부정"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 136,
@@ -1559,7 +1759,8 @@
   "allowed_docs": [
    "국제지평설연구학회"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 137,
@@ -1574,7 +1775,11 @@
   "allowed_docs": [
    "물고기"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
  },
  {
   "id": 138,
@@ -1590,7 +1795,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 139,
@@ -1606,7 +1812,10 @@
    "소개"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "음모론"
+  ]
  },
  {
   "id": 140,
@@ -1623,7 +1832,10 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
  },
  {
   "id": 141,
@@ -1640,7 +1852,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 142,
@@ -1658,7 +1871,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 143,
@@ -1671,7 +1885,8 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 144,
@@ -1686,7 +1901,11 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
  },
  {
   "id": 145,
@@ -1704,7 +1923,11 @@
    "이순신",
    "조선의 역사"
   ],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "한국사 연표",
+   "아시아의 역사"
+  ]
  },
  {
   "id": 146,
@@ -1721,7 +1944,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 147,
@@ -1736,7 +1960,10 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "스페인의 미술"
+  ]
  },
  {
   "id": 148,
@@ -1751,7 +1978,10 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "모차르트와 베토벤"
+  ]
  },
  {
   "id": 149,
@@ -1764,7 +1994,13 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "환태평양 조산대",
+   "산",
+   "후지",
+   "후지산의 분화사"
+  ]
  },
  {
   "id": 150,
@@ -1777,7 +2013,10 @@
   "key_phrases": [],
   "tags": [],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": [
+   "광화문광장"
+  ]
  },
  {
   "id": 151,
@@ -1793,7 +2032,8 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  },
  {
   "id": 152,
@@ -1808,6 +2048,7 @@
    "전언·구어"
   ],
   "allowed_docs": [],
-  "gold_status": "확정"
+  "gold_status": "확정",
+  "related_docs": []
  }
 ]

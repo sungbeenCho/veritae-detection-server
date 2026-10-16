@@ -23,7 +23,9 @@ from pathlib import Path
 import misinfo_infer
 from kiwipiepy import Kiwi
 from misinfo_lib import fit_blocks
-from wiki_index import _quote_fts5_token, expand_with_neighbors, extract_keywords, lead_rowid, search, title_chunks
+from wiki_index import (
+    DISAMBIGUATION_SUFFIX, _quote_fts5_token, expand_with_neighbors, extract_keywords, lead_rowid, search, title_chunks,
+)
 
 CASE_FILES = [
     "cases_basic.json", "cases_e2e.json", "cases_grounding.json", "cases_hard.json",
@@ -161,6 +163,114 @@ def describe_doc(conn, title: str, keywords: list[str], chunk_count: int) -> lis
     return lines
 
 
+# ---- 검색 후보 방식 비교(--candidates) ----
+# 1차 진단(2026-10-16): 정답 문서는 대부분(88/103) 들어오지만, 지금 방식은 조각 단위 점수로 문단 5칸을 문서 3개 이상으로
+# 항상 채워 관련 없는 문서가 판정 입력에 섞인다. 후보는 문서를 먼저 고르고(조각 점수를 문서별로 모음) 문서마다 첫 조각과
+# 검색어가 가장 많이 맞는 조각을 넣는다. 주 지표는 '관련 없는 문서 수', 정답 적중은 떨어지지 않는지만 본다. e5는 쓰지 않는다.
+CONCEPT_DOCS = {"선풍기 사망설", "자폐에 대한 논쟁", "달착륙 음모론", "지평설", "한국의 미신", "국제지평설연구학회"}
+MODES = [
+    ("합산3", "sum", False, 3, None),
+    ("최대평균3", "maxavg", False, 3, None),
+    ("제목가중3", "maxavg", True, 3, None),
+    ("최대평균1", "maxavg", False, 1, None),
+    ("최대평균2", "maxavg", False, 2, None),
+    # 가변 개수는 합산 점수로 한다 - 최대평균 점수는 1위 대비 비율이 0.75~0.95에 몰려 기준으로 갈리지 않았다(시험 색인).
+    ("합산가변0.3", "sum", False, 3, 0.3),
+    ("합산가변0.5", "sum", False, 3, 0.5),
+]
+
+
+def doc_ranking(conn, keywords: str, how: str, use_title: bool, limit: int = 500) -> list[tuple[str, float]]:
+    """키워드 검색 상위 limit개 조각을 문서별로 모아 문서 점수 순으로. use_title이면 제목 열도 검색·점수에 넣는다(가중치 작게)."""
+    terms = " OR ".join(_quote_fts5_token(t) for t in keywords.split())
+    if not terms:
+        return []
+    if use_title:
+        match, score = "{title keywords} : (" + terms + ")", "bm25(chunks, 0.5, 0.0, 1.0)"
+    else:
+        match, score = "keywords : (" + terms + ")", "bm25(chunks, 0.0, 0.0, 1.0)"
+    try:
+        rows = conn.execute(
+            f"SELECT title, {score} FROM chunks WHERE chunks MATCH ? AND title NOT LIKE ? ORDER BY {score} LIMIT ?",
+            (match, f"%{DISAMBIGUATION_SUFFIX}", limit),
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    per_doc: dict[str, list[float]] = {}
+    for title, value in rows:
+        per_doc.setdefault(title, []).append(-value)  # bm25()는 좋을수록 작은(음수) 값
+    def doc_score(values: list[float]) -> float:
+        values = sorted(values, reverse=True)
+        if how == "sum":
+            return sum(values)
+        return values[0] + sum(values[:3]) / len(values[:3])
+    return sorted(((t, doc_score(v)) for t, v in per_doc.items()), key=lambda kv: -kv[1])
+
+
+def run_mode(conn, keywords: str, how: str, use_title: bool, count: int, ratio) -> dict:
+    ranking = doc_ranking(conn, keywords, how, use_title)
+    if ratio is not None and ranking:
+        top = ranking[0][1]
+        chosen = [t for t, v in ranking[:count] if v >= top * ratio]
+    else:
+        chosen = [t for t, _ in ranking[:count]]
+    chunks = []
+    for title in chosen:
+        chunks.extend(title_chunks(conn, title, keywords, limit=1))
+    blocks = fit_blocks(expand_with_neighbors(conn, chunks)) if chunks else []
+    return {"docs": chosen, "chars": sum(len(t) + len(b) for t, b in blocks)}
+
+
+def judge_docs(docs: list[str], g) -> tuple[bool, int]:
+    """(정답 적중, 정답·허용·관련이 아닌 문서 수). 정답표가 없는 문장은 모든 문서를 미판정으로 센다."""
+    if not g or not g["gold_docs"]:
+        return False, len(set(docs))
+    ok = set(g["gold_docs"]) | set(g.get("allowed_docs", [])) | set(g.get("related_docs", []))
+    hit = any(d in docs for d in g["gold_docs"] + g.get("allowed_docs", []))
+    return hit, len({d for d in docs if d not in ok})
+
+
+def print_candidate_summary(rows: list[dict]) -> None:
+    print()
+    print("===== [4/4] 검색 후보 비교 =====")
+    first: dict[str, dict] = {}
+    for row in rows:
+        first.setdefault(row["sentence"], row)
+    names = ["지금방식"] + [m[0] for m in MODES]
+    graded = [r for r in first.values() if r["g"] and r["g"]["gold_docs"] and r["g"]["gold_status"] == "확정"]
+    others = [r for r in first.values() if not (r["g"] and r["g"]["gold_docs"])]
+    concept = [r for r in graded if CONCEPT_DOCS & set(r["g"]["gold_docs"] + r["g"].get("allowed_docs", []))]
+    print("방식 | 정답적중(확정) | 거짓/지지 | 엉뚱문서 평균(확정문장) | 개념문서 적중 | 정답없음·일상: 문서수 평균, 입력 평균 | 입력 평균(확정)")
+    for name in names:
+        res = [r["modes"][name] for r in graded]
+        hits = sum(1 for x in res if x["hit"])
+        false_hits = sum(1 for r in graded if r["g"]["expected"] == "contradiction" and r["modes"][name]["hit"])
+        false_all = sum(1 for r in graded if r["g"]["expected"] == "contradiction")
+        true_hits = sum(1 for r in graded if r["g"]["expected"] == "entailment" and r["modes"][name]["hit"])
+        true_all = sum(1 for r in graded if r["g"]["expected"] == "entailment")
+        junk = sum(x["junk"] for x in res) / max(len(res), 1)
+        concept_hits = sum(1 for r in concept if CONCEPT_DOCS & set(r["modes"][name]["docs"]))
+        o_docs = sum(len(set(r["modes"][name]["docs"])) for r in others) / max(len(others), 1)
+        o_chars = sum(r["modes"][name]["chars"] for r in others) / max(len(others), 1)
+        g_chars = sum(x["chars"] for x in res) / max(len(res), 1)
+        print(
+            f"{name} | {hits}/{len(res)} | {false_hits}/{false_all}·{true_hits}/{true_all} | {junk:.2f} | "
+            f"{concept_hits}/{len(concept)} | {o_docs:.1f}개, {o_chars:.0f}자 | {g_chars:.0f}자"
+        )
+    print()
+    print("방식별 '정답·허용·관련이 아닌데 들어온 문서'(사람이 관련 여부를 판정할 목록, 들어온 횟수, 확정 문장 기준):")
+    for name in names:
+        pool: dict[str, int] = {}
+        for r in graded:
+            g = r["g"]
+            ok = set(g["gold_docs"]) | set(g.get("allowed_docs", [])) | set(g.get("related_docs", []))
+            for d in dict.fromkeys(r["modes"][name]["docs"]):
+                if d not in ok:
+                    pool[d] = pool.get(d, 0) + 1
+        top = sorted(pool.items(), key=lambda kv: -kv[1])[:40]
+        print(f"  {name}: " + ", ".join(f"{t}({n})" for t, n in top))
+
+
 def load_cases(paths: list[Path]) -> list[dict]:
     cases = []
     for path in paths:
@@ -176,6 +286,7 @@ def main() -> None:
     parser.add_argument("--cases", nargs="*", type=Path, help="사례 파일(기본: tests/regression의 사례 파일 전부)")
     parser.add_argument("--gold", type=Path, help="정답표(tests/regression/retrieval_gold.json). 주면 정답 문서 기준으로 채점한다")
     parser.add_argument("--evidence-count", type=int, default=5)
+    parser.add_argument("--candidates", action="store_true", help="검색 후보 방식(문서 단위 등)을 지금 방식과 함께 비교한다")
     args = parser.parse_args()
 
     paths = args.cases or [CASES_DIR / name for name in CASE_FILES if (CASES_DIR / name).exists()]
@@ -188,6 +299,7 @@ def main() -> None:
     # 여러 번에 붙여 넣을 수 있게 하고, 정답 문서를 찾은 문장은 한 줄로 짧게, 놓친 문장만 자세히 쓴다.
     print("===== [1/3] 문장별 결과 =====")
     records = []
+    candidate_rows: list[dict] = []
     start = time.perf_counter()
     for index, case in enumerate(cases, start=1):
         record = measure(kiwi, conn, case["sentence"], args.evidence_count)
@@ -205,6 +317,20 @@ def main() -> None:
         else:
             line = f"{head} || 최종: {', '.join(record['final'])}"
         print(line, flush=True)
+        if args.candidates:
+            base_hit, base_junk = judge_docs(list(dict.fromkeys(record["final"])), g)
+            modes = {"지금방식": {"docs": list(dict.fromkeys(record["final"])), "chars": record.get("judge_input_chars", 0),
+                                 "hit": base_hit, "junk": base_junk}}
+            marks = [f"지금방식:{'O' if base_hit else 'X'}{base_junk}"]
+            for name, how, use_title, count, ratio in MODES:
+                result = run_mode(conn, record["keywords"], how, use_title, count, ratio)
+                result["hit"], result["junk"] = judge_docs(result["docs"], g)
+                modes[name] = result
+                marks.append(f"{name}:{'O' if result['hit'] else 'X'}{result['junk']}")
+            record["modes"] = modes
+            graded = bool(g and g["gold_docs"])
+            print(f"    후보[{'적중O/놓침X+엉뚱문서수' if graded else '정답없음: 문서수'}] " + " ".join(marks), flush=True)
+            candidate_rows.append({"sentence": case["sentence"], "g": g, "modes": modes})
         records.append({**case, **record})
     seconds = time.perf_counter() - start
 
@@ -213,6 +339,8 @@ def main() -> None:
     print(f"문장 {len(records)}개, {seconds:.0f}초 (문장당 {seconds / max(len(records), 1):.2f}초)")
     if gold:
         print_gold_summary(conn, records, gold)
+    if args.candidates:
+        print_candidate_summary(candidate_rows)
     print(f"전체 기록: {args.dump}")
 
 
