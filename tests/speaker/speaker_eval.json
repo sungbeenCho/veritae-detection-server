@@ -1,0 +1,1018 @@
+[
+ {
+  "sentence": "선풍기틀 틀고 자면 사망하다는 이야기틀 들없어요",
+  "claim": "선풍기틀을 틀고 자면 사망한다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "OCR 전언, 그 내용을 맞다고 함 (claim에 OCR 오타 남음)",
+  "subset": "4B정리흠"
+ },
+ {
+  "sentence": "선풍기를 틀고 자면 사망한다는 이야기를 들었어요.",
+  "claim": "선풍기를 틀고 자면 사망한다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "전언은 그 내용을 맞다고 함",
+  "subset": "본"
+ },
+ {
+  "sentence": "만리장성은 우주에서 맨눈으로 보인다고 합니다.",
+  "claim": "만리장성은 우주에서 맨눈으로 보인다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "전언",
+  "subset": "본"
+ },
+ {
+  "sentence": "사람은 뇌의 10퍼센트만 쓴다고 들었어요.",
+  "claim": "사람은 뇌의 10 퍼센트를 쓴다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "claim 변형(만 -> 를), 원문 기준 전언이므로 맞다고 함",
+  "subset": "4B정리흠"
+ },
+ {
+  "sentence": "백신이 자폐증을 일으킨다더라.",
+  "claim": "백신이 자폐증을 일으킨다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "전언",
+  "subset": "본"
+ },
+ {
+  "sentence": "한국에는 선풍기를 틀고 자면 죽는다는 속설이 있다.",
+  "claim": "한국에는 선풍기를 틀고 자면 죽는다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "속설 소개는 그 내용으로 판정(사용자 결정)",
+  "subset": "본"
+ },
+ {
+  "sentence": "만리장성이 우주에서 맨눈으로 보인다는 이야기는 잘못 알려진 것이다.",
+  "claim": "만리장성은 우주에서 맨눈으로 보인다.",
+  "label": "아니라고 함",
+  "source": "4B_run1",
+  "note": "부정평가, run3도 동일 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "인간이 뇌의 10퍼센트만 사용한다는 것은 근거 없는 속설이다.",
+  "claim": "인간은 뇌의 10 퍼센트를 사용한다.",
+  "label": "아니라고 함",
+  "source": "4B_run1",
+  "note": "claim 변형(만 -> 를), 원문 기준으로 부정",
+  "subset": "4B정리흠"
+ },
+ {
+  "sentence": "아폴로 11호의 달 착륙이 조작되었다는 음모론이 있다.",
+  "claim": "아폴로 11 호의 달 착륙은 조작되었다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "음모론 소개는 그 내용으로 판정",
+  "subset": "본"
+ },
+ {
+  "sentence": "번개가 같은 곳에 두 번 치지 않는다는 말은 사실이 아니다.",
+  "claim": "번개가 같은 곳에 두 번 치는 것이다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "이중부정, 4B 부정함으로 뒤집음(run3도 동일)",
+  "subset": "본"
+ },
+ {
+  "sentence": "금붕어의 기억력이 3초라는 속설이 있다.",
+  "claim": "금붕어의 기억력은 3 초이다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "속설 소개는 그 내용으로 판정",
+  "subset": "본"
+ },
+ {
+  "sentence": "지구가 평평하다고 주장하는 사람들이 있다.",
+  "claim": "지구가 평평하다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "주장 소개는 그 내용으로 판정",
+  "subset": "본"
+ },
+ {
+  "sentence": "사람은 평생 뇌의 10%밖에 못 쓴대요",
+  "claim": "사람은 평생 뇌의 10%밖에 못 쓴다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "전언, 밖에/못 유지",
+  "subset": "본"
+ },
+ {
+  "sentence": "백신 맞으면 자폐 걸린다고 맘카페에서 봤어요",
+  "claim": "백신 맞으면 자폐가 걸린다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "전언(출처 있는)",
+  "subset": "본"
+ },
+ {
+  "sentence": "우리 할머니가 그러시는데 여름에 문 닫고 선풍기 켜놓고 자면 죽을 수도 있으니까 꼭 타이머 맞춰놓으래요",
+  "claim": "여름에 문 닫고 선풍기 켜놓고 자면 죽는다.",
+  "label": "맞다고 함",
+  "source": "4B_run3",
+  "note": "조언붙은전언, 원문은 '죽을 수도'라 claim이 약간 단정적(claim 변형 경미)",
+  "subset": "4B정리흠"
+ },
+ {
+  "sentence": "요즘 애들은 잘 모르는데 에펠탑은 원래 영국 런던에 세워진 탑이래",
+  "claim": "에펠탑은 원래 영국 런던에 세워진 탑이다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "전언",
+  "subset": "본"
+ },
+ {
+  "sentence": "선풍기틀 켜고 자면 죽는다고 들없어요",
+  "claim": "선풍기 틀을 켜고 자면 죽는다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "OCR 전언",
+  "subset": "4B정리흠"
+ },
+ {
+  "sentence": "선풍기 틀고 자면 죽는다는 건 다 미신이래요, 걱정 안 해도 돼요",
+  "claim": "선풍기를 틀고 자면 죽는다.",
+  "label": "아니라고 함",
+  "source": "4B_run1",
+  "note": "들은 부정(미신)",
+  "subset": "본"
+ },
+ {
+  "sentence": "만리장성이 우주에서 맨눈으로 보인다는 건 사실이 아니라고 하더라고요",
+  "claim": "만리장성을 우주에서 맨눈으로 볼 수 있다.",
+  "label": "아니라고 함",
+  "source": "4B_run1",
+  "note": "들은 부정, 4B run1 전함으로 뒤집음(run3은 정답)",
+  "subset": "본"
+ },
+ {
+  "sentence": "뇌를 10%만 쓴다는 얘기는 잘못 알려진 거래요",
+  "claim": "뇌는 10% 만을 사용한다.",
+  "label": "아니라고 함",
+  "source": "4B_run1",
+  "note": "부정평가, run3 claim '뇌를 10%만 쓴다.'도 동일 라벨",
+  "subset": "본"
+ },
+ {
+  "sentence": "백신이 자폐를 일으킨다는 주장은 근거가 없는 것으로 밝혀졌다",
+  "claim": "백신이 자폐를 일으킨다.",
+  "label": "아니라고 함",
+  "source": "4B_run3",
+  "note": "부정평가, 4B run3 전함으로 뒤집음(run1은 사실 없음)",
+  "subset": "본"
+ },
+ {
+  "sentence": "번개가 같은 곳에 두 번 안 친다는 말은 사실이 아니야",
+  "claim": "번개가 같은 곳에 두 번 친다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "이중부정, 4B 부정함으로 뒤집음",
+  "subset": "본"
+ },
+ {
+  "sentence": "지구가 평평하다고 주장하는 사람들이 아직도 있대",
+  "claim": "지구가 평평하다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "전언+소개, 그 내용으로 판정",
+  "subset": "본"
+ },
+ {
+  "sentence": "고래를 물고기로 아는 사람이 많은데 고래는 포유류예요",
+  "claim": "고래는 포유류이다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "대조 구조의 직접 단언",
+  "subset": "본"
+ },
+ {
+  "sentence": "금붕어 기억력이 3초라는 건 근거 없는 속설이라던데",
+  "claim": "금붕어의 기억력은 3 초이다.",
+  "label": "아니라고 함",
+  "source": "4B_run1",
+  "note": "들은 부정",
+  "subset": "본"
+ },
+ {
+  "sentence": "달 착륙이 조작됐다는 음모론이 있다",
+  "claim": "달 착륙이 조작되었다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "음모론 소개는 그 내용으로 판정",
+  "subset": "본"
+ },
+ {
+  "sentence": "선풍기 사망설은 미신이라는 이야기틀 들없어요",
+  "claim": "선풍기 사망설은 미신이다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "claim 자체에 '미신' 평가가 들어 있어 말한 사람은 그 claim을 맞다고 함(OCR 전언); run3은 부정함으로 틀림",
+  "subset": "본"
+ },
+ {
+  "sentence": "뇌틀 10%만 쓴다는 건 잘못 알려진 거래요",
+  "claim": "뇌틀을 10% 만 쓰면 뇌졸중이 예방된다.",
+  "label": "사실 없음",
+  "source": "4B_run1",
+  "note": "claim 변형(원문에 없는 내용을 지어냄), 원문과 무관한 claim이므로 사실 없음; 4B는 부정함",
+  "subset": "4B정리흠"
+ },
+ {
+  "sentence": "뇌틀 10%만 쓴다는 건 잘못 알려진 거래요",
+  "claim": "뇌틀 10%만 쓴다.",
+  "label": "아니라고 함",
+  "source": "4B_run3",
+  "note": "OCR 오타(뇌틀=뇌를) 남은 claim, 부정평가",
+  "subset": "4B정리흠"
+ },
+ {
+  "sentence": "고래는 폐로 숨을 쉰다고 배웠어요",
+  "claim": "고래는 폐로 숨을 쉬었다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "전언, claim 시제 변형 경미",
+  "subset": "4B정리흠"
+ },
+ {
+  "sentence": "지구가 둥글다는 건 거짓말이래요",
+  "claim": "지구는 둥글다.",
+  "label": "아니라고 함",
+  "source": "4B_run1",
+  "note": "거짓 취급: 말한 사람은 둥글다를 아니라고 함",
+  "subset": "본"
+ },
+ {
+  "sentence": "고래가 포유류라는 건 잘못 알려진 거래요",
+  "claim": "고래는 포유류이다.",
+  "label": "아니라고 함",
+  "source": "4B_run1",
+  "note": "부정평가",
+  "subset": "본"
+ },
+ {
+  "sentence": "에펠탑이 파리에 있다는 건 사실이 아니라던데",
+  "claim": "에펠탑은 파리에 있다.",
+  "label": "아니라고 함",
+  "source": "4B_run1",
+  "note": "들은 부정",
+  "subset": "본"
+ },
+ {
+  "sentence": "세종대왕이 한글을 만들었다는 건 근거 없는 이야기래",
+  "claim": "세종대왕이 한글을 만들었다.",
+  "label": "아니라고 함",
+  "source": "4B_run1",
+  "note": "부정평가",
+  "subset": "본"
+ },
+ {
+  "sentence": "백신이 자폐를 일으키지 않는다는 건 거짓말이에요",
+  "claim": "백신이 자폐를 일으킨다.",
+  "label": "맞다고 함",
+  "source": "4B_run1",
+  "note": "이중부정(내용 속 부정), 4B run1 부정함으로 뒤집음(run3은 정답)",
+  "subset": "본"
+ },
+ {
+  "sentence": "이번 달부터 버스 요금이 오른다고 합니다",
+  "claim": "버스 요금이 오른다.",
+  "label": "맞다고 함",
+  "source": "4B_run3",
+  "note": "검증 불가여도 전언은 그 내용을 맞다고 함",
+  "subset": "본"
+ },
+ {
+  "sentence": "옆집 아저씨가 복권 1등 됐대",
+  "claim": "복권 1 등이다.",
+  "label": "맞다고 함",
+  "source": "4B_run3",
+  "note": "전언, claim 변형(주어 빠짐)이나 원문 기준 맞다고 함",
+  "subset": "4B정리흠"
+ },
+ {
+  "sentence": "선풍기틀 틀고 자면 사망하다는 이야기틀 들없어요",
+  "claim": "선풍기를 틀고 자면 사망하지 않는다.",
+  "label": "아니라고 함",
+  "source": "gold_problem",
+  "note": "OCR 전언의 반대 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "만리장성이 우주에서 맨눈으로 보인다는 이야기는 잘못 알려진 것이다.",
+  "claim": "만리장성은 우주에서 맨눈으로 보이지 않는다.",
+  "label": "맞다고 함",
+  "source": "gold_problem",
+  "note": "부정평가의 반대 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "인간이 뇌의 10퍼센트만 사용한다는 것은 근거 없는 속설이다.",
+  "claim": "인간은 뇌의 10퍼센트만 사용한다.",
+  "label": "아니라고 함",
+  "source": "gold_problem",
+  "note": "원문 그대로의 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "번개가 같은 곳에 두 번 치지 않는다는 말은 사실이 아니다.",
+  "claim": "번개는 같은 곳에 두 번 치지 않는다.",
+  "label": "아니라고 함",
+  "source": "gold_problem",
+  "note": "이중부정, 내용 속 부정 claim은 아니라고 함",
+  "subset": "본"
+ },
+ {
+  "sentence": "우리 할머니가 그러시는데 여름에 문 닫고 선풍기 켜놓고 자면 죽을 수도 있으니까 꼭 타이머 맞춰놓으래요",
+  "claim": "여름에 문 닫고 선풍기 켜놓고 자면 죽을 수도 있다.",
+  "label": "맞다고 함",
+  "source": "gold_problem",
+  "note": "조언붙은전언의 정답 claim(원문 '죽을 수도' 유지)",
+  "subset": "본"
+ },
+ {
+  "sentence": "선풍기 틀고 자면 죽는다는 건 다 미신이래요, 걱정 안 해도 돼요",
+  "claim": "선풍기를 틀고 자면 죽지 않는다.",
+  "label": "맞다고 함",
+  "source": "gold_problem",
+  "note": "들은 부정의 반대 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "만리장성이 우주에서 맨눈으로 보인다는 건 사실이 아니라고 하더라고요",
+  "claim": "만리장성은 우주에서 맨눈으로 보이지 않는다.",
+  "label": "맞다고 함",
+  "source": "gold_problem",
+  "note": "들은 부정의 반대 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "백신이 자폐를 일으킨다는 주장은 근거가 없는 것으로 밝혀졌다",
+  "claim": "백신은 자폐를 일으키지 않는다.",
+  "label": "맞다고 함",
+  "source": "gold_problem",
+  "note": "부정평가의 반대 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "번개가 같은 곳에 두 번 안 친다는 말은 사실이 아니야",
+  "claim": "번개가 같은 곳에 두 번 안 친다.",
+  "label": "아니라고 함",
+  "source": "gold_problem",
+  "note": "이중부정, 원문 그대로의 부정 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "고래를 물고기로 아는 사람이 많은데 고래는 포유류예요",
+  "claim": "고래는 물고기이다.",
+  "label": "아니라고 함",
+  "source": "gold_problem",
+  "note": "대조: 흔한 오해를 아니라고 함",
+  "subset": "본"
+ },
+ {
+  "sentence": "선풍기 사망설은 미신이라는 이야기틀 들없어요",
+  "claim": "선풍기를 틀고 자면 사망한다.",
+  "label": "아니라고 함",
+  "source": "gold_problem",
+  "note": "OCR 부정의 정답 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "뇌틀 10%만 쓴다는 건 잘못 알려진 거래요",
+  "claim": "뇌를 10%만 쓴다.",
+  "label": "아니라고 함",
+  "source": "gold_problem",
+  "note": "OCR 부정의 정답 claim(오타 교정)",
+  "subset": "본"
+ },
+ {
+  "sentence": "지구가 둥글다는 건 거짓말이래요",
+  "claim": "지구는 둥글지 않다.",
+  "label": "맞다고 함",
+  "source": "gold_false_negation",
+  "note": "거짓말이라 함 -> 반대 claim은 맞다고 함",
+  "subset": "본"
+ },
+ {
+  "sentence": "고래가 포유류라는 건 잘못 알려진 거래요",
+  "claim": "고래는 포유류가 아니다.",
+  "label": "맞다고 함",
+  "source": "gold_false_negation",
+  "note": "반대 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "에펠탑이 파리에 있다는 건 사실이 아니라던데",
+  "claim": "에펠탑은 파리에 있지 않다.",
+  "label": "맞다고 함",
+  "source": "gold_false_negation",
+  "note": "반대 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "세종대왕이 한글을 만들었다는 건 근거 없는 이야기래",
+  "claim": "세종대왕은 한글을 만들지 않았다.",
+  "label": "맞다고 함",
+  "source": "gold_false_negation",
+  "note": "반대 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "백신이 자폐를 일으키지 않는다는 건 거짓말이에요",
+  "claim": "백신이 자폐를 일으키지 않는다.",
+  "label": "아니라고 함",
+  "source": "gold_false_negation",
+  "note": "이중부정, 내용 속 부정 claim은 아니라고 함",
+  "subset": "본"
+ },
+ {
+  "sentence": "만리장성은 달에서도 맨눈으로 보인다던데 진짜 대단하다",
+  "claim": "만리장성은 달에서 맨눈으로 보이지 않는다.",
+  "label": "아니라고 함",
+  "source": "gold_realistic",
+  "note": "전언의 반대 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "사람은 평생 뇌의 10%밖에 못 쓴대요",
+  "claim": "사람은 평생 뇌의 대부분을 쓴다.",
+  "label": "아니라고 함",
+  "source": "gold_realistic",
+  "note": "전언의 반대 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "서울이 대한민국 수도잖아요",
+  "claim": "서울은 대한민국의 수도가 아니다.",
+  "label": "아니라고 함",
+  "source": "gold_realistic",
+  "note": "직접 단언의 반대 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "에펠탑은 프랑스 파리에 있어요",
+  "claim": "에펠탑은 영국 런던에 있다.",
+  "label": "아니라고 함",
+  "source": "gold_realistic",
+  "note": "직접 단언의 반대 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "달은 햇빛을 반사해서 빛나는 거래",
+  "claim": "달은 스스로 빛을 낸다.",
+  "label": "아니라고 함",
+  "source": "gold_realistic",
+  "note": "전언의 반대 claim",
+  "subset": "본"
+ },
+ {
+  "sentence": "내일 비 온대 우산 챙겨",
+  "claim": "내일 비가 온다.",
+  "label": "맞다고 함",
+  "source": "gold_realistic",
+  "note": "전언+조언, 그 내용을 맞다고 함",
+  "subset": "본"
+ },
+ {
+  "sentence": "오늘 저녁 뭐 먹을까?",
+  "claim": "오늘 저녁 메뉴가 정해졌다.",
+  "label": "사실 없음",
+  "source": "gold_realistic",
+  "note": "질문, 따질 사실 없음",
+  "subset": "본"
+ },
+ {
+  "sentence": "다들 감기 조심하세요!",
+  "claim": "감기는 환절기에 잘 걸린다.",
+  "label": "사실 없음",
+  "source": "gold_problem",
+  "note": "당부, 따질 사실 없음",
+  "subset": "본"
+ },
+ {
+  "sentence": "이 영화 진짜 재밌더라",
+  "claim": "이 영화는 흥행에 성공했다.",
+  "label": "사실 없음",
+  "source": "gold_realistic",
+  "note": "의견",
+  "subset": "본"
+ },
+ {
+  "sentence": "주말에 등산 갈 사람?",
+  "claim": "산은 주말에 등산객이 많다.",
+  "label": "사실 없음",
+  "source": "gold_realistic",
+  "note": "질문",
+  "subset": "본"
+ },
+ {
+  "sentence": "우리 팀장님 진짜 좋은 분이야",
+  "claim": "팀장은 팀원 평가를 담당한다.",
+  "label": "사실 없음",
+  "source": "gold_realistic",
+  "note": "의견",
+  "subset": "본"
+ },
+ {
+  "sentence": "어제 강남역 근처에서 교통사고가 났대요",
+  "claim": "어제 강남역 근처에서 교통사고가 났다.",
+  "label": "맞다고 함",
+  "source": "gold_realistic",
+  "note": "검증 불가여도 전언은 그 내용을 맞다고 함",
+  "subset": "본"
+ },
+ {
+  "sentence": "오늘 코스피가 2% 넘게 올랐대",
+  "claim": "오늘 코스피가 2% 넘게 올랐다.",
+  "label": "맞다고 함",
+  "source": "gold_realistic",
+  "note": "전언",
+  "subset": "본"
+ },
+ {
+  "sentence": "선풍기 틀고 자면 죽는다는 건 그냥 낭설이다",
+  "claim": "선풍기를 틀고 자면 사망한다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "선풍기 틀고 자면 죽는다는 건 그냥 낭설이다",
+  "claim": "선풍기를 틀고 자도 사망하지 않는다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "번개는 같은 곳에 두 번 안 친다는 거, 그거 도시전설임",
+  "claim": "번개는 같은 곳에 두 번 치지 않는다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "번개는 같은 곳에 두 번 안 친다는 거, 그거 도시전설임",
+  "claim": "번개는 같은 곳에 두 번 칠 수 있다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "만리장성이 우주에서 맨눈으로 보인다는 건 팩트가 아님",
+  "claim": "만리장성은 우주에서 맨눈으로 보인다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "만리장성이 우주에서 맨눈으로 보인다는 건 팩트가 아님",
+  "claim": "만리장성은 우주에서 맨눈으로 보이지 않는다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "백신이 자폐를 일으킨다는 얘기는 그냥 뻥이래요",
+  "claim": "백신은 자폐를 일으킨다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "백신이 자폐를 일으킨다는 얘기는 그냥 뻥이래요",
+  "claim": "백신은 자폐를 일으키지 않는다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "사람이 뇌를 10%밖에 못 쓴다는 건 완전 과장된 얘기예요",
+  "claim": "사람은 뇌를 10%밖에 쓰지 못한다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "금붕어 기억력이 3초라는 건 팩트가 아니라 걍 소문이래",
+  "claim": "금붕어의 기억력은 3초다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "커피 마시면 키 안 큰다는 건 도시전설이에요",
+  "claim": "커피를 마시면 키가 크지 않는다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "커피 마시면 키 안 큰다는 건 도시전설이에요",
+  "claim": "커피를 마셔도 키 성장에는 영향이 없다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "콜라에 뼈를 담가 두면 하루 만에 녹는다는 건 팩트가 아님 ㅋㅋ",
+  "claim": "콜라에 뼈를 담가 두면 하루 만에 녹는다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "콜라에 뼈를 담가 두면 하루 만에 녹는다는 건 팩트가 아님 ㅋㅋ",
+  "claim": "콜라에 뼈를 담가 두어도 하루 만에 녹지 않는다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "혈액형으로 성격을 나눈다는 건 과학적 근거가 하나도 없는 얘기임",
+  "claim": "혈액형으로 성격을 나눌 수 있다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "혈액형으로 성격을 나눈다는 건 과학적 근거가 하나도 없는 얘기임",
+  "claim": "혈액형으로 성격을 나눌 수 없다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "전자레인지 돌리면 음식에 방사능 남는다고들 하던데 아니래, 그거 다 뻥이래",
+  "claim": "전자레인지로 돌리면 음식에 방사능이 남는다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "전자레인지 돌리면 음식에 방사능 남는다고들 하던데 아니래, 그거 다 뻥이래",
+  "claim": "전자레인지로 돌려도 음식에 방사능이 남지 않는다",
+  "label": "맞다고 함",
+  "category": "들은부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "5G 전파가 코로나 퍼뜨렸다는 말은 거짓이라고 뉴스에서 그러더라",
+  "claim": "5G 전파가 코로나를 퍼뜨렸다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "5G 전파가 코로나 퍼뜨렸다는 말은 거짓이라고 뉴스에서 그러더라",
+  "claim": "5G 전파는 코로나를 퍼뜨리지 않는다",
+  "label": "맞다고 함",
+  "category": "들은부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "바닷물 마시면 갈증이 풀린다고들 하는데 오히려 더 목마르대, 풀린다는 건 틀린 얘기라더라",
+  "claim": "바닷물을 마시면 갈증이 풀린다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "바닷물 마시면 갈증이 풀린다고들 하는데 오히려 더 목마르대, 풀린다는 건 틀린 얘기라더라",
+  "claim": "바닷물을 마시면 갈증이 더 심해진다",
+  "label": "맞다고 함",
+  "category": "들은부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "의사 선생님이 그러시던데 토마토 익혀 먹으면 영양 다 날아간다는 건 낭설이라고 하셨어요",
+  "claim": "토마토를 익혀 먹으면 영양이 다 날아간다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "의사 선생님이 그러시던데 토마토 익혀 먹으면 영양 다 날아간다는 건 낭설이라고 하셨어요",
+  "claim": "토마토를 익혀 먹어도 영양이 다 날아가지는 않는다",
+  "label": "맞다고 함",
+  "category": "들은부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "지구가 둥글지 않다는 소리는 말도 안 되는 소리지",
+  "claim": "지구는 둥글지 않다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "지구가 둥글지 않다는 소리는 말도 안 되는 소리지",
+  "claim": "지구는 둥글다",
+  "label": "맞다고 함",
+  "category": "이중부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "후지산이 활화산이 아니라는 말은 틀린 소리라던데",
+  "claim": "후지산은 활화산이 아니다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "후지산이 활화산이 아니라는 말은 틀린 소리라던데",
+  "claim": "후지산은 활화산이다",
+  "label": "맞다고 함",
+  "category": "이중부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "고래가 물고기가 아니라는 건 거짓이래요 걔네 물고기 맞대요",
+  "claim": "고래는 물고기가 아니다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "고래가 물고기가 아니라는 건 거짓이래요 걔네 물고기 맞대요",
+  "claim": "고래는 물고기다",
+  "label": "맞다고 함",
+  "category": "이중부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "아폴로 달 착륙이 실제로 없었다는 주장은 근거 없는 낭설이라고 함",
+  "claim": "아폴로 달 착륙은 실제로 없었다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "아폴로 달 착륙이 실제로 없었다는 주장은 근거 없는 낭설이라고 함",
+  "claim": "아폴로 달 착륙은 실제로 있었다",
+  "label": "맞다고 함",
+  "category": "이중부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "피카소가 프랑스 사람인 줄 알았는데 찾아보니까 스페인 출신이더라",
+  "claim": "피카소는 프랑스 출신이다",
+  "label": "아니라고 함",
+  "category": "대조",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "피카소가 프랑스 사람인 줄 알았는데 찾아보니까 스페인 출신이더라",
+  "claim": "피카소는 스페인 출신이다",
+  "label": "맞다고 함",
+  "category": "대조",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "우리나라 수도가 부산이라고 착각하는 사람 있던데 진짜 수도는 서울이거든",
+  "claim": "대한민국의 수도는 부산이다",
+  "label": "아니라고 함",
+  "category": "대조",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "우리나라 수도가 부산이라고 착각하는 사람 있던데 진짜 수도는 서울이거든",
+  "claim": "대한민국의 수도는 서울이다",
+  "label": "맞다고 함",
+  "category": "대조",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "보름달 뜨는 날엔 사건사고가 늘어난다고 경찰 하는 친구가 그러던데 조심해",
+  "claim": "보름달이 뜨는 날에는 사건사고가 늘어난다",
+  "label": "맞다고 함",
+  "category": "조언붙은전언",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "높은 산 꼭대기에서는 물이 100도 되기 전에 끓는다 함",
+  "claim": "높은 산에서는 물이 100도보다 낮은 온도에서 끓는다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "에펠탑은 여름에 쇠가 늘어나서 키가 십몇 센티쯤 더 커져요",
+  "claim": "에펠탑은 여름에 키가 더 커진다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "달은 스스로 빛을 내지 않음. 햇빛 반사하는 거임",
+  "claim": "달은 스스로 빛을 내지 않는다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "이순신 장군은 노량해전에서 전사하셨다고 배웠습니다",
+  "claim": "이순신 장군은 노량해전에서 전사했다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "에베레스트 정상이 해발 팔천 미터가 훌쩍 넘는다는 건 다들 알잖아요",
+  "claim": "에베레스트는 해발 8000미터가 넘는다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "오늘 단톡방에서 누가 그러는데 비타민C 아무리 많이 먹어도 감기 걸릴 때는 걸린대요, 안 걸린다는 건 틀린 말이래",
+  "claim": "비타민C를 많이 먹으면 감기에 안 걸린다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "백신롤 맞으면 자폐가 생긴다는 건 헛소문이래요",
+  "claim": "백신을 맞으면 자폐가 생긴다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "백신롤 맞으면 자폐가 생긴다는 건 헛소문이래요",
+  "claim": "백신을 맞아도 자폐가 생기지 않는다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "번개는같은곳에두번안친다는건도시전섴이얌",
+  "claim": "번개는 같은 곳에 두 번 치지 않는다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "번개는같은곳에두번안친다는건도시전섴이얌",
+  "claim": "번개는 같은 곳에 두 번 칠 수 있다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "금붕어 기억력이 3초라는 건 패트가 아님 몇 달도 기억한대",
+  "claim": "금붕어의 기억력은 3초다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "지구가 평평하다는 말은 낭설이엇다고 선생님이 하셔서 적어둠",
+  "claim": "지구는 평평하다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "만리장성 우주에서 보인다는 얘기 도시전섴 이래 실제론 안 보임",
+  "claim": "만리장성은 우주에서 보인다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "고래 는 포유류 인데 물고기 라고 알고 있는 사람 많음 이건 틀린 말 임",
+  "claim": "고래는 물고기다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "선풍기 바람 세게 틀어도 괜찮은지 궁금해서 물어봐요",
+  "claim": "선풍기를 틀고 자면 사망한다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "오늘 번개 칠까 봐 약속 취소하고 싶다 ㅠㅠ",
+  "claim": "번개는 높은 곳에 잘 친다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "에펠탑 야경 진짜 보러 가고 싶다",
+  "claim": "에펠탑은 파리에 있다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "퇴근길에 토마토 좀 사다 줄 수 있어?",
+  "claim": "토마토를 익히면 라이코펜 흡수율이 높아진다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "후지산은 내년 봄쯤에나 가볼 생각이에요",
+  "claim": "후지산은 활화산이다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "금붕어 밥 줬는지 기억이 안 나네",
+  "claim": "금붕어의 기억력은 3초다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "오늘따라 달 되게 예쁘다 퇴근하면서 봄",
+  "claim": "달은 항상 같은 면이 지구를 향한다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "만리장성은 중국 북쪽을 따라 길게 뻗어 있다",
+  "claim": "고래는 포유류이다",
+  "label": "사실 없음",
+  "category": "무관",
+  "source": "writer2",
+  "subset": "본"
+ },
+ {
+  "sentence": "5G 요금제 바꾸려는데 추천해줄 사람?",
+  "claim": "5G 전파가 코로나를 퍼뜨렸다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "source": "writer2",
+  "subset": "본"
+ }
+]
