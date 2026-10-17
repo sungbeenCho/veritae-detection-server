@@ -45,6 +45,19 @@ def predict(model_path: Path, rows: list[dict]) -> list[str]:
     return out
 
 
+_SURFACE_DENY_WORDS = ("거짓", "틀린", "틀렸", "미신", "속설일", "사실이 아니", "사실 아니", "잘못", "근거 없", "근거가 없", "낭설",
+                       "헛소문", "루머", "가짜", "뻥", "구라", "괴담", "도시전설", "오해", "아니래", "아니라")
+_SURFACE_POINTERS = ("그 ", "그거", "그건", "이 ", "이거", "이건", "저 ", "걔", "거기", "해당")
+
+
+def surface_rule(row: dict) -> str:
+    """측정 기준선: 문장 뜻을 읽지 않고 겉모양만 보는 규칙."""
+    sentence = row["sentence"]
+    if sentence.startswith(_SURFACE_POINTERS):
+        return "사실 없음"
+    return "아니라고 함" if any(w in sentence for w in _SURFACE_DENY_WORDS) else "맞다고 함"
+
+
 def report(name: str, pairs: list[tuple[dict, str]]) -> None:
     if not pairs:
         return
@@ -70,6 +83,32 @@ def main() -> None:
         report(f"출처 {source}", [p for p in pairs if p[0].get("source", "") == source])
     for label in SPEAKER_TO_NLI:
         report(f"정답 {label}", [p for p in pairs if p[0]["label"] == label])
+    # 내용의 실제 참거짓(claim_true)이 적힌 평가 세트면, 참거짓 상식만으로는 못 맞히는 문항(거짓을 맞다고 함, 참을 아니라고 함)을
+    # 따로 센다 - 이 점수가 올라야 문장을 제대로 읽게 된 것이다(2026-10-17: 참거짓만 알면 86%를 맞히는 평가 세트가 있었다).
+    if any(r.get("claim_true") is not None for r in rows):
+        hard = [p for p in pairs if (p[0]["label"], p[0].get("claim_true")) in {("맞다고 함", False), ("아니라고 함", True)}]
+        easy = [p for p in pairs if (p[0]["label"], p[0].get("claim_true")) in {("맞다고 함", True), ("아니라고 함", False)}]
+        report("상식으로는 못 맞히는 문항(거짓을 맞다고·참을 아니라고)", hard)
+        report("상식과 같은 방향 문항", easy)
+    # 문장을 읽지 않고 겉모양만 보는 규칙(평가 단어가 있으면 아니라고 함, 지시어로 시작하면 사실 없음, 나머지는 맞다고 함)이
+    # 2026-10-17 평가 세트의 71.6%를 맞혔다. 이 규칙이 틀리는 문항에서의 점수가 문장을 제대로 읽는지 보여준다. 측정용 기준선일
+    # 뿐 판정에는 쓰지 않는다.
+    hard_surface = [p for p in pairs if surface_rule(p[0]) != p[0]["label"]]
+    print(f"(겉모양 규칙 기준선 {len(pairs) - len(hard_surface)}/{len(pairs)})")
+    report("겉모양 규칙으로는 못 맞히는 문항", hard_surface)
+    # 상식(참이면 맞다고 함)으로도 겉모양 규칙으로도 못 맞히는 핵심 문항 - 문장 구조를 읽어야만 맞힌다.
+    core = [p for p in hard_surface if (p[0]["label"], p[0].get("claim_true")) in {("맞다고 함", False), ("아니라고 함", True)}]
+    report("상식·겉모양 둘 다로 못 맞히는 핵심 문항", core)
+    # 같은 원문에 내용만 반대인 claim 쌍 - 둘 다 맞혀야 원문을 읽은 것이다.
+    by_sentence: dict[str, list] = {}
+    for row, pred in pairs:
+        by_sentence.setdefault(row["sentence"], []).append((row, pred))
+    groups = [g for g in by_sentence.values() if len(g) >= 2 and len({r["label"] for r, _ in g}) >= 2]
+    both = sum(1 for g in groups if all(pred == r["label"] for r, pred in g))
+    if groups:
+        print(f"같은 원문의 라벨이 다른 claim 묶음 모두 맞힘: {both}/{len(groups)} ({both / len(groups):.0%})")
+    for category in sorted({r.get("category", "") for r in rows if r.get("category")}):
+        report(f"유형 {category}", [p for p in pairs if p[0].get("category") == category])
     confusion = collections.Counter((row["label"], pred) for row, pred in pairs)
     print("정답 -> 예측: " + ", ".join(f"{a}->{b} {n}" for (a, b), n in sorted(confusion.items())))
     print("\n틀린 항목(사람이 확인):")
