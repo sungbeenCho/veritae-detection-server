@@ -1,0 +1,32 @@
+[
+ {
+  "expected": "contradiction",
+  "category": "false_negation",
+  "sentence": "지구가 둥글다는 건 거짓말이래요",
+  "evidence_keys": [["지구"], ["둥", "구형", "구체", "타원체", "공 모양"]]
+ },
+ {
+  "expected": "contradiction",
+  "category": "false_negation",
+  "sentence": "고래가 포유류라는 건 잘못 알려진 거래요",
+  "evidence_keys": [["포유"]]
+ },
+ {
+  "expected": "contradiction",
+  "category": "false_negation",
+  "sentence": "에펠탑이 파리에 있다는 건 사실이 아니라던데",
+  "evidence_keys": [["파리"]]
+ },
+ {
+  "expected": "contradiction",
+  "category": "false_negation",
+  "sentence": "세종대왕이 한글을 만들었다는 건 근거 없는 이야기래",
+  "evidence_keys": [["세종"], ["한글", "훈민정음"]]
+ },
+ {
+  "expected": "contradiction",
+  "category": "false_negation",
+  "sentence": "백신이 자폐를 일으키지 않는다는 건 거짓말이에요",
+  "evidence_keys": [["자폐"], ["않", "없", "아니"]]
+ }
+]

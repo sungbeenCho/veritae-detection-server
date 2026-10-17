@@ -47,14 +47,15 @@ def label_indices(id2label: dict[int, str]) -> dict[str, int]:
 class NliModel:
     """모델은 처음 쓸 때 한 번만 올린다 - 반박 후보가 없는 요청은 로딩 비용을 내지 않는다."""
 
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, load_step: str = "load_nli"):
         self._model_path = model_path
+        self._load_step = load_step
         self._loaded = None
 
     def _load(self):
         if self._loaded is None:
             # 반박이 나온 문장에서 처음 쓸 때 읽는다 - 이 시간을 서버 로그에서 볼 수 있게 잰다(2026-10-13).
-            with logged_step("load_nli"):
+            with logged_step(self._load_step):
                 import torch
                 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
@@ -85,6 +86,10 @@ class NliModel:
 
     def contradiction_scores(self, premises: list[str], hypothesis: str) -> list[float]:
         return [p["contradiction"] for p in self.label_probabilities(premises, hypothesis)]
+
+    def entailment_scores(self, premises: list[str], hypothesis: str) -> list[float]:
+        """아니라고 한 내용이 참인 문장("지구가 둥글다는 건 거짓말이래요")의 근거는 그 내용을 뒷받침하는 문장이다."""
+        return [p["entailment"] for p in self.label_probabilities(premises, hypothesis)]
 
 
 def candidate_sentences(blocks: list[tuple[str, str]]) -> list[tuple[str, str]]:
