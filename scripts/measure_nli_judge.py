@@ -65,12 +65,18 @@ def main() -> None:
     nli = NliModel(args.nli_model or default_model_path())
     names = ("분류기v2", "분류기v1")
     results = []
-    for row in rows:
+    import time
+    start = time.perf_counter()
+    for index, row in enumerate(rows, start=1):
         entry = {"sentence": row["sentence"], "expected": row["expected"], "file": row["file"], "now_shown": bool(row["지금"]["shown"]),
                  "now": row["지금"]["shown"]}
         for name in names:
             entry[name] = score_row(row[name], nli, shortlist_sentences, candidate_sentences)
         results.append(entry)
+        # 끝까지 아무것도 안 찍으면 멈춘 것처럼 보인다 - 10문장마다 진행 상황과 남은 시간을 찍는다.
+        if index % 10 == 0 or index == len(rows):
+            elapsed = time.perf_counter() - start
+            print(f"진행 {index}/{len(rows)} 문장, {elapsed:.0f}초 지남, 남은 시간 약 {elapsed / index * (len(rows) - index):.0f}초", flush=True)
 
     def shown(e: dict, name: str, threshold: float) -> bool:
         s = e[name]
