@@ -26,6 +26,14 @@
  {
   "expected": "contradiction",
   "category": "직접단언",
+  "sentence": "자유의 여신상은 영국 런던에 서 있잖아.",
+  "fact": "자유의 여신상은 영국 런던에 있다",
+  "fact_true": false,
+  "note": "미국 뉴욕에 있음"
+ },
+ {
+  "expected": "contradiction",
+  "category": "직접단언",
   "sentence": "개구리는 파충류에 속한단다.",
   "fact": "개구리는 파충류이다",
   "fact_true": false,
@@ -76,6 +84,14 @@
   "category": "직접단언",
   "sentence": "신라의 수도는 경주였어요.",
   "fact": "신라의 수도는 경주였다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "직접단언",
+  "sentence": "자유의 여신상은 미국 뉴욕에 있잖아.",
+  "fact": "자유의 여신상은 미국 뉴욕에 있다",
   "fact_true": true,
   "note": ""
  },
@@ -280,6 +296,14 @@
   "note": ""
  },
  {
+  "expected": "entailment",
+  "category": "부정",
+  "sentence": "자유의 여신상은 런던에 있지 않습니다.",
+  "fact": "자유의 여신상은 런던에 있다",
+  "fact_true": false,
+  "note": ""
+ },
+ {
   "expected": "contradiction",
   "category": "부정",
   "sentence": "제주도는 우리나라에서 가장 큰 섬이 아니야.",
@@ -380,6 +404,14 @@
   "category": "전언부정",
   "sentence": "박쥐가 포유류라는 건 틀린 말이래요.",
   "fact": "박쥐는 포유류이다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언부정",
+  "sentence": "자유의 여신상이 뉴욕에 있다는 건 사실이 아니라고 하더라고요.",
+  "fact": "자유의 여신상은 뉴욕에 있다",
   "fact_true": true,
   "note": ""
  },
