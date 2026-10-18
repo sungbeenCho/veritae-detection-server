@@ -201,3 +201,32 @@ def test_sentence_is_wrong_rule():
     assert misinfo_lib.sentence_is_wrong(S, "반박") and misinfo_lib.sentence_is_wrong(D, "지지")
     assert not misinfo_lib.sentence_is_wrong(S, "지지") and not misinfo_lib.sentence_is_wrong(D, "반박")
     assert not misinfo_lib.sentence_is_wrong(N, "반박") and not misinfo_lib.sentence_is_wrong(S, "판단불가")
+
+
+def test_split_sends_denied_sentence_to_claim_judgment(kiwi, conn, llm):
+    """나눔+A: 분류기가 '아니라고 함'으로 보는 부정 문장은 정리된 내용으로 판정한다(판정 스키마가 CLAIM_JUDGE_SCHEMA)."""
+    calls, answer = llm
+    answer.update(label="지지", reason="선풍기 사망설 문서는 사망할 수 있다고 한다.")
+
+    result = misinfo_infer.judge_sentence_split(kiwi, conn, DENIES, "u", "m", 5, _scorer({}), _scorer({SUPPORTING: 0.9}),
+                                                FakeSpeaker({DENIES: "contradiction"}))
+
+    assert [schema for schema, _ in calls] == [misinfo_lib.EXTRACT_SCHEMA, misinfo_lib.CLAIM_JUDGE_SCHEMA]
+    assert result["evidence"][0]["text"] == SUPPORTING
+
+
+def test_split_sends_other_sentences_to_sentence_judgment_with_template_a(kiwi, conn, monkeypatch, llm):
+    """부정 문장이 아니면 지금 방식(문장으로 판정)에 판정 지시문 A를 쓴다."""
+    calls, _ = llm
+    seen = {}
+
+    def fake_judge(kiwi_, conn_, sentence, url, model, count, nli, wiki_search=False, timer=None, judge_template=None):
+        seen.update(sentence=sentence, template=judge_template)
+        return None
+
+    monkeypatch.setattr(misinfo_infer, "judge_sentence", fake_judge)
+    misinfo_infer.judge_sentence_split(kiwi, conn, STATES, "u", "m", 5, _scorer({}), _scorer({}),
+                                       FakeSpeaker({STATES: "entailment"}))
+
+    assert seen == {"sentence": STATES, "template": misinfo_lib.JUDGE_TEMPLATE_A}
+    assert [schema for schema, _ in calls] == [misinfo_lib.EXTRACT_SCHEMA]

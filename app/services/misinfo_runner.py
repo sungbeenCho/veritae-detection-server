@@ -45,9 +45,22 @@ def _check_nli_model(nli_model: Path) -> None:
         )
 
 
+def _check_speaker_model(settings) -> None:
+    """분류기를 쓰는 판정 방식이면 모델 폴더를 요청 시작 시점에 확인한다(NLI 모델과 같은 이유)."""
+    if settings.misinfo_judge_mode in ("speaker", "split"):
+        folder = settings.misinfo_speaker_model
+        if not (folder.is_dir() and (folder / "config.json").is_file()):
+            raise MisinfoInferenceError(
+                f"말한 사람 판별 모델 폴더를 찾을 수 없습니다: {folder} "
+                "(scripts/train_nli.py --extra-data로 만들거나 MISINFO_SPEAKER_MODEL로 경로 지정, "
+                "이전 판정으로 되돌리려면 MISINFO_JUDGE_MODE=current)"
+            )
+
+
 def run_misinfo_inference(sentences: list[str]) -> MisinfoResult:
     settings = get_settings()
     _check_nli_model(settings.misinfo_nli_model)
+    _check_speaker_model(settings)
     job_dir = settings.text_extraction_work_dir / uuid.uuid4().hex
     job_dir.mkdir(parents=True, exist_ok=True)
     sentences_file = job_dir / "sentences.json"
@@ -67,6 +80,9 @@ def run_misinfo_inference(sentences: list[str]) -> MisinfoResult:
     ]
     if settings.misinfo_wiki_search:
         command.append("--wiki-search")
+    command += ["--judge-mode", settings.misinfo_judge_mode]
+    if settings.misinfo_judge_mode in ("speaker", "split"):
+        command += ["--speaker-model", str(settings.misinfo_speaker_model)]
 
     try:
         with get_gpu_queue().acquire("misinfo_infer"):

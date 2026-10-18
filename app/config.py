@@ -147,6 +147,15 @@ class Settings:
         # 위키백과 검색 기능을 같이 쓸지(2026-10-01). 사용자 문장의 핵심 단어가 위키백과(해외)로 전송되므로
         # 기본은 꺼짐 - 켜려면 MISINFO_WIKI_SEARCH=1.
         self.misinfo_wiki_search = os.environ.get("MISINFO_WIKI_SEARCH", "0") == "1"
+        # 판정 방식(2026-10-18 마지막 측정으로 채택). split = 나눔+A: 부정 문장은 말한 사람 판별 분류기 + 정리된 내용 판정,
+        # 나머지는 문장 판정, 둘 다 판정 지시문 A. current = 06ba7c5 판정(되돌릴 때 MISINFO_JUDGE_MODE=current).
+        self.misinfo_judge_mode = os.environ.get("MISINFO_JUDGE_MODE", "split")
+        # 말한 사람 판별 분류기(scripts/train_nli.py --extra-data로 학습, 2026-10-17 v2).
+        self.misinfo_speaker_model = Path(
+            os.environ.get(
+                "MISINFO_SPEAKER_MODEL", str(Path(__file__).resolve().parent.parent / "data" / "speaker_model_v2")
+            )
+        )
 
 
 @lru_cache

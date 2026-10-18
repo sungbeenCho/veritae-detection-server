@@ -40,6 +40,8 @@ def _misinfo_settings(tmp_path) -> MagicMock:
     (nli_model / "config.json").write_text("{}", encoding="utf-8")
     settings.misinfo_nli_model = nli_model
     settings.misinfo_wiki_search = False
+    settings.misinfo_judge_mode = "current"
+    settings.misinfo_speaker_model = tmp_path / "speaker_model_v2"
     return settings
 
 
@@ -238,3 +240,36 @@ def test_run_misinfo_inference_uses_gpu_queue(mock_get_settings, mock_run, tmp_p
     run_misinfo_inference(["아무 문장"])
 
     assert calls == ["misinfo_infer"]
+
+
+@patch("app.services.misinfo_runner.subprocess.run")
+@patch("app.services.misinfo_runner.get_settings")
+def test_split_mode_passes_judge_mode_and_speaker_model(mock_get_settings, mock_run, tmp_path):
+    """나눔+A(split)면 판정 방식과 말한 사람 판별 모델 폴더를 하위 프로세스에 넘긴다."""
+    settings = _misinfo_settings(tmp_path)
+    settings.misinfo_judge_mode = "split"
+    settings.misinfo_speaker_model.mkdir()
+    (settings.misinfo_speaker_model / "config.json").write_text("{}", encoding="utf-8")
+    mock_get_settings.return_value = settings
+
+    def fake_run(command, **kwargs):
+        _write_result_json(Path(command[command.index("--output") + 1]))
+        return MagicMock(returncode=0, stderr="")
+
+    mock_run.side_effect = fake_run
+    run_misinfo_inference(["문장"])
+    command = mock_run.call_args[0][0]
+    assert command[command.index("--judge-mode") + 1] == "split"
+    assert command[command.index("--speaker-model") + 1] == str(settings.misinfo_speaker_model)
+
+
+@patch("app.services.misinfo_runner.subprocess.run")
+@patch("app.services.misinfo_runner.get_settings")
+def test_split_mode_without_speaker_model_fails_early(mock_get_settings, mock_run, tmp_path):
+    settings = _misinfo_settings(tmp_path)
+    settings.misinfo_judge_mode = "split"
+    mock_get_settings.return_value = settings
+
+    with pytest.raises(MisinfoInferenceError, match="말한 사람 판별 모델"):
+        run_misinfo_inference(["문장"])
+    mock_run.assert_not_called()

@@ -484,7 +484,33 @@ def judge_sentence_speaker(
     return show_if_wrong(sentence, claim, speaker, *judged, nli, nli_support, timer)
 
 
-JUDGE_MODES = ("current", "a", "speaker")
+def judge_sentence_split(
+    kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str, evidence_count: int, nli: ContradictionScorer,
+    nli_support: ContradictionScorer, speaker_model: NliModel, wiki_search: bool = False, timer: StepTimer | None = None,
+) -> dict | None:
+    """나눔+A(2026-10-18 마지막 측정에서 채택): 분류기가 "아니라고 함"으로 보는 부정 문장만 분류기 방식(정리된 내용으로 검색·
+    판정)으로, 나머지는 지금 방식(문장으로 검색·판정)으로 판정하고, 둘 다 판정 지시문 A를 쓴다.
+    분류기 방식이 나았던 문장은 거의 다 부정 문장이었고 놓친 문장은 평범한 문장이었다(225문장). 학습·설계에 쓰지 않은 새 문장
+    70개에서 위험 오답 6 -> 0, 탐지 27 -> 27, 전체 295문장에서 위험 오답 25 -> 9, 탐지 107 -> 105(주로 OCR 오타 문장)."""
+    timer = timer or StepTimer()
+    claim = extract_claim(sentence, ollama_url, model, timer)
+    speaker = None
+    if claim:
+        with timer.step("speaker"):
+            speaker = speaker_of(speaker_model, sentence, claim)
+    logger.info("extract_result speaker=%s claim=%r", speaker, claim)
+    if speaker == SPEAKER_DENIES and not unsupported_words(kiwi, sentence, claim):
+        judged = judge_claim(kiwi, conn, claim, ollama_url, model, evidence_count, wiki_search, timer, CLAIM_JUDGE_TEMPLATE_A)
+        if judged is None:
+            return None
+        return show_if_wrong(sentence, claim, speaker, *judged, nli, nli_support, timer)
+    # 부정 문장이 아니면(맞다고 함·사실 없음·정리 실패 포함) 지금 방식 그대로 문장으로 판정한다 - 분류기 방식은 평범한 문장을
+    # 놓쳤다(세종대왕 고려, 임진왜란 1392 등).
+    return judge_sentence(kiwi, conn, sentence, ollama_url, model, evidence_count, nli, wiki_search=wiki_search, timer=timer,
+                          judge_template=JUDGE_TEMPLATE_A)
+
+
+JUDGE_MODES = ("current", "a", "speaker", "split")
 
 
 def main() -> None:
@@ -504,8 +530,8 @@ def main() -> None:
     parser.add_argument("--judge-mode", choices=JUDGE_MODES, default="current")
     parser.add_argument("--speaker-model", help="--judge-mode speaker일 때 말한 사람 판별 모델 폴더")
     args = parser.parse_args()
-    if args.judge_mode == "speaker" and not args.speaker_model:
-        parser.error("--judge-mode speaker에는 --speaker-model이 필요하다")
+    if args.judge_mode in ("speaker", "split") and not args.speaker_model:
+        parser.error(f"--judge-mode {args.judge_mode}에는 --speaker-model이 필요하다")
     # 서버(misinfo_runner.py)가 이 프로세스의 stderr를 서버 로그로 올린다 - 단계별 시간과 경고가 거기 보인다.
     configure_script_logging()
     # 어떤 NLI 모델 폴더와 설정으로 돌았는지 - 회귀 테스트와 실서버가 다른 모델로 돌던 문제(2026-10-13)를 로그로 확인한다.
@@ -518,7 +544,7 @@ def main() -> None:
 
     sentences = json.loads(args.sentences.read_text(encoding="utf-8"))
     nli = NliModel(args.nli_model)
-    speaker_model = NliModel(args.speaker_model, load_step="load_speaker") if args.judge_mode == "speaker" else None
+    speaker_model = NliModel(args.speaker_model, load_step="load_speaker") if args.judge_mode in ("speaker", "split") else None
 
     # 읽기 전용으로 연다 - 일반 sqlite3.connect(path)는 파일이 없으면 빈 DB 파일을 새로
     # 만들어버려서(스키마 없는 깨진 wiki_index.sqlite3), 이후 모든 검색이 "그냥 결과 없음"으로
@@ -540,7 +566,12 @@ def main() -> None:
         for index, sentence in enumerate(sentences, start=1):
             timer = StepTimer()
             sentence_start = time.perf_counter()
-            if speaker_model is not None:
+            if args.judge_mode == "split":
+                claim = judge_sentence_split(
+                    kiwi, conn, sentence, args.ollama_url, args.ollama_model, args.evidence_count, nli.contradiction_scores,
+                    nli.entailment_scores, speaker_model, wiki_search=args.wiki_search, timer=timer,
+                )
+            elif speaker_model is not None:
                 claim = judge_sentence_speaker(
                     kiwi, conn, sentence, args.ollama_url, args.ollama_model, args.evidence_count, nli.contradiction_scores,
                     nli.entailment_scores, speaker_model, wiki_search=args.wiki_search, timer=timer,
