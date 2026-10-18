@@ -70,3 +70,7 @@ python run_regression.py --wiki-index C:\ai\veritae-detection-server\data\wiki_i
   `outcome`, 후보 문장 전체의 NLI 점수가 들어 있다.
 - `cases_basic.json`/`cases_hard.json`(참고용)의 결과는 지금 파이프라인과 직접 비교할 수
   없으니 정확도 숫자 자체보다는 "터지지 않고 도는지" 정도만 참고한다.
+
+## 판정 방식(2026-10-18)과 이 회귀 도구
+
+서버 기본 판정 방식은 `split`(README '판정 방식')인데, `run_regression.py`는 판정 함수 `judge_sentence`를 직접 불러 **`current` 흐름만** 잰다. `split`과의 비교는 `scripts/measure_final.py`(지금·나눔·나눔+A·제목검색, 기존 225문장 + 새 문장 `cases_fresh2.json`)로 한다. 판정 방식을 바꾸거나 판정 지시문을 고친 뒤에는 그 도구로 다시 재고, 서버 경로는 `scripts/check_image_e2e.py`로 확인한다.

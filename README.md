@@ -618,6 +618,18 @@ python train_nli.py --init-model C:\ai\veritae-detection-server\data\nli_model -
 
 끝나면 KLUE 검증 정확도와 평가형 반박 문장 정확도가 학습 전후로 찍힌다(KLUE 정확도가 0.89 안팎으로 크게 떨어지지 않았는지 본다). 모델 폴더 위치를 바꾸려면 환경변수 `MISINFO_NLI_MODEL`로 경로를 지정한다. 환경변수는 설정 **이후에 새로 연 창**에서 띄운 서버에만 적용된다. 학습 결과는 원재료(KLUE 데이터셋, KLUE-RoBERTa)의 라이선스인 CC BY-SA 4.0을 따른다.
 
+#### 2-2. 말한 사람 판별 분류기 학습 (필수, 약 17분) - 서버 기본 판정 방식(split)이 쓴다
+
+문장을 말한 사람이 그 내용을 **맞다고 하는지, 아니라고 하는지, 따질 사실이 없는지**만 가리는 작은 분류기다(2026-10-17). 4B 모델이 "선풍기 틀고 자면 죽는다는 건 미신이래요" 같은 부정 문장과 이중부정, 전해 들은 말을 거꾸로 읽는 문제를 이 분류기가 맡는다. 위 NLI 모델과는 다른 모델이고(`klue/roberta-base`, KLUE-NLI + `tests/speaker/speaker_train_v2.json`을 섞어 처음부터 학습), 같은 `nli-train` 환경에서 학습한다.
+
+```powershell
+conda activate nli-train
+cd C:\ai\veritae-detection-server\scripts
+python train_nli.py --base-model klue/roberta-base --extra-data ..\tests\speaker\speaker_train_v2.json --extra-eval ..\tests\speaker\speaker_eval_v2.json --output ..\data\speaker_model_v2
+```
+
+끝나면 `[학습 후] KLUE-NLI 검증 정확도 0.85 안팎, 말한 사람 판별 평가 세트 정확도 0.98 안팎`이 찍힌다. 채점은 `python eval_speaker.py --model ..\data\speaker_model_v2 --eval ..\tests\speaker\speaker_eval.json`(text-extraction 환경)으로 다시 볼 수 있다. 이 폴더가 없으면 판정 방식이 `split`일 때 요청 시작 시점에 `말한 사람 판별 모델 폴더를 찾을 수 없습니다` 오류(502)로 실패한다. 위치를 바꾸려면 `MISINFO_SPEAKER_MODEL`.
+
 ### 3. 위키 인덱스 구축 (최초 1회, 이후 원할 때 재실행)
 
 한국어 위키백과 전체 덤프(약 1.4GB)를 받아서 인덱스를 만든다. **몇십 분이 아니라 훨씬 오래
@@ -646,7 +658,19 @@ $env:OLLAMA_MODEL = "qwen3.5:4b"             # 기본값과 동일
 $env:MISINFO_EVIDENCE_CHUNK_COUNT = "5"      # 판정마다 LLM에 넘길 근거 조각 수, 기본값과 동일
 $env:MISINFO_TIMEOUT_SECONDS = "300"         # 가짜정보 판정 서브프로세스 타임아웃(초), 기본값과 동일
 $env:MISINFO_WIKI_SEARCH = "0"               # 1이면 위키백과 검색도 같이 씀(문장의 핵심 단어가 위키백과로 전송됨), 기본 꺼짐
+$env:MISINFO_JUDGE_MODE = "split"            # 판정 방식, 기본값과 동일(아래 '판정 방식' 참고). 예전 판정으로 되돌리려면 "current"
+$env:MISINFO_SPEAKER_MODEL = "C:\ai\veritae-detection-server\data\speaker_model_v2"   # 말한 사람 판별 분류기 폴더, 기본값과 동일
 ```
+
+**판정 방식(`MISINFO_JUDGE_MODE`)** - 2026-10-18 측정으로 `split`을 기본으로 정했다.
+
+| 값 | 하는 일 |
+|---|---|
+| `split` (기본) | 1) 4B가 위키 없이 문장에서 따질 내용만 뽑는다. 2) 말한 사람 판별 분류기가 그 내용을 맞다고/아니라고 하는지 본다. 3) **"아니라고 함"(부정 문장)이면** 뽑은 내용으로 위키를 검색해 그 내용의 참거짓을 판정하고, 맞다고 한 내용이 거짓이거나 아니라고 한 내용이 참이면 거짓 문장으로 띄운다. **그 외 문장은** 원래 문장으로 검색·판정한다(`current`와 같은 흐름). 4) 판정 지시문은 둘 다 "가장 직접 알려주는 근거 문단 하나만 고르고 이유는 그 문단으로만"(이유에 다른 문서 내용이 섞이지 않게). |
+| `current` | 06ba7c5 판정 그대로(분류기 안 씀). 문제가 있을 때 되돌리는 값 |
+| `a`, `speaker` | 측정용(`a` = current + 근거 문단 하나 지시문, `speaker` = 모든 문장을 분류기 방식으로) |
+
+측정(`scripts/measure_final.py`): 학습·설계에 쓰지 않은 새 문장 70개에서 맞는 문장을 틀렸다고 띄우는 경우 6 -> 0, 거짓 문장 탐지 27/32 -> 27/32. 전체 295문장에서 각각 25 -> 9, 107 -> 105(놓친 것은 주로 OCR 오타 문장). 4B 호출이 문장마다 한 번 늘어 문장당 1~2초 더 걸린다.
 
 **e5 재정렬 모델 최초 다운로드:** 첫 요청 처리 시 `intfloat/multilingual-e5-small`(재정렬용
 임베딩 모델, 약 470MB)을 HuggingFace에서 자동으로 받는다. Lilju 모델과 마찬가지로 이후엔
@@ -671,6 +695,8 @@ cd C:\ai\veritae-detection-server
 python scripts\check_image_e2e.py --url http://localhost:8000
 ```
 
+**알려진 약점(2026-10-18):** 판정 방식이 `split`이면 이 샘플 이미지의 선풍기 문장("선풍기틀 틀고 자면 사망하다는 이야기틀 들없어요")은 **탐지되지 않아 이 스크립트가 실패로 끝난다.** 분류기는 "맞다고 함"으로 바르게 읽지만 그 외 문장 흐름에서 4B가 내용을 "…라는 속설이 있다"로 잘못 정리하기 때문이다(`current`도 같은 잘못된 정리를 하는데, 그 위에서 우연히 거짓으로 판정해 통과했었다). 서버 경로·시간·설정 확인 용도로는 그대로 쓴다 - 서버 로그의 `misinfo_config ... judge_mode=split`과 시간을 본다.
+
 ### 로그 읽는 법
 
 서버 콘솔에 요청 하나당 아래 줄들이 찍힌다(INFO). 문장 본문은 싣지 않는다.
@@ -679,15 +705,16 @@ python scripts\check_image_e2e.py --url http://localhost:8000
 - `stage_done label=spai|scam|misinfo seconds=..` : 이미지 판독(SPAI), 글자 추출+사기감지, 가짜정보 판정 각각의 시간
 - `gpu_queue_acquired/released ... wait_seconds=.. run_seconds=..` : GPU 대기열 대기·점유 시간
 - `misinfo_infer 로그:` 아래 줄들(가짜정보 하위 프로세스):
-  - `load_kiwi / load_e5 / load_nli seconds=..` : 모델을 읽는 시간(요청마다 새 프로세스라 매번 든다)
+  - `load_kiwi / load_e5 / load_nli / load_speaker seconds=..` : 모델을 읽는 시간(요청마다 새 프로세스라 매번 든다)
+  - `extract_result speaker=.. claim=..` : (split) 4B가 위키 없이 뽑은 내용과 분류기 판단(맞다고 함/아니라고 함/사실 없음). 뽑은 내용이 비면 따질 사실이 없는 문장
   - `ollama wall=.. load=.. prompt_eval=..(N tok) eval=..(N tok)` : LLM 호출 한 번의 총 시간 / 모델 로드 / 근거 읽기 / 답 쓰기
-  - `judge_result label=.. core_claim=.. reason=.. cited=[문서]` : 문장마다 LLM 판정 결과 - 문장을 무엇으로 정리했고(core_claim) 어떻게 판정했는지(지지/반박/판단불가)와 이유. 탐지가 안 됐을 때 원인을 여기서 본다
+  - `judge_result label=.. core_claim=.. reason=.. cited=[문서]` : 문장마다 LLM 판정 결과 - 문장을 무엇으로 정리했고(core_claim) 어떻게 판정했는지(지지/반박/판단불가)와 이유. 탐지가 안 됐을 때 원인을 여기서 본다. (split의 부정 문장은 `judge_result label=.. speaker=.. claim=..` - 뽑은 내용의 참거짓 판정)
   - `sentence i/N total=..s outcome=.. search=.. rerank=.. judge_llm=.. shortlist=.. nli=.. reason_match=..` : 문장별 단계 시간과 **결과**
-  - `misinfo_config nli_model=.. ollama_model=.. wiki_search=..` : 이번 요청이 **어떤 NLI 모델 폴더**와 설정으로 돌았는지(옛 모델로 도는지 바로 확인)
+  - `misinfo_config nli_model=.. ollama_model=.. wiki_search=.. judge_mode=.. speaker_model=..` : 이번 요청이 **어떤 NLI 모델 폴더**와 판정 방식·분류기로 돌았는지(옛 모델·옛 방식으로 도는지 바로 확인)
   - `refutation_check core_claim=.. threshold=0.8 evidence_by=nli|reason_match top=(문서) nli=0.xx 문장; ...` : 거짓으로 판정된 문장의 근거를 고른 방식과 NLI 점수가 높은 후보 문장 3개
   - `misinfo_summary ... startup= setup= sentences_total= unload= total=` : 전체 요약
 
-판정 기준(2026-10-14): 문장이 결국 말하는 내용으로 판단한다. 전해 들은 말("~라고 들었어요")과 속설 소개("~라는 속설이 있다")는 그 내용을, 속설을 부정하는 문장("~는 사실이 아니다")은 부정된 뜻을 판단한다. LLM이 "반박"이라고 판정하면 거짓으로 표시하고, NLI는 그 판정을 버리지 않고 화면 근거 문장을 고르는 데만 쓴다. `outcome`은 문장이 어디서 끝났는지 알려준다.
+판정 기준(2026-10-14, split은 2026-10-18): 문장이 결국 말하는 내용으로 판단한다. split의 부정 문장은 분류기가 "아니라고 함"으로 본 내용의 참거짓으로 판단한다(아니라고 한 내용이 거짓이면 맞는 문장, 참이면 거짓 문장 - 이때 근거는 그 내용을 뒷받침하는 문장을 NLI 함의 점수로 고른다). 전해 들은 말("~라고 들었어요")과 속설 소개("~라는 속설이 있다")는 그 내용을, 속설을 부정하는 문장("~는 사실이 아니다")은 부정된 뜻을 판단한다. LLM이 "반박"이라고 판정하면 거짓으로 표시하고, NLI는 그 판정을 버리지 않고 화면 근거 문장을 고르는 데만 쓴다. `outcome`은 문장이 어디서 끝났는지 알려준다.
 
 | outcome | 뜻 |
 |---|---|
