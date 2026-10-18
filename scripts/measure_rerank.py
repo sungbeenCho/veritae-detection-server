@@ -60,7 +60,7 @@ class Reranker:
                                     truncation=True, max_length=512, return_tensors="pt").to(self.device)
             with self.torch.no_grad():
                 scores += self.model(**inputs).logits.view(-1).float().cpu().tolist()
-        return [c for _, c in sorted(zip(scores, range(len(candidates))), key=lambda x: -x[0])]
+        return [candidates[i] for _, i in sorted(zip(scores, range(len(candidates))), key=lambda x: -x[0])]
 
 
 def top5(order_fn, text, candidates):
