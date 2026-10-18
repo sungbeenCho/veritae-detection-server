@@ -59,7 +59,7 @@ URL = re.compile(r"(https?://\S+|www\.\S+|\b[\w-]+\.(com|net|kr|co\.kr|ly|gl|me|
 
 MODELS = {
     "lilju": "Lilju/voicephishing_kobert",
-    "user0074": "user0074/voice-phishing-koelectra",
+    # user0074/voice-phishing-koelectra는 pytorch_model.bin만 있어 뺐다(pickle 로드는 torch 2.6 미만에서 거부, 2026-09-13에 이미 탈락).
     "xlmr_smishing": "donghyun95/kor-smishing-xlmroberta",
     "klue_smishing_synth": "donghyun95/smishing-detection-roberta-base",
     "kcelectra_smishing": "kdt-2-team4-newbiz/kcelectra-smishing-classifier",
@@ -156,7 +156,7 @@ def main() -> None:
             continue
         t0 = time.time()
         tokenizer = AutoTokenizer.from_pretrained(model_id)
-        model = AutoModelForSequenceClassification.from_pretrained(model_id, use_safetensors=None).eval().to(DEVICE)
+        model = AutoModelForSequenceClassification.from_pretrained(model_id, use_safetensors=True).eval().to(DEVICE)
         idx = phishing_index(model)
         print(f"\n### {key} ({model_id}) id2label={model.config.id2label} -> 사기 칸 {idx}", flush=True)
         results[key] = {}
