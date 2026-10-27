@@ -228,8 +228,9 @@ def main() -> None:
             continue
         t0 = time.time()
         tokenizer = AutoTokenizer.from_pretrained(model_id)
-        # 로컬에서 학습한 NLI 모델 폴더는 safetensors 여부를 따로 확인하지 않았다 - HF 모델에만 강제한다.
-        model = AutoModelForSequenceClassification.from_pretrained(model_id, use_safetensors=key != "nli_zeroshot").eval().to(DEVICE)
+        # HF 모델은 safetensors만 받는다. 로컬 NLI 폴더는 기본값(None, 있는 형식을 읽음)으로 둔다 -
+        # False를 주면 Trainer가 저장한 model.safetensors를 건너뛰어 "파일 없음"으로 실패한다(2026-10-27).
+        model = AutoModelForSequenceClassification.from_pretrained(model_id, use_safetensors=None if key == "nli_zeroshot" else True).eval().to(DEVICE)
         idx = nli_entailment_index(model) if key == "nli_zeroshot" else phishing_index(model)
         score = score_nli if key == "nli_zeroshot" else score_texts
         print(f"\n### {key} ({model_id}) id2label={model.config.id2label} -> 사기 칸 {idx}", flush=True)
