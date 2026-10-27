@@ -69,6 +69,9 @@ MODELS = {
     "xlmr_smishing": "donghyun95/kor-smishing-xlmroberta",
     "klue_smishing_synth": "donghyun95/smishing-detection-roberta-base",
     "kcelectra_smishing": "kdt-2-team4-newbiz/kcelectra-smishing-classifier",
+    # 2026-10-27 추가 후보. 둘 다 모델 카드에 언어·학습 데이터·라이선스가 없다(같은 공개 데이터로 학습했을 가능성 높음).
+    "nsjkm_electra": "nsjkm646588/smishing-classifier",
+    "sseul2_distilbert": "sseul2/bert-smishing-model-final2",
     "nli_zeroshot": str(Path(__file__).resolve().parent.parent / "data" / "nli_model_aug"),
 }
 TARGET_FPR = 0.10  # 앞 절반에서 맞출 정상 오탐률. 뒤 절반 100개 기준 관측 10%면 95%CI 상한이 약 17%라 20% 기준에 여유가 남는다.
