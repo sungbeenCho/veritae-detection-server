@@ -2,7 +2,7 @@
 
 공개 분류 모델은 전부 합격 기준에 못 미쳤고(measure_scam_models.py), 직접 학습은 다양한 실제 정상 문자가 없어
 막혔다. 학습 데이터가 필요 없는 로컬 LLM이 같은 시험 세트에서 기준을 넘는지 본다. 서버 코드는 바꾸지 않는다.
-사용: conda activate nli-train; cd scripts; python measure_scam_llm.py [--prompt v1|v2] [--limit N]
+사용: conda activate nli-train; cd scripts; python measure_scam_llm.py [--prompt v1|v2|v3] [--limit N]
 
 - 세트는 measure_scam_models.py와 같다. 통화는 묶음 없이 전체 전사를 한 번에 넣는다.
 - 모델은 0~100 사기 가능성과 이유 한 문장을 JSON으로 답한다. 가능성/100을 점수로 써서 AUC를 잰다.
@@ -64,6 +64,20 @@ reason에 판단 이유를 한국어 한 문장으로 써라.
 </message>""",
 }
 
+# v3(2026-10-27, 마지막 시도): v2는 오탐을 거의 없앴지만 "자연스러운 요청"을 넓게 받아들여 전형적인 사기
+# (가족 사칭 폰 고장 문자, 검찰 명의도용 통화, 대출 상환 사칭)를 놓쳤다(실제 통화 탐지 87%→68%).
+# 놓친 문장에 맞추지 않고 널리 알려진 대표 유형을 넣는다. 같은 세트로 다시 재므로 이번 결과로 마무리한다.
+PROMPTS["v3"] = PROMPTS["v2"].replace(
+    "- 판단은 글에 실제로 적힌 내용으로만 해라.",
+    """- 널리 알려진 대표 사기 유형이다. 글이 이 흐름에 해당하면, 아직 돈 이야기가 나오기 전이라도 사기로 봐라.
+  · 가족·지인 사칭: 휴대폰 고장·분실·번호 변경을 핑계로 문자로 연락해 돈, 상품권, 신분증 사진, 인증번호, 앱 설치를 요구한다.
+  · 수사기관·금융감독원 사칭: 명의 도용, 사건 연루, 계좌가 범죄에 쓰였다고 알리며 본인·지인 정보를 확인하거나, 조사·자산 보호를 이유로 이체·현금 인출·앱 설치를 요구한다.
+  · 대출 사기: 저금리 대환, 기존 대출 상환, 신용 점수 올리기를 이유로 상환금·수수료·보증금 입금이나 앱 설치를 요구한다.
+  · 택배·결제·공공기관 사칭: 배송 오류, 해외 결제 승인, 과태료·민원을 알리며 링크 접속이나 전화를 유도한다.
+  · 투자·코인 고수익 보장, 중고거래 선입금 요구.
+- 판단은 글에 실제로 적힌 내용으로만 해라.""",
+)
+
 SCHEMAS = {
     "v1": {"type": "object", "properties": {"scam_probability": {"type": "integer"}, "reason": {"type": "string"}},
            "required": ["scam_probability", "reason"]},
@@ -71,6 +85,7 @@ SCHEMAS = {
            "properties": {"scam_probability": {"type": "integer"}, "quote": {"type": "string"}, "reason": {"type": "string"}},
            "required": ["scam_probability", "quote", "reason"]},
 }
+SCHEMAS["v3"] = SCHEMAS["v2"]
 
 
 def compact(text: str) -> str:
@@ -127,7 +142,7 @@ def fixed_check(flagged: np.ndarray, labels: np.ndarray) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt", choices=sorted(PROMPTS), default="v2")
+    parser.add_argument("--prompt", choices=sorted(PROMPTS), default="v3")
     parser.add_argument("--limit", type=int, default=0, help="세트마다 앞뒤에서 N개만(빠른 점검용)")
     args = parser.parse_args()
     download()
