@@ -111,7 +111,8 @@ def load_sets() -> dict[str, list[dict]]:
     def call_item(segments: list[str], label: int) -> dict:
         # 서버 설계(설계서 3.1)와 같이 한 칸씩 밀며 3문장씩 묶는다.
         windows = [" ".join(segments[i:i + WINDOW]) for i in range(max(1, len(segments) - WINDOW + 1))]
-        return {"windows": windows, "label": label}
+        # text는 묶음 없이 통화 전체를 한 번에 읽는 후보(measure_scam_llm.py)용.
+        return {"windows": windows, "text": " ".join(segments), "label": label}
 
     path = HARD / "eval_hard_I.json"
     if path.exists():
