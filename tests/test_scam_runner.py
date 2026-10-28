@@ -49,39 +49,32 @@ def _scam_settings(tmp_path) -> MagicMock:
     settings.text_extraction_script = Path("/fake/scam_infer.py")
     settings.text_extraction_timeout_seconds = 300
     settings.text_extraction_work_dir = tmp_path
-    settings.lilju_model_id = "Lilju/voicephishing_kobert"
     settings.paddleocr_lang = "korean"
     settings.whisper_model_size = "large-v3"
     return settings
 
 
-def _write_result_json(output_file: Path, score, evidence=None, sentences=None) -> None:
+def _write_result_json(output_file: Path, sentences=None) -> None:
     output_file.write_text(
-        json.dumps({"score": score, "evidence": evidence or [], "sentences": sentences or []}),
+        json.dumps({"sentences": sentences or []}),
         encoding="utf-8",
     )
 
 
 @patch("app.services.scam_runner.subprocess.run")
 @patch("app.services.scam_runner.get_settings")
-def test_run_scam_inference_image_returns_score_and_evidence(mock_get_settings, mock_run, tmp_path):
+def test_run_scam_inference_image_returns_sentences(mock_get_settings, mock_run, tmp_path):
     mock_get_settings.return_value = _scam_settings(tmp_path)
 
     def fake_run(command, **kwargs):
         output_file = Path(command[command.index("--output") + 1])
-        _write_result_json(
-            output_file, 0.82,
-            [{"sentence": "계좌번호를 알려주세요", "score": 0.95}],
-            sentences=["계좌번호를 알려주세요", "지금 바로 입금하세요"],
-        )
+        _write_result_json(output_file, sentences=["계좌번호를 알려주세요", "지금 바로 입금하세요"])
         return MagicMock(returncode=0, stderr="")
 
     mock_run.side_effect = fake_run
 
     result = run_scam_inference_image(b"fake-image-bytes", "test.jpg")
 
-    assert result.score == 0.82
-    assert result.evidence == [{"sentence": "계좌번호를 알려주세요", "score": 0.95}]
     assert result.sentences == ["계좌번호를 알려주세요", "지금 바로 입금하세요"]
     called_command = mock_run.call_args.args[0]
     assert called_command[called_command.index("--mode") + 1] == "ocr"
@@ -89,20 +82,19 @@ def test_run_scam_inference_image_returns_score_and_evidence(mock_get_settings, 
 
 @patch("app.services.scam_runner.subprocess.run")
 @patch("app.services.scam_runner.get_settings")
-def test_run_scam_inference_audio_uses_stt_mode_and_returns_none_score_when_no_text(mock_get_settings, mock_run, tmp_path):
+def test_run_scam_inference_audio_uses_stt_mode_and_returns_no_sentences_when_no_text(mock_get_settings, mock_run, tmp_path):
     mock_get_settings.return_value = _scam_settings(tmp_path)
 
     def fake_run(command, **kwargs):
         output_file = Path(command[command.index("--output") + 1])
-        _write_result_json(output_file, None)
+        _write_result_json(output_file)
         return MagicMock(returncode=0, stderr="")
 
     mock_run.side_effect = fake_run
 
     result = run_scam_inference_audio(b"fake-audio-bytes", "test.wav")
 
-    assert result.score is None
-    assert result.evidence == []
+    assert result.sentences == []
     called_command = mock_run.call_args.args[0]
     assert called_command[called_command.index("--mode") + 1] == "stt"
 
@@ -143,14 +135,14 @@ def test_run_scam_inference_video_extracts_audio_and_frames_then_runs_video_mode
             # 프레임 추출 호출 - 실제 프레임 파일까지는 안 만들어도 이 테스트엔 지장 없음
             return MagicMock(returncode=0, stderr="")
         output_file = Path(command[command.index("--output") + 1])
-        _write_result_json(output_file, 0.6, [{"sentence": "지금 바로 이체하세요", "score": 0.9}])
+        _write_result_json(output_file, sentences=["지금 바로 이체하세요"])
         return MagicMock(returncode=0, stderr="")
 
     mock_run.side_effect = fake_run
 
     result = run_scam_inference_video(b"fake-video-bytes", "test.mp4")
 
-    assert result.score == 0.6
+    assert result.sentences == ["지금 바로 이체하세요"]
     assert mock_run.call_count == 3
     audio_command = mock_run.call_args_list[0].args[0]
     assert audio_command[0] == "ffmpeg"
@@ -179,14 +171,14 @@ def test_run_scam_inference_video_omits_frames_dir_when_frame_extraction_fails(m
         if command[0] == "ffmpeg":
             return MagicMock(returncode=1, stderr="frame extraction boom")
         output_file = Path(command[command.index("--output") + 1])
-        _write_result_json(output_file, 0.6, [{"sentence": "지금 바로 이체하세요", "score": 0.9}])
+        _write_result_json(output_file, sentences=["지금 바로 이체하세요"])
         return MagicMock(returncode=0, stderr="")
 
     mock_run.side_effect = fake_run
 
     result = run_scam_inference_video(b"fake-video-bytes", "test.mp4")
 
-    assert result.score == 0.6
+    assert result.sentences == ["지금 바로 이체하세요"]
     infer_command = mock_run.call_args_list[2].args[0]
     assert "--frames-dir" not in infer_command
 
@@ -206,14 +198,14 @@ def test_run_scam_inference_video_omits_audio_when_no_audio_track(mock_get_setti
         if command[0] == "ffmpeg":
             return MagicMock(returncode=0, stderr="")
         output_file = Path(command[command.index("--output") + 1])
-        _write_result_json(output_file, 0.6, [{"sentence": "지금 바로 이체하세요", "score": 0.9}])
+        _write_result_json(output_file, sentences=["지금 바로 이체하세요"])
         return MagicMock(returncode=0, stderr="")
 
     mock_run.side_effect = fake_run
 
     result = run_scam_inference_video(b"fake-video-bytes", "test.mp4")
 
-    assert result.score == 0.6
+    assert result.sentences == ["지금 바로 이체하세요"]
     infer_command = mock_run.call_args_list[-1].args[0]
     assert "--input" not in infer_command
     assert "--frames-dir" in infer_command
@@ -232,14 +224,14 @@ def test_run_scam_inference_video_returns_empty_when_audio_and_frames_both_unava
         if command[0] == "ffmpeg":
             return MagicMock(returncode=1, stderr="boom")
         output_file = Path(command[command.index("--output") + 1])
-        _write_result_json(output_file, None, [])
+        _write_result_json(output_file)
         return MagicMock(returncode=0, stderr="")
 
     mock_run.side_effect = fake_run
 
     result = run_scam_inference_video(b"fake-video-bytes", "test.mp4")
 
-    assert result.score is None
+    assert result.sentences == []
     infer_command = mock_run.call_args_list[-1].args[0]
     assert "--input" not in infer_command
     assert "--frames-dir" not in infer_command
@@ -295,7 +287,7 @@ def test_run_scam_inference_image_does_not_use_gpu_queue(mock_get_settings, mock
 
     def fake_run(command, **kwargs):
         output_file = Path(command[command.index("--output") + 1])
-        _write_result_json(output_file, None)
+        _write_result_json(output_file)
         return MagicMock(returncode=0, stderr="")
 
     mock_run.side_effect = fake_run
@@ -314,7 +306,7 @@ def test_run_scam_inference_audio_uses_gpu_queue(mock_get_settings, mock_run, tm
 
     def fake_run(command, **kwargs):
         output_file = Path(command[command.index("--output") + 1])
-        _write_result_json(output_file, None)
+        _write_result_json(output_file)
         return MagicMock(returncode=0, stderr="")
 
     mock_run.side_effect = fake_run

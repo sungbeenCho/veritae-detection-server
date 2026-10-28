@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 """scam_infer.py
 
-이미지(OCR) 또는 음성(STT)에서 텍스트를 추출해 Lilju/voicephishing_kobert로 문장별
-피싱 확률을 매기고, 하나의 위험도 점수 + 근거 문장 목록을 JSON으로 저장한다.
+이미지(OCR)·음성(STT)·영상(음성+화면 글자)에서 텍스트를 추출해 문장 목록을 JSON으로 저장한다.
+사기 판정은 여기서 하지 않는다(2026-10-28) - Lilju 모델은 정상 문장도 사기로 판정해 쓸 수 없었고,
+대신 로컬 LLM이 가짜정보 판정과 같은 단계에서 판정한다(app/services/scam_judge.py). 이 프로세스가
+끝나면 Whisper가 GPU에서 빠지므로, 다음 단계에서 Ollama 모델을 올려도 둘이 동시에 GPU에 있지 않다.
 
-`text-extraction` conda env(PaddleOCR, faster-whisper, transformers, kss 설치됨)에서
+`text-extraction` conda env(EasyOCR, faster-whisper, kss 설치됨)에서
 실행되어야 한다. veritae-detection-server(FastAPI, detection-api env)는 이 스크립트를
 subprocess로 호출하고 --output 경로의 JSON만 읽는다 - 무거운 의존성을 FastAPI
 프로세스에 넣지 않기 위함(SPAI/AntiDeepfake/dfdc 연동과 동일한 패턴).
@@ -15,9 +17,7 @@ import argparse
 import json
 from pathlib import Path
 
-EVIDENCE_SCORE_THRESHOLD = 0.5  # spai_runner.py/antideepfake_infer.py/dfdc_infer.py와 동일 임계값
-MAX_SENTENCE_LENGTH = 300  # Lilju 학습 시 입력 길이를 크게 벗어나는 극단값 방어용 - 실측 근거 없는 안전장치
-PHISHING_LABEL_INDEX = 1  # Lilju 모델카드 없음 - 2026-09-13 실측(9/10 정확도)으로 확인된 값
+MAX_SENTENCE_LENGTH = 300  # 문장 하나가 극단적으로 긴 경우 방어용 - 실측 근거 없는 안전장치
 FRAME_HASH_DIFF_THRESHOLD = 5  # perceptual hash 차이가 이 값 이하면 "직전에 처리한 프레임과 사실상
 # 같은 화면"으로 보고 OCR을 건너뛴다 - 실측 근거 없는 초기값(2026-09-15), 데스크탑 실측 후 조정 필요
 
@@ -90,39 +90,6 @@ def split_sentences(text_units: list[str]) -> list[str]:
     return [s[:MAX_SENTENCE_LENGTH] for s in sentences]
 
 
-def score_sentences(sentences: list[str], model_id: str) -> list[float]:
-    import torch
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForSequenceClassification.from_pretrained(model_id, use_safetensors=True)
-    model.eval()
-
-    scores = []
-    with torch.no_grad():
-        for sentence in sentences:
-            inputs = tokenizer(sentence, return_tensors="pt", truncation=True)
-            logits = model(**inputs).logits
-            probs = torch.softmax(logits, dim=-1)
-            scores.append(probs[0, PHISHING_LABEL_INDEX].item())
-    return scores
-
-
-def aggregate(scores: list[float]) -> float:
-    """사용자 확정(2026-09-13): 최고확률x0.7 + 평균확률x0.3 (Lilju 자체 데모 app.py의
-    집계 방식을 그대로 채택 - 모델의 일부가 아닌 후처리 로직이라 자유롭게 채택 가능함을
-    확인하고 결정함, spec §4)."""
-    return max(scores) * 0.7 + (sum(scores) / len(scores)) * 0.3
-
-
-def build_evidence(sentences: list[str], scores: list[float]) -> list[dict]:
-    return [
-        {"sentence": sentence, "score": score}
-        for sentence, score in zip(sentences, scores)
-        if score >= EVIDENCE_SCORE_THRESHOLD
-    ]
-
-
 def _join_ocr_fragments(fragments: list[str]) -> list[str]:
     """OCR 엔진(PaddleOCR/EasyOCR 공통)이 한 줄 단위를 넘어 단어/구 단위로도 잘게 쪼개
     인식하는 경우가 많아(2026-09-15 3060Ti 실기 확인 - 2026-09-13 설계 당시 가정과
@@ -142,7 +109,6 @@ def main() -> None:
              "그 경우 화면 텍스트(--frames-dir)만으로 진행한다."
     )
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--lilju-model-id", required=True)
     parser.add_argument("--paddleocr-lang", required=True)
     parser.add_argument("--whisper-model-size", required=True)
     parser.add_argument(
@@ -172,17 +138,7 @@ def main() -> None:
     sentences = split_sentences(text_units)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    if not sentences:
-        args.output.write_text(json.dumps({"score": None, "evidence": [], "sentences": []}), encoding="utf-8")
-        return
-
-    scores = score_sentences(sentences, args.lilju_model_id)
-    result = {
-        "score": aggregate(scores),
-        "evidence": build_evidence(sentences, scores),
-        "sentences": sentences,
-    }
-    args.output.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
+    args.output.write_text(json.dumps({"sentences": sentences}, ensure_ascii=False), encoding="utf-8")
 
 
 if __name__ == "__main__":

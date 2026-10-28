@@ -7,7 +7,6 @@ import uuid
 from pathlib import Path
 
 from app.config import get_settings
-from app.services.gpu_queue import get_gpu_queue
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +57,8 @@ def _check_speaker_model(settings) -> None:
 
 
 def run_misinfo_inference(sentences: list[str]) -> MisinfoResult:
+    """GPU 대기열 자리는 잡지 않는다 - 호출자(text_judge)가 사기 판정과 묶어 자리 하나 안에서 부른다(2026-10-28).
+    따로 잡으면 사기 판정이 올린 Ollama 모델이 GPU에 남은 채 자리가 비어, 다른 요청의 Whisper가 같이 올라갈 수 있다."""
     settings = get_settings()
     _check_nli_model(settings.misinfo_nli_model)
     _check_speaker_model(settings)
@@ -85,16 +86,15 @@ def run_misinfo_inference(sentences: list[str]) -> MisinfoResult:
         command += ["--speaker-model", str(settings.misinfo_speaker_model)]
 
     try:
-        with get_gpu_queue().acquire("misinfo_infer"):
-            result = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=settings.misinfo_timeout_seconds,
-                env=_SUBPROCESS_ENV,
-            )
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=settings.misinfo_timeout_seconds,
+            env=_SUBPROCESS_ENV,
+        )
 
         # 성공해도 남긴다 - 단계별 시간과 경고(LLM 형식 오류로 문장을 판단불가 처리 등)가 여기에만 있다.
         if result.stderr:

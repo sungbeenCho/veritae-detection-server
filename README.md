@@ -457,7 +457,9 @@ score가 높으면(얼굴 조작 확률이 높으면) `evidence` 배열에 탐�
 
 ## 사기 위험도 분석(text-extraction) 설정
 
-OCR(EasyOCR)/STT(faster-whisper)/문장분리(kss)/사기감지(Lilju/voicephishing_kobert)를 위한 새 conda env를 만든다. GitHub repo clone은 필요 없다(전부 pip 패키지).
+OCR(EasyOCR)/STT(faster-whisper)/문장분리(kss)를 위한 새 conda env를 만든다. GitHub repo clone은 필요 없다(전부 pip 패키지).
+
+사기 판정 자체는 이 env가 아니라 가짜정보탐지와 같은 Ollama 모델(`OLLAMA_MODEL`, 기본 qwen3.5:4b)이 한다(2026-10-28, Lilju 대체). 추출이 끝나면 `app/services/text_judge.py`가 GPU 대기열 자리 하나 안에서 사기 판정 → 가짜정보 판정을 이어서 하고 모델을 내린다. 그래서 사기감지에도 아래 "가짜정보탐지" 절의 Ollama 설치가 필요하다. 지시문은 `scripts/measure_scam_llm.py`의 v3와 글자 그대로 같아야 한다(`tests/test_scam_judge.py`가 확인).
 
 **중요 - 실기 검증에서 확인된 주의사항 (2026-09-15, 3060Ti):**
 - **OCR은 PaddleOCR이 아니라 EasyOCR을 쓴다.** PaddleOCR은 최신(3.x)에서 CPU 크래시/GPU cuDNN 버전 충돌이 있었고, 안정판(2.x)으로 내려도 "국민은행" 같은 특정 단어를 일관되게 잘못 인식하는 문제가 있었다. 같은 이미지로 EasyOCR과 직접 비교해 EasyOCR이 명확히 더 정확함을 확인하고 교체했다.
@@ -527,13 +529,12 @@ conda activate text-extraction
 
 ```powershell
 setx TEXT_EXTRACTION_PYTHON "C:\Users\<user>\miniconda3\envs\text-extraction\python.exe"
-setx LILJU_MODEL_ID "Lilju/voicephishing_kobert"
 setx PADDLEOCR_LANG "korean"
 setx WHISPER_MODEL_SIZE "large-v3"
 setx TEXT_EXTRACTION_TIMEOUT_SECONDS "300"
 ```
 
-**HuggingFace 토큰:** 최초 실행 시 HuggingFace에서 Lilju 가중치(약 370MB)를 자동 다운로드한다. 이후로는 로컬에 캐시되어 다시 안 받으므로, 보통은 설정 안 해도 된다. 반복 실행이 많아 rate limit 에러를 실제로 만났을 때만 설정:
+**HuggingFace 토큰:** EasyOCR·Whisper 등 모델은 최초 실행 시 자동 다운로드한다. 이후로는 로컬에 캐시되어 다시 안 받으므로, 보통은 설정 안 해도 된다. 반복 실행이 많아 rate limit 에러를 실제로 만났을 때만 설정:
 
 ```powershell
 setx HF_TOKEN "your_huggingface_token_here"
@@ -673,7 +674,7 @@ $env:MISINFO_SPEAKER_MODEL = "C:\ai\veritae-detection-server\data\speaker_model_
 측정(`scripts/measure_final.py`): 학습·설계에 쓰지 않은 새 문장 70개에서 맞는 문장을 틀렸다고 띄우는 경우 6 -> 0, 거짓 문장 탐지 27/32 -> 27/32. 전체 295문장에서 각각 25 -> 9, 107 -> 105(놓친 것은 주로 OCR 오타 문장). 4B 호출이 문장마다 한 번 늘어 문장당 1~2초 더 걸린다.
 
 **e5 재정렬 모델 최초 다운로드:** 첫 요청 처리 시 `intfloat/multilingual-e5-small`(재정렬용
-임베딩 모델, 약 470MB)을 HuggingFace에서 자동으로 받는다. Lilju 모델과 마찬가지로 이후엔
+임베딩 모델, 약 470MB)을 HuggingFace에서 자동으로 받는다. 다른 모델과 마찬가지로 이후엔
 로컬 캐시를 쓰므로 다시 받지 않는다 - 서버를 처음 켜고 문장이 있는 첫 분석 요청을 보낼 때
 그만큼 응답이 느려질 수 있다는 점만 알아두면 된다.
 
@@ -702,7 +703,8 @@ python scripts\check_image_e2e.py --url http://localhost:8000
 서버 콘솔에 요청 하나당 아래 줄들이 찍힌다(INFO). 문장 본문은 싣지 않는다.
 
 - `request_done method=POST path=/process/image status=200 seconds=..` : 요청 전체 시간과 결과 코드
-- `stage_done label=spai|scam|misinfo seconds=..` : 이미지 판독(SPAI), 글자 추출+사기감지, 가짜정보 판정 각각의 시간
+- `stage_done label=spai|scam|text_judge seconds=..` : 이미지 판독(SPAI), 글자 추출, 사기 판정+가짜정보 판정(Ollama 한 번 올림) 각각의 시간
+- `scam_judge probability=.. chars=..` : 사기 가능성(0~100)과 판정에 넣은 글자 수(3000자에서 자름)
 - `gpu_queue_acquired/released ... wait_seconds=.. run_seconds=..` : GPU 대기열 대기·점유 시간
 - `misinfo_infer 로그:` 아래 줄들(가짜정보 하위 프로세스):
   - `load_kiwi / load_e5 / load_nli / load_speaker seconds=..` : 모델을 읽는 시간(요청마다 새 프로세스라 매번 든다)

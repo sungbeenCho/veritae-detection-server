@@ -20,9 +20,9 @@ class ScamInferenceError(RuntimeError):
 
 
 class ScamResult:
-    def __init__(self, score: float | None, evidence: list[dict], sentences: list[str]):
-        self.score = score
-        self.evidence = evidence
+    """글자 추출 결과(문장 목록). 사기 판정은 이 단계에서 하지 않고 text_judge가 이 문장들로 한다(2026-10-28)."""
+
+    def __init__(self, sentences: list[str]):
         self.sentences = sentences
 
 
@@ -47,7 +47,6 @@ def _run_scam_infer(mode: str, input_bytes: bytes, filename: str) -> ScamResult:
         "--mode", mode,
         "--input", str(input_file),
         "--output", str(output_file),
-        "--lilju-model-id", settings.lilju_model_id,
         "--paddleocr-lang", settings.paddleocr_lang,
         "--whisper-model-size", settings.whisper_model_size,
     ]
@@ -104,7 +103,6 @@ def _run_scam_infer_video(job_dir: Path, audio_file: Path | None, frames_dir: Pa
         str(settings.text_extraction_script),
         "--mode", "video",
         "--output", str(output_file),
-        "--lilju-model-id", settings.lilju_model_id,
         "--paddleocr-lang", settings.paddleocr_lang,
         "--whisper-model-size", settings.whisper_model_size,
     ]
@@ -143,9 +141,7 @@ def _parse_result(output_file: Path) -> ScamResult:
         data = json.loads(output_file.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError, OSError) as e:
         raise ScamInferenceError(f"사기감지 output JSON을 읽거나 파싱할 수 없습니다: {output_file}") from e
-    return ScamResult(
-        score=data.get("score"), evidence=data.get("evidence", []), sentences=data.get("sentences", [])
-    )
+    return ScamResult(sentences=data.get("sentences", []))
 
 
 def run_scam_inference_image(image_bytes: bytes, filename: str) -> ScamResult:

@@ -95,9 +95,10 @@ class Settings:
         self.dfdc_work_dir = Path(os.environ.get("DFDC_WORK_DIR", "./tmp")).resolve()
         self.dfdc_work_dir.mkdir(parents=True, exist_ok=True)
 
-        # --- 사기 위험도 분석(fraud-risk) 설정. OCR(PaddleOCR)/STT(faster-whisper)/
-        # 문장분리(kss)/사기감지(Lilju/voicephishing_kobert)를 전부 별도 conda env
-        # (text-extraction)에 격리한다. GitHub repo clone이 필요 없는 pip 패키지들이라
+        # --- 사기 위험도 분석(fraud-risk) 글자 추출 설정. OCR(EasyOCR)/STT(faster-whisper)/
+        # 문장분리(kss)를 전부 별도 conda env(text-extraction)에 격리한다. 사기 판정 자체는
+        # Lilju 대신 로컬 LLM(ollama_url/ollama_model, 아래 가짜정보 설정과 같은 모델)이 한다(2026-10-28).
+        # GitHub repo clone이 필요 없는 pip 패키지들이라
         # SPAI/AntiDeepfake/dfdc와 달리 REPO_DIR 필수 설정은 없다.
         self.text_extraction_python = os.environ.get("TEXT_EXTRACTION_PYTHON", "python")
         self.text_extraction_script = Path(
@@ -106,7 +107,6 @@ class Settings:
                 str(Path(__file__).resolve().parent.parent / "scripts" / "scam_infer.py"),
             )
         )
-        self.lilju_model_id = os.environ.get("LILJU_MODEL_ID", "Lilju/voicephishing_kobert")
         # 변수명은 PaddleOCR 시절 그대로 남아있지만(호환성 유지), 값은 EasyOCR 언어 코드다
         # (2026-09-15, OCR 엔진을 PaddleOCR에서 EasyOCR로 교체 - 실기에서 EasyOCR이
         # 한글 인식 정확도가 더 높게 나옴).

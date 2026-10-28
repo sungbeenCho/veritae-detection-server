@@ -5,10 +5,13 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.routers import image as image_router
+from app.services import text_judge
 from app.services.gpu_queue import GpuQueueFullError
 from app.services.misinfo_runner import MisinfoInferenceError, MisinfoResult
+from app.services.scam_judge import ScamJudgeError
 from app.services.scam_runner import ScamInferenceError, ScamResult
 from app.services.spai_runner import SpaiInferenceError, SpaiResult
+from tests.text_judge_stubs import FAKE_SCAM_JSON, stub_text_judge  # noqa: F401
 
 client = TestClient(app)
 
@@ -18,7 +21,7 @@ def test_process_image_returns_score(monkeypatch):
         image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.87, None)
     )
     monkeypatch.setattr(
-        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], [])
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -39,7 +42,7 @@ def test_process_image_returns_evidence_image_when_present(monkeypatch):
         image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.87, "base64data")
     )
     monkeypatch.setattr(
-        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], [])
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -55,10 +58,10 @@ def test_process_image_logs_time_of_each_stage_and_whole_request(monkeypatch, ca
     """2분이 어느 단계에서 나가는지 서버 로그만으로 알 수 있어야 한다(2026-10-13: 로그가 없어 원인을 못 찾았다)."""
     monkeypatch.setattr(image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.87, None))
     monkeypatch.setattr(
-        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], ["문장 하나."])
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(["문장 하나."])
     )
     monkeypatch.setattr(
-        image_router, "run_misinfo_inference", lambda sentences: MisinfoResult("qwen3.5:4b", "2026-09-01", [])
+        text_judge, "run_misinfo_inference", lambda sentences: MisinfoResult("qwen3.5:4b", "2026-09-01", [])
     )
 
     with caplog.at_level(logging.INFO, logger="app"):
@@ -68,7 +71,7 @@ def test_process_image_logs_time_of_each_stage_and_whole_request(monkeypatch, ca
         )
 
     assert response.status_code == 200
-    for stage in ("spai", "scam", "misinfo"):
+    for stage in ("spai", "scam", "text_judge"):
         assert f"stage_done label={stage} seconds=" in caplog.text
     assert "request_done method=POST path=/process/image status=200 seconds=" in caplog.text
 
@@ -97,7 +100,7 @@ def test_process_image_returns_502_on_spai_failure(monkeypatch):
 
     monkeypatch.setattr(image_router, "run_spai_inference", raise_error)
     monkeypatch.setattr(
-        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], [])
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -115,10 +118,10 @@ def test_process_image_returns_scam_detection_when_present(monkeypatch):
     monkeypatch.setattr(
         image_router,
         "run_scam_inference_image",
-        lambda data, filename: ScamResult(0.82, [{"sentence": "계좌번호를 알려주세요", "score": 0.95}], ["계좌번호를 알려주세요"]),
+        lambda data, filename: ScamResult(["계좌번호를 알려주세요"]),
     )
     monkeypatch.setattr(
-        image_router,
+        text_judge,
         "run_misinfo_inference",
         lambda sentences: type("R", (), {"model": "qwen3.5:4b", "wiki_snapshot": "2026-09-01", "claims": []})(),
     )
@@ -129,11 +132,7 @@ def test_process_image_returns_scam_detection_when_present(monkeypatch):
     )
 
     assert response.status_code == 200
-    assert response.json()["scam_detection"] == {
-        "model": "lilju",
-        "score": 0.82,
-        "evidence": [{"sentence": "계좌번호를 알려주세요", "score": 0.95}],
-    }
+    assert response.json()["scam_detection"] == FAKE_SCAM_JSON
 
 
 def test_process_image_omits_scam_detection_when_no_text(monkeypatch):
@@ -141,7 +140,7 @@ def test_process_image_omits_scam_detection_when_no_text(monkeypatch):
         image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.87, None)
     )
     monkeypatch.setattr(
-        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], [])
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -178,7 +177,7 @@ def test_process_image_returns_503_when_gpu_queue_full(monkeypatch):
 
     monkeypatch.setattr(image_router, "run_spai_inference", raise_full)
     monkeypatch.setattr(
-        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], [])
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -194,10 +193,10 @@ def test_process_image_includes_misinformation_detection_when_refuted(monkeypatc
     monkeypatch.setattr(
         image_router,
         "run_scam_inference_image",
-        lambda data, filename: ScamResult(None, [], ["선풍기를 틀고 자면 사망한다."]),
+        lambda data, filename: ScamResult(["선풍기를 틀고 자면 사망한다."]),
     )
     monkeypatch.setattr(
-        image_router,
+        text_judge,
         "run_misinfo_inference",
         lambda sentences: type(
             "R", (), {"model": "qwen3.5:4b", "wiki_snapshot": "2026-09-01",
@@ -221,11 +220,11 @@ def test_process_image_includes_misinformation_detection_when_refuted(monkeypatc
 def test_process_image_omits_misinformation_detection_when_no_sentences(monkeypatch):
     monkeypatch.setattr(image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.1, None))
     monkeypatch.setattr(
-        image_router, "run_scam_inference_image", lambda data, filename: ScamResult(None, [], [])
+        image_router, "run_scam_inference_image", lambda data, filename: ScamResult([])
     )
     called = []
     monkeypatch.setattr(
-        image_router, "run_misinfo_inference", lambda sentences: called.append(sentences)
+        text_judge, "run_misinfo_inference", lambda sentences: called.append(sentences)
     )
 
     response = client.post(
@@ -242,13 +241,13 @@ def test_process_image_returns_502_when_misinfo_inference_fails(monkeypatch):
     monkeypatch.setattr(
         image_router,
         "run_scam_inference_image",
-        lambda data, filename: ScamResult(None, [], ["아무 문장"]),
+        lambda data, filename: ScamResult(["아무 문장"]),
     )
 
     def raise_error(sentences):
         raise MisinfoInferenceError("boom")
 
-    monkeypatch.setattr(image_router, "run_misinfo_inference", raise_error)
+    monkeypatch.setattr(text_judge, "run_misinfo_inference", raise_error)
 
     response = client.post(
         "/process/image",
@@ -256,3 +255,25 @@ def test_process_image_returns_502_when_misinfo_inference_fails(monkeypatch):
     )
 
     assert response.status_code == 502
+
+
+def test_process_image_returns_502_when_scam_judgment_fails(monkeypatch):
+    monkeypatch.setattr(image_router, "run_spai_inference", lambda data, filename: SpaiResult(0.1, None))
+    monkeypatch.setattr(
+        image_router,
+        "run_scam_inference_image",
+        lambda data, filename: ScamResult(["아무 문장"]),
+    )
+
+    def raise_error(sentences):
+        raise ScamJudgeError("boom")
+
+    monkeypatch.setattr(text_judge, "judge_scam", raise_error)
+
+    response = client.post(
+        "/process/image",
+        files={"file": ("test.jpg", io.BytesIO(b"fake-image-bytes"), "image/jpeg")},
+    )
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "사기감지 처리 중 오류가 발생했습니다."
