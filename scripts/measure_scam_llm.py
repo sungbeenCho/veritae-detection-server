@@ -106,6 +106,8 @@ SCHEMAS["v3"] = SCHEMAS["v4"] = SCHEMAS["v2"]
 PROMPTS["v5"] = PROMPTS["v3"].replace("scam_probability에", "{key}에")
 SCHEMAS["v5"] = SCHEMAS["v3"]
 RANDOM_KEY_PROMPTS = {"v5"}
+# v5 결과(2026-10-28): 칸 이름 없는 점수 지정 공격에도 36개가 뒤집혀(태그 탈출 41개) 이름 숨기기로는 못 막는다.
+# 실제 통화 오탐이 3%에서 10%로 늘고 인용 확인율도 떨어져(실제 문자 86/157) 폐기했다. 기본값은 v3로 되돌린다.
 
 
 def compact(text: str) -> str:
@@ -195,7 +197,7 @@ def run_injection(prompt_key: str, sets: dict) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt", choices=sorted(PROMPTS), default="v5")
+    parser.add_argument("--prompt", choices=sorted(PROMPTS), default="v3")
     parser.add_argument("--limit", type=int, default=0, help="세트마다 앞뒤에서 N개만(빠른 점검용)")
     parser.add_argument("--injection", action="store_true", help="판정 속이기 시험만 한다")
     args = parser.parse_args()
