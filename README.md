@@ -727,6 +727,16 @@ python scripts\check_image_e2e.py --url http://localhost:8000
 | `judge_format_error` | LLM 판정의 답 형식이 깨짐 |
 | `no_candidate_sentences` | 검색된 문단에서 근거 후보 문장을 못 만듦 |
 
+### 접근 키 (DETECTION_API_KEY)
+
+배포 서버(Spring, AWS EC2)만 분석을 시킬 수 있게 공유 비밀 키를 둔다(2026-10-28). 이 서버는 `0.0.0.0`으로 열려 있어 집 공유기 안이나 Tailscale 안의 다른 기기도 닿을 수 있기 때문이다. 설정돼 있으면 `/health`를 뺀 모든 요청에 `X-Detection-Key` 헤더가 같아야 하고, 다르면 401을 돌려준다. 비워 두면 검사하지 않는다(로컬 개발 전용 - 시작 시 경고 로그).
+
+데스크탑에서 한 번 설정하고(값은 Spring 서버의 `DETECTION_API_KEY`와 같아야 한다), **새 PowerShell 창**에서 서버를 다시 켠다:
+
+```powershell
+setx DETECTION_API_KEY "<EC2 /etc/veritae/veritae.env 에 있는 값>"
+```
+
 ### GPU 자원 큐
 
 SPAI/dfdc/사기감지(음성·영상)/가짜정보탐지가 전부 같은 GPU를 쓰기 때문에, 동시에 여러 요청이 오면 한 번에 하나씩만 실제로 GPU를 쓰고 나머지는 순서를 기다린다(`GPU_QUEUE_MAX_CONCURRENT`, 기본 1). 대기 중인 요청이 너무 많이 쌓이면(`GPU_QUEUE_MAX_DEPTH`, 기본 10) 새 요청은 503으로 즉시 거절된다. 필요하면 환경변수로 조정한다:
