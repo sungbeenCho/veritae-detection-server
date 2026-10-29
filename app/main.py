@@ -17,7 +17,7 @@ app = FastAPI(title="Veritae Detection Server")
 
 # Spring 서버만 분석을 시킬 수 있게 하는 공유 비밀 키(2026-10-28, 배포 준비). 이 서버는 0.0.0.0으로 열려 있어
 # 집 공유기 안·Tailscale 안의 다른 기기도 닿을 수 있다 - 키가 맞는 요청만 GPU를 쓰게 한다.
-# 비워 두면(로컬 개발) 검사하지 않는다. 데스크탑 운영 환경에서는 반드시 설정한다(README).
+# 비워 두면(로컬 개발) 검사하지 않는다. 데스크탑 운영 환경에서는 반드시 설정한다(docs/SETUP.md).
 API_KEY = os.environ.get("DETECTION_API_KEY", "")
 API_KEY_HEADER = "X-Detection-Key"
 if not API_KEY:

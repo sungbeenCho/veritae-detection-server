@@ -1,6 +1,6 @@
 # 사기감지 분류기 학습 데이터 작성 지침 (3판, 2026-10-18)
 
-설계서: veritae-server `docs/superpowers/specs/2026-10-18-scam-classifier-design.md` 4장.
+처음에는 Lilju 모델을 대신할 분류기를 직접 학습하려고 만든 지침이다. 분류기 학습은 하지 않고 로컬 LLM 판정으로 바꿨고(2026-10-27), 이 지침으로 쓴 세트(`eval_hard_G/H/I.json`)는 지금 `scripts/measure_scam_llm.py`가 "헷갈리는 문자·통화" 시험 세트로 쓴다(`measure_scam_models.load_sets`).
 
 ## 바뀐 이유
 - 1·2차 시범은 같은 작성자가 사기/정상 "짝"을 썼다.

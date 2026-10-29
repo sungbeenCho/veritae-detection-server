@@ -65,7 +65,7 @@ python run_regression.py --wiki-index C:\ai\veritae-detection-server\data\wiki_i
 - 통과 조건: 네 세트 모두 위험 오답 0건, 잘못된 근거 문장 0건. 잡아낸 거짓 문장 수는 직전
   실측과 비교해 함께 보고한다.
 - 그룹마다 `결과별 문장 수`(outcome별 개수)를 출력한다. 거짓 문장을 놓쳤을 때 검색·판정 중 어디서
-  끝났는지 본다(outcome 뜻은 레포 README의 "로그 읽는 법" 표).
+  끝났는지 본다(outcome 뜻은 docs/SETUP.md의 "로그 읽는 법" 표).
 - `--dump-candidates`로 저장한 기록에는 문장마다 LLM 판정(`first`: 핵심 주장, 인용 문단, 이유, 판정)과
   `outcome`, 후보 문장 전체의 NLI 점수가 들어 있다.
 - `cases_basic.json`/`cases_hard.json`(참고용)의 결과는 지금 파이프라인과 직접 비교할 수
@@ -73,4 +73,4 @@ python run_regression.py --wiki-index C:\ai\veritae-detection-server\data\wiki_i
 
 ## 판정 방식(2026-10-18)과 이 회귀 도구
 
-서버 기본 판정 방식은 `split`(README '판정 방식')인데, `run_regression.py`는 판정 함수 `judge_sentence`를 직접 불러 **`current` 흐름만** 잰다. `split`과의 비교는 `scripts/measure_final.py`(지금·나눔·나눔+A·제목검색, 기존 225문장 + 새 문장 `cases_fresh2.json`)로 한다. 판정 방식을 바꾸거나 판정 지시문을 고친 뒤에는 그 도구로 다시 재고, 서버 경로는 `scripts/check_image_e2e.py`로 확인한다.
+서버 기본 판정 방식은 `split`(docs/SETUP.md '판정 방식')인데, `run_regression.py`는 판정 함수 `judge_sentence`를 직접 불러 **`current` 흐름만** 잰다. `split`과의 비교는 `scripts/measure_final.py`(지금·나눔·나눔+A·제목검색, 기존 225문장 + 새 문장 `cases_fresh2.json`)로 한다. 판정 방식을 바꾸거나 판정 지시문을 고친 뒤에는 그 도구로 다시 재고, 서버 경로는 `scripts/check_image_e2e.py`로 확인한다.

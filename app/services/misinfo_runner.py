@@ -40,7 +40,7 @@ def _check_nli_model(nli_model: Path) -> None:
     if not (nli_model.is_dir() and (nli_model / "config.json").is_file()):
         raise MisinfoInferenceError(
             f"NLI 모델 폴더를 찾을 수 없습니다: {nli_model} "
-            "(scripts/train_nli.py로 만들거나 환경변수 MISINFO_NLI_MODEL로 경로를 지정하세요 - README 참고)"
+            "(scripts/train_nli.py로 만들거나 환경변수 MISINFO_NLI_MODEL로 경로를 지정하세요 - docs/SETUP.md 참고)"
         )
 
 

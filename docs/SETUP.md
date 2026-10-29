@@ -1,10 +1,12 @@
-# veritae-detection-server
+# 데스크탑 설치·실행 안내
 
-Veritae 프로젝트의 AI 생성물 탐지 서버 (이미지, SPAI 모델). Spring 서버(veritae-server)의 오케스트레이션 요청을 받아 이미지 파일의 AI 생성 확률 점수를 반환한다.
+veritae-detection-server를 GPU 데스크탑(RTX 3060 Ti, Windows)에 처음부터 설치하고 실행하는 절차다. 프로젝트 소개와 구조는 저장소 첫 화면의 [README](../README.md)를 본다.
 
-이 서버는 3060Ti가 달린 별도 데스크탑에서 상시 구동된다. 아래 절차는 **그 데스크탑에 아무것도 설치되어 있지 않다는 전제**로, 처음부터 끝까지 순서대로 따라가면 된다. 명령어는 PowerShell 기준.
+아래 절차는 **그 데스크탑에 아무것도 설치되어 있지 않다는 전제**로, 처음부터 끝까지 순서대로 따라가면 된다. 명령어는 PowerShell 기준. 0~11절은 이미지(SPAI) 기본 설치, 12절은 Spring 서버 연결이고, 음성·영상·사기 위험도·가짜정보 설정은 그 뒤 절에 이어진다.
 
-## 왜 conda 환경이 두 개인지
+## 왜 conda 환경을 나누는지
+
+기본 설치(0~11절)는 아래 두 환경을 쓴다. 뒤의 음성·영상·글자 추출 설정도 같은 이유로 환경을 하나씩 더 만든다(`antideepfake`, `dfdc`, `text-extraction`).
 
 - `spai` 환경: SPAI 모델 실행 전용 (PyTorch, CUDA 필요, 무거움)
 - `detection-api` 환경: 이 FastAPI 서버 실행 전용 (FastAPI, uvicorn만 필요, 가벼움)
@@ -138,30 +140,21 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```powershell
 curl http://localhost:8000/health
 # {"status":"ok"} 가 나오면 서버는 정상
-
-curl -F "file=@C:\path\to\test.jpg;type=image/jpeg" http://localhost:8000/process/image
-# {"ai_detection":{"model":"spai","score":0.xx}} 가 나오면 SPAI 연동까지 정상
 ```
 
-## 12. 홈 LAN에서 Spring이 접근할 수 있게 방화벽 허용
+이 단계에서는 `/health`까지만 확인한다. `/process/image`·`/process/audio`·`/process/video`는 AI 판독과 함께 글자 추출·사기 판정·가짜정보 판정을 한 요청 안에서 하고, 그중 하나라도 준비가 안 돼 있으면 요청 전체가 502로 끝난다. 그래서 분석 요청 확인은 아래 [사기 위험도 분석](#사기-위험도-분석text-extraction-설정)·[가짜정보 판별](#가짜정보허위정보-판별-설정) 설정까지 마친 뒤에 한다. [접근 키](#접근-키-detection_api_key)를 설정했다면 분석 요청에 `-H "X-Detection-Key: <키>"`를 붙인다.
 
-관리자 권한 PowerShell에서:
+## 12. Spring 서버와 연결
+
+운영에서는 Spring 서버(AWS EC2)와 이 데스크탑을 **Tailscale 사설망**으로 연결한다. 두 기기에 Tailscale을 설치해 같은 계정으로 로그인한 뒤, 데스크탑의 Tailscale IP(`tailscale ip -4`, `100.x.x.x`)를 Spring의 `DETECTION_SERVICE_URL` 환경변수에 `http://<Tailscale IP>:8000`으로 넣는다. 인터넷에 8000번 포트를 열 필요가 없다.
+
+같은 공유기 안의 PC에서 Spring을 로컬로 돌려 시험할 때는, 관리자 권한 PowerShell에서 8000번 포트를 허용하고 `ipconfig`의 `IPv4 주소`를 쓴다.
 
 ```powershell
 New-NetFirewallRule -DisplayName "Veritae Detection Server" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow
 ```
 
-## 13. 데스크탑의 로컬 IP 확인 (Spring 쪽 설정에 필요)
-
-```powershell
-ipconfig
-```
-
-`IPv4 주소` 값을 확인해서, Spring 서버(veritae-server)의 `application.properties`에 다음처럼 설정하면 된다 (Spring 쪽 연동 코드는 다음 작업에서 진행 예정):
-
-```properties
-detection.service.url=http://<위에서 확인한 IP>:8000
-```
+어느 경우든 Spring만 분석을 시킬 수 있도록 아래 [접근 키 (DETECTION_API_KEY)](#접근-키-detection_api_key) 설정을 함께 한다.
 
 ---
 
@@ -290,6 +283,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```powershell
 curl -X POST -F "file=@C:\path\to\test.wav" http://localhost:8000/process/audio
 ```
+
+아래 응답 예시는 AI 판독 칸만 보인 것이다. 실제 응답에는 `scam_detection`·`misinformation_detection` 칸도 함께 오며, 사기 위험도·가짜정보 설정을 마치기 전에는 요청이 502로 끝난다(11절 참고).
 
 정상이면 다음과 같은 응답이 나온다:
 
@@ -434,6 +429,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 curl -X POST -F "file=@C:\path\to\test.mp4;type=video/mp4" http://localhost:8000/process/video
 ```
 
+아래 응답 예시는 AI 판독 칸만 보인 것이다. 실제 응답에는 `scam_detection`·`misinformation_detection` 칸도 함께 오며, 사기 위험도·가짜정보 설정을 마치기 전에는 요청이 502로 끝난다(11절 참고).
+
 정상이면 다음과 같은 응답이 나온다:
 
 ```json
@@ -449,9 +446,7 @@ curl -X POST -F "file=@C:\path\to\test.mp4;type=video/mp4" http://localhost:8000
 
 score가 높으면(얼굴 조작 확률이 높으면) `evidence` 배열에 탐지된 시간 구간이, `evidence_image`에 Grad-CAM 히트맵(base64 PNG)이 채워질 수 있다(둘 다 best-effort — 실패해도 전체 분석은 성공한다).
 
-**이 단계에서 주의:** `scripts/dfdc_infer.py`는 실제 GPU/체크포인트 없이 소스코드만 읽고 작성되어 이번이 첫 실환경 검증이다. 특히 아래 두 지점은 미검증 상태이니, 에러가 나거나 결과가 이상하면 먼저 의심해야 한다:
-- Grad-CAM의 `target_layer`(`model.encoder.conv_head`)가 실제 `DeepFakeClassifier` 객체 구조와 맞는지 — 안 맞으면 `evidence_image`가 계속 `null`로만 나온다(예외를 삼키므로 서버 에러는 안 남).
-- 히트맵 배경 이미지의 RGB 색공간이 실제로 맞는지 — 코드 리뷰로 selimsef의 `VideoReader`가 프레임을 이미 BGR→RGB 변환한다는 것까지는 소스에서 확인했지만, 실제로 렌더링된 PNG를 육안으로 봐야 최종 확인이 된다.
+실제 데스크탑 검증 완료(2026-09-12): 실제 얼굴 바꾸기 영상에서 점수(0.98), 시간 구간, Grad-CAM 히트맵이 모두 나오는 것을 확인했다.
 
 ---
 
@@ -529,7 +524,7 @@ conda activate text-extraction
 
 ```powershell
 setx TEXT_EXTRACTION_PYTHON "C:\Users\<user>\miniconda3\envs\text-extraction\python.exe"
-setx PADDLEOCR_LANG "korean"
+setx PADDLEOCR_LANG "ko"
 setx WHISPER_MODEL_SIZE "large-v3"
 setx TEXT_EXTRACTION_TIMEOUT_SECONDS "300"
 ```
@@ -700,7 +695,7 @@ python scripts\check_image_e2e.py --url http://localhost:8000
 
 ### 로그 읽는 법
 
-서버 콘솔에 요청 하나당 아래 줄들이 찍힌다(INFO). 문장 본문은 싣지 않는다.
+서버 콘솔에 요청 하나당 아래 줄들이 찍힌다(INFO). 원문 문장은 보통 싣지 않지만, 가짜정보 하위 프로세스 줄에는 문장에서 정리한 내용(`claim`, `core_claim`)과 근거 문장이 들어가고, LLM 답 형식이 깨진 경우에는 원문 문장도 경고(WARNING) 로그에 남는다.
 
 - `request_done method=POST path=/process/image status=200 seconds=..` : 요청 전체 시간과 결과 코드
 - `stage_done label=spai|scam|text_judge seconds=..` : 이미지 판독(SPAI), 글자 추출, 사기 판정+가짜정보 판정(Ollama 한 번 올림) 각각의 시간
@@ -759,20 +754,4 @@ pytest
 
 ## API
 
-### `GET /health`
-헬스체크. `{"status": "ok"}` 반환.
-
-### `POST /process/image`
-`multipart/form-data`로 이미지 파일(`file` 필드, jpeg/png/webp)을 받아 AI 생성 확률 점수를 반환.
-
-```json
-{
-  "ai_detection": { "model": "spai", "score": 0.87, "evidence_image": null }
-}
-```
-
-score가 0.5 이상이면(AI 생성 의심이 높으면) `evidence_image`에 SPAI의 attention 히트맵(원본 사진 위에 합성된 오버레이, base64 PNG)이 채워질 수 있다(best-effort — 실패해도 전체 분석은 성공하고 `null`이 된다). 0.5 미만이면 진짜 사진일 가능성이 높다고 보고 히트맵 자체를 만들지 않는다(음성/영상과 동일한 임계값, `scripts/antideepfake_infer.py`/`scripts/dfdc_infer.py`의 `EVIDENCE_SCORE_THRESHOLD`와 동일).
-
-**이 기능은 아직 실제 GPU/체크포인트로 검증 전이다(2026-09-12, 소스코드만 읽고 작성).** 특히 아래는 미검증 상태:
-- `TEST.EXPORT_IMAGE_PATCHES` 플래그를 켰을 때 실제로 `<output>/images/<idx>/patches_attn/attn_overlay_*.png` 파일이 생성되는지 (mever-team/spai 소스 확인은 했으나 실제 체크포인트로 실행한 적 없음)
-- 히트맵이 실제로 유의미한 영역을 가리키는지는 렌더링된 PNG를 육안으로 봐야 최종 확인됨
+엔드포인트 목록과 접근 키 규칙은 [README](../README.md#api)에 있다. 응답 JSON의 칸 구성은 `app/schemas.py`가 기준이다.

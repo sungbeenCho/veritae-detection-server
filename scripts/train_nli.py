@@ -4,10 +4,10 @@
 라이선스가 명시된 한국어 NLI 분류기가 없어(2026-10-01 조사: HuggingFace의 KLUE-NLI 모델 대부분이 라이선스
 표기 없음) 직접 학습한다. 원재료인 KLUE 데이터셋과 KLUE-RoBERTa 모델은 모두 CC BY-SA 4.0이라(KLUE 공식 저장소
 github.com/KLUE-benchmark/KLUE의 License 항목 - HuggingFace 모델 카드에는 표기가 없다), 학습 결과도
-CC BY-SA 4.0을 따른다(출처 표기 필요 - README 참고). 같은 방법으로 학습된 공개 모델(라이선스 없음)로 노트북에서
+CC BY-SA 4.0을 따른다(출처 표기 필요 - docs/SETUP.md 참고). 같은 방법으로 학습된 공개 모델(라이선스 없음)로 노트북에서
 미리 시험했을 때 실제 위키 문단에서 진짜 반박 문장과 아닌 문장을 가장 잘 구분했다(nli_check.py 참고).
 
-GPU가 필요하다(3060Ti 8GB 기준 약 1~2시간). CUDA용 PyTorch가 든 별도 conda 환경에서 실행한다 - README 참고.
+GPU가 필요하다(3060Ti 8GB 기준 약 1~2시간). CUDA용 PyTorch가 든 별도 conda 환경에서 실행한다 - docs/SETUP.md 참고.
 사용: python train_nli.py --output C:\\ai\\veritae-detection-server\\data\\nli_model
 
 보충 학습(--init-model + --augment): 이미 학습한 모델에서 이어서, 위키가 속설을 반박할 때 쓰는 평가형 문장

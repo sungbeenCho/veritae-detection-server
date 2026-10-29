@@ -60,7 +60,7 @@ def _decode_to_wav_if_needed(audio_path: Path) -> Path:
     """torchaudio(soundfile 백엔드)는 비압축 포맷(wav/flac/ogg)만 읽을 수 있다.
     폰 녹음은 보통 압축 포맷(m4a/mp4/mp3/aac)이라 실측(2026-08-25, 실제 카카오톡
     녹음 파일)에서 soundfile.LibsndfileError로 실패하는 걸 확인했다 - ffmpeg로 먼저
-    wav로 변환한다. ffmpeg가 PATH에 있어야 한다(README 사전 준비 참고)."""
+    wav로 변환한다. ffmpeg가 PATH에 있어야 한다(docs/SETUP.md 사전 준비 참고)."""
     if audio_path.suffix.lower() in {".wav", ".flac", ".ogg"}:
         return audio_path
     converted_path = audio_path.with_name(audio_path.stem + "_converted.wav")

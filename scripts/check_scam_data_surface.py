@@ -3,7 +3,7 @@
 
 Lilju 대체 분류기 데이터(tests/scam/*.json, 지침 tests/scam/SPEC.md)를 학습하기 전에 돌린다. 겉모양(길이, 문장 수,
 문장부호, 숫자, 존댓말 끝맺음)이 라벨과 엮여 있으면 모델이 사기 '행위'가 아니라 작성 습관을 배운다(KorCCVi가
-출처만으로 라벨이 맞혀진 것과 같은 실패). 설계서 veritae-server docs/superpowers/specs/2026-10-18-scam-classifier-design.md 4.3.
+출처만으로 라벨이 맞혀진 것과 같은 실패). 분류기 학습은 하지 않기로 했지만(2026-10-27, LLM 판정으로 대체) 시험 세트 점검에 그대로 쓸 수 있다.
 
 판정 규칙이 아니라 데이터 점검용이다. numpy만 쓴다.
 사용: python check_scam_data_surface.py ..\\tests\\scam\\pilot_A.json ..\\tests\\scam\\pilot_B.json
