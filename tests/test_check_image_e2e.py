@@ -79,6 +79,7 @@ def fake_server():
         def do_POST(self):
             state["received"] = self.rfile.read(int(self.headers["Content-Length"]))
             state["path"] = self.path
+            state["key"] = self.headers.get("X-Detection-Key")
             data = json.dumps(state["body"]).encode()
             self.send_response(state["status"])
             self.send_header("Content-Length", str(len(data)))
@@ -119,3 +120,21 @@ def test_run_reports_failure_when_server_is_unreachable():
 
     assert ok is False
     assert any("연결" in line for line in lines)
+
+
+def test_run_sends_detection_key_header_when_env_is_set(fake_server, monkeypatch):
+    # 2026-10-28부터 데스크탑 서버는 DETECTION_API_KEY가 맞지 않으면 401을 돌려준다 - 확인 스크립트도 같은 키를 보내야 한다.
+    monkeypatch.setenv("DETECTION_API_KEY", "secret-key")
+
+    ok, _ = run(fake_server["url"], SAMPLE_IMAGE, expect="선풍기", timeout=10)
+
+    assert ok is True
+    assert fake_server["key"] == "secret-key"
+
+
+def test_run_omits_detection_key_header_when_env_is_empty(fake_server, monkeypatch):
+    monkeypatch.delenv("DETECTION_API_KEY", raising=False)
+
+    run(fake_server["url"], SAMPLE_IMAGE, expect="선풍기", timeout=10)
+
+    assert fake_server["key"] is None

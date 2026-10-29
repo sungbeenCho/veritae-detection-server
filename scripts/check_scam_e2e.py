@@ -19,7 +19,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from check_image_e2e import DEFAULT_TIMEOUT_SECONDS, build_multipart
+from check_image_e2e import DEFAULT_TIMEOUT_SECONDS, build_multipart, request_headers
 
 SAMPLES = Path(__file__).resolve().parent.parent / "tests" / "samples"
 # (이름, 경로, 엔드포인트, content-type, 사기여야 하는지)
@@ -35,7 +35,7 @@ MODEL_SUFFIX = "-scam-v3"
 def post(url: str, endpoint: str, path: Path, content_type: str, timeout: float) -> tuple[dict | None, str]:
     body, header = build_multipart("file", path.name, content_type, path.read_bytes())
     request = urllib.request.Request(
-        f"{url.rstrip('/')}/process/{endpoint}", data=body, headers={"Content-Type": header}, method="POST"
+        f"{url.rstrip('/')}/process/{endpoint}", data=body, headers=request_headers(header), method="POST"
     )
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:

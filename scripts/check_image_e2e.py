@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -57,11 +58,21 @@ def evaluate(response: dict, expect: str) -> tuple[bool, list[str]]:
     return False, lines
 
 
+def request_headers(content_type: str) -> dict[str, str]:
+    """서버가 DETECTION_API_KEY로 보호돼 있으면(2026-10-28~) 같은 키를 X-Detection-Key 헤더로 보낸다 - 서버를 켠 창과
+    같은 환경변수를 읽는다. 비어 있으면 헤더 없이 보낸다(키 검사를 끈 로컬 개발 서버)."""
+    headers = {"Content-Type": content_type}
+    api_key = os.environ.get("DETECTION_API_KEY", "")
+    if api_key:
+        headers["X-Detection-Key"] = api_key
+    return headers
+
+
 def run(url: str, image: Path, expect: str, timeout: float = DEFAULT_TIMEOUT_SECONDS) -> tuple[bool, list[str]]:
     content_type = "image/png" if image.suffix.lower() == ".png" else "image/jpeg"
     body, header = build_multipart("file", image.name, content_type, image.read_bytes())
     request = urllib.request.Request(
-        f"{url.rstrip('/')}/process/image", data=body, headers={"Content-Type": header}, method="POST"
+        f"{url.rstrip('/')}/process/image", data=body, headers=request_headers(header), method="POST"
     )
     start = time.perf_counter()
     try:
