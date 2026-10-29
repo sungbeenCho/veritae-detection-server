@@ -1,5 +1,7 @@
 # scripts/misinfo_infer.py
-"""문장 목록 -> 위키 검색 -> e5 재정렬 -> LLM 판정 -> 반박된 문장만 결과로.
+"""문장 목록 -> 위키 검색 -> e5 재정렬 -> 앞뒤 문맥과 문서 첫 문단 붙이기 -> LLM 1차 판정 -> 반박이면 근거 문장 하나와
+링크를 결과로. 근거 문장은 e5로 주장과 가까운 후보 15개를 NLI가 채점해 모순 점수 0.8 이상인 문장 중 판정 이유와 가장 가까운 문장, 없으면 판정이
+인용한 문단에서 판정 이유와 가장 가까운 문장이다. NLI는 판정을 버리지 않는다(2026-10-14).
 text-extraction conda env(kiwipiepy, mwparserfromhell, torch, transformers 설치됨)에서
 실행되어야 한다. veritae-detection-server(FastAPI)는 이 스크립트를 subprocess로 호출하고
 --output 경로의 JSON만 읽는다 - scam_infer.py와 동일한 패턴.
@@ -9,22 +11,57 @@ docs(veritae-server 레포): docs/superpowers/specs/2026-09-29-misinformation-de
 import argparse
 import json
 import logging
+import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
+# 프로세스 시작 직후 시각 - 아래 무거운 임포트(kiwipiepy 등)에 걸린 시간을 startup으로 잰다.
+_PROCESS_START = time.perf_counter()
+
 from kiwipiepy import Kiwi
 
-from misinfo_lib import build_claim, build_prompt, parse_llm_response
-from wiki_index import extract_keywords, get_snapshot, search
+from misinfo_lib import (
+    CLAIM_JUDGE_SCHEMA,
+    CLAIM_JUDGE_TEMPLATE_A,
+    EXTRACT_SCHEMA,
+    JUDGE_SCHEMA,
+    JUDGE_TEMPLATE,
+    JUDGE_TEMPLATE_A,
+    SPEAKER_DENIES,
+    SPEAKER_FROM_NLI,
+    SPEAKER_NO_FACT,
+    build_claim,
+    build_extract_prompt,
+    build_judge_prompt,
+    fit_blocks,
+    parse_claim_judge_response,
+    parse_extract_response,
+    parse_judge_response,
+    replace_block_numbers,
+    sentence_is_wrong,
+)
+from misinfo_timing import StepTimer, configure_script_logging, format_ollama_stats, logged_step
+from nli_check import (
+    NLI_THRESHOLD,
+    ContradictionScorer,
+    NliModel,
+    candidate_sentences,
+    default_model_path,
+    pick_best_contradiction,
+)
+from wiki_index import (
+    Chunk,
+    expand_with_neighbors,
+    extract_keywords,
+    get_snapshot,
+    search,
+    title_chunks,
+    web_search_terms,
+)
 
-OLLAMA_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "label": {"type": "string", "enum": ["지지", "반박", "판단불가"]},
-        "reason": {"type": "string"},
-    },
-    "required": ["label", "reason"],
-}
+# 이름 있는 로거를 쓴다 - 회귀 테스트가 이 로거만 자세히 보여주고 httpx/HuggingFace 로그는 끌 수 있게.
+logger = logging.getLogger("misinfo")
 
 EMBEDDING_MODEL_ID = "intfloat/multilingual-e5-small"
 
@@ -40,14 +77,16 @@ _embed_device = "cpu"
 def _load_embed_model():
     global _embed_tokenizer, _embed_model, _embed_device
     if _embed_model is None:
-        import torch
-        from transformers import AutoModel, AutoTokenizer
+        # torch/transformers 임포트와 모델 읽기 시간을 함께 잰다 - 요청마다 새 프로세스라 매번 든다(2026-10-13).
+        with logged_step("load_e5"):
+            import torch
+            from transformers import AutoModel, AutoTokenizer
 
-        _embed_tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL_ID)
-        _embed_model = AutoModel.from_pretrained(EMBEDDING_MODEL_ID)
-        _embed_model.eval()
-        _embed_device = "cuda" if torch.cuda.is_available() else "cpu"
-        _embed_model.to(_embed_device)
+            _embed_tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL_ID)
+            _embed_model = AutoModel.from_pretrained(EMBEDDING_MODEL_ID)
+            _embed_model.eval()
+            _embed_device = "cuda" if torch.cuda.is_available() else "cpu"
+            _embed_model.to(_embed_device)
     return _embed_tokenizer, _embed_model, _embed_device
 
 
@@ -64,32 +103,94 @@ def embed(texts: list[str]):
     return torch.nn.functional.normalize(vectors, dim=-1).cpu()
 
 
-def rerank(sentence: str, candidates: list[tuple[str, str]], top_k: int) -> list[tuple[str, str]]:
+# 한 문서에서 고를 수 있는 조각 수. 상위 5개가 전부 한 문서('선풍기 사망설', '에펠탑의 레플리카…')
+# 조각이라 다른 문서의 근거('미신' 문서의 "선풍기 미신" 등)가 밀려났다(2026-10-01 실측). 앞뒤 문맥을
+# 붙이므로 한 문서에서 2개면 그 문서의 내용은 충분히 담긴다.
+MAX_CHUNKS_PER_TITLE = 2
+
+
+def rerank(sentence: str, candidates: list[Chunk], top_k: int) -> list[Chunk]:
     if not candidates:
         return []
     query_vec = embed(["query: " + sentence])
-    passage_vecs = embed([f"passage: {title} {text}" for title, text in candidates])
+    passage_vecs = embed([f"passage: {c.title} {c.text}" for c in candidates])
     scores = (passage_vecs @ query_vec.T).squeeze(-1)
-    top_indices = scores.argsort(descending=True)[:top_k].tolist()
-    return [candidates[i] for i in top_indices]
+    return pick_diverse([candidates[i] for i in scores.argsort(descending=True).tolist()], top_k)
 
 
-def ask_ollama(ollama_url: str, model: str, prompt: str) -> str:
+# NLI로 채점할 후보 문장 수. 검색 문단 전체를 문장으로 쪼개면 평균 42개(최대 56개)인데, 전부 채점하면 NLI가
+# 오래 걸리고(text-extraction 환경은 CPU 전용일 수 있음) 주장과 무관한 문장에 높은 점수가 나올 기회도 늘어난다.
+# e5로 주장과 가까운 문장만 먼저 추린다. 2026-10-13 기록 대조(59문장, LLM 1차가 반박이라 한 30개)에서 5개는 24개,
+# 10개는 24개, 15개는 26개를 잡았고 20개나 전체도 26개로 같았다(참을 거짓으로 띄운 건은 어느 크기에서도 0건).
+# 10-01에는 이 단계 뒤에 LLM이 근거 문장을 골랐는데 엉뚱한 문장을 골라 맞는 반박 7개를 버려서 없앴다.
+NLI_SHORTLIST_SIZE = 15
+
+
+def shortlist_sentences(claim: str, candidates: list[tuple[str, str]], size: int = NLI_SHORTLIST_SIZE) -> list[tuple[str, str]]:
+    """(제목, 문장) 후보 중 claim과 의미가 가까운 순으로 size개."""
+    if len(candidates) <= size:
+        return candidates
+    query_vec = embed(["query: " + claim])
+    passage_vecs = embed([f"passage: {sentence}" for _, sentence in candidates])
+    scores = (passage_vecs @ query_vec.T).squeeze(-1)
+    return [candidates[i] for i in scores.argsort(descending=True).tolist()[:size]]
+
+
+def closest_to_reason(reason: str, candidates: list[tuple[str, str]]) -> tuple[str, str]:
+    """(제목, 문장) 후보 중 판정 이유와 의미가 가장 가까운 문장. NLI가 근거 문장을 못 찾았을 때 화면 근거로 쓴다 -
+    2026-10-14 기록 대조에서 인용 문단 안의 이 문장은 대부분 이유가 가리키는 바로 그 문장이었다("빛은 달에서 생성된
+    것이 아닌 햇빛의 일부를 … 반사해 생긴 것이다", "공용어는 한국어이며 수도는 서울특별시이다")."""
+    if len(candidates) == 1:
+        return candidates[0]
+    query_vec = embed(["query: " + reason])
+    passage_vecs = embed([f"passage: {sentence}" for _, sentence in candidates])
+    scores = (passage_vecs @ query_vec.T).squeeze(-1)
+    return candidates[int(scores.argmax())]
+
+
+def pick_diverse(ranked: list[Chunk], top_k: int, per_title: int = MAX_CHUNKS_PER_TITLE) -> list[Chunk]:
+    """순위 순으로 고르되 한 문서에서는 per_title개까지만 고른다."""
+    picked: list[Chunk] = []
+    counts: dict[str, int] = {}
+    for chunk in ranked:
+        if counts.get(chunk.title, 0) < per_title:
+            picked.append(chunk)
+            counts[chunk.title] = counts.get(chunk.title, 0) + 1
+            if len(picked) == top_k:
+                break
+    return picked
+
+
+# 모델이 입력과 출력을 합쳐 한 번에 다룰 수 있는 토큰 수. 서버 기본값(데스크탑 실측 4096)에
+# 기대지 않고 명시한다 - 입력이 이 한도를 넘으면 Ollama가 프롬프트 앞부분(지시문)을 조용히
+# 잘라내고, 출력이 남은 한도를 넘으면 JSON을 다 쓰기 전에 멈춰 빈 응답이 된다(2026-10-01 실측:
+# 생각 모드가 4096을 다 써서 done_reason=length, response=''). 입력 크기는 misinfo_lib.fit_blocks가
+# 이 한도 안으로 보장한다.
+OLLAMA_NUM_CTX = 8192
+
+
+def ask_ollama(ollama_url: str, model: str, prompt: str, schema: dict) -> str:
     body = {
         "model": model,
         "prompt": prompt,
-        "format": OLLAMA_SCHEMA,
+        "format": schema,
         "stream": False,
+        # 생각 모드는 쓰지 않는다 - qwen3.5:4b는 생각이 수천 토큰으로 길어져 한도에 걸리거나
+        # 문장당 수십 초가 걸려 분석 제한 시간(MISINFO_TIMEOUT_SECONDS)을 넘긴다(2026-10-01 실측).
         "think": False,
-        "options": {"temperature": 0},
+        "options": {"temperature": 0, "num_ctx": OLLAMA_NUM_CTX},
     }
     req = urllib.request.Request(
         f"{ollama_url}/api/generate",
         data=json.dumps(body).encode("utf-8"),
         headers={"Content-Type": "application/json"},
     )
+    start = time.perf_counter()
     with urllib.request.urlopen(req, timeout=180) as resp:
-        return json.loads(resp.read())["response"]
+        data = json.loads(resp.read())
+    # Ollama가 알려주는 모델 로드 / 근거 읽기(prompt_eval) / 생성 시간 - 문장당 시간이 어디서 나가는지 보여준다.
+    logger.info("ollama %s", format_ollama_stats(data, time.perf_counter() - start))
+    return data["response"]
 
 
 def unload_ollama_model(ollama_url: str, model: str) -> None:
@@ -106,36 +207,310 @@ def unload_ollama_model(ollama_url: str, model: str) -> None:
         headers={"Content-Type": "application/json"},
     )
     try:
-        with urllib.request.urlopen(req, timeout=30):
+        with logged_step("unload_ollama"), urllib.request.urlopen(req, timeout=30):
             pass
     except Exception:
         # 언로드 실패는 이번 요청 자체를 실패시킬 이유가 아니다(best-effort) - 다만 조용히
         # 삼키면 다음에도 GPU에 모델이 남아있는 원인을 못 찾으니 반드시 경고 로그를 남긴다.
-        logging.warning("Ollama 모델 언로드 요청 실패 (model=%s)", model, exc_info=True)
+        logger.warning("Ollama 모델 언로드 요청 실패 (model=%s)", model, exc_info=True)
 
 
-def judge_sentence(kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str, evidence_count: int) -> dict | None:
-    keywords = extract_keywords(kiwi, sentence)
-    candidates = search(conn, keywords, limit=50) if keywords else []
+# 위키백과 검색 기능(무료 공개 API, 유료 LLM 아님). 로컬 키워드 검색은 단어가 다르면 문서를 못 찾는다 -
+# "달 착륙은 조작되었다"로 "달착륙 음모론"을, "지구는 평평하다"로 "지평설"을 못 찾았다(2026-10-01 실측).
+# 위키백과 검색은 이 둘을 찾았고, 반대로 로컬 검색이 찾는 문서(에펠탑, 후지산)는 못 찾아서 둘을 같이 쓴다.
+# 제목만 받아오고 문서 내용은 로컬 인덱스의 것을 쓴다. 사용자 문장을 그대로 보내지 않고 핵심 단어만 보낸다.
+# 외부 전송이라 설정(MISINFO_WIKI_SEARCH)으로 켤 때만 쓴다 - 기본은 꺼짐.
+WIKI_SEARCH_URL = "https://ko.wikipedia.org/w/api.php"
+WIKI_SEARCH_TITLES = 5
+WIKI_SEARCH_TIMEOUT_SECONDS = 5
+# 위키미디어 API 정책상 연락처가 담긴 User-Agent를 보내야 한다.
+WIKI_USER_AGENT = "VeritaeMisinfo/1.0 (https://github.com/sungbeenCho/veritae-detection-server)"
+
+
+def wiki_search_titles(terms: str, limit: int = WIKI_SEARCH_TITLES) -> list[str]:
+    """위키백과 검색 상위 문서 제목. 실패하면(네트워크 등) 빈 목록 - 로컬 검색만으로 계속 판정한다."""
+    if not terms.strip():
+        return []
+    query = urllib.parse.urlencode(
+        {"action": "query", "list": "search", "format": "json", "srnamespace": 0, "srlimit": limit, "srsearch": terms}
+    )
+    req = urllib.request.Request(f"{WIKI_SEARCH_URL}?{query}", headers={"User-Agent": WIKI_USER_AGENT})
+    try:
+        with urllib.request.urlopen(req, timeout=WIKI_SEARCH_TIMEOUT_SECONDS) as resp:
+            return [hit["title"] for hit in json.loads(resp.read())["query"]["search"]]
+    except (OSError, ValueError, KeyError, TypeError):
+        logger.warning("위키백과 검색 실패 - 로컬 검색만으로 판정함 (terms=%r)", terms, exc_info=True)
+        return []
+
+
+def judge_sentence(
+    kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str, evidence_count: int, nli: ContradictionScorer,
+    wiki_search: bool = False, timer: StepTimer | None = None, judge_template: str = JUDGE_TEMPLATE,
+) -> dict | None:
+    # timer에는 단계별 시간(search, rerank, judge_llm, shortlist, nli)과, 결과가 비었을 때 그 이유
+    # (outcome)가 담긴다 - 판정 결과 자체에는 영향이 없다. 안 넘기면(회귀 테스트 등) 쓰고 버린다.
+    # judge_template 기본값은 06ba7c5와 같은 지시문이다. JUDGE_TEMPLATE_A는 --judge-mode a(설정으로 켤 때만).
+    timer = timer or StepTimer()
+    with timer.step("search"):
+        keywords = extract_keywords(kiwi, sentence)
+        candidates = search(conn, keywords, limit=50) if keywords else []
+        if wiki_search:
+            seen = {c.rowid for c in candidates}
+            for title in wiki_search_titles(web_search_terms(kiwi, sentence)):
+                for chunk in title_chunks(conn, title, keywords):
+                    if chunk.rowid not in seen:
+                        seen.add(chunk.rowid)
+                        candidates.append(chunk)
     if not candidates:
+        timer.outcome = "no_evidence_found"
         return None
 
-    top_chunks = rerank(sentence, candidates, top_k=evidence_count)
-    prompt = build_prompt(sentence, top_chunks)
-    raw_response = ask_ollama(ollama_url, model, prompt)
-    verdict = parse_llm_response(raw_response)
-    if verdict is None:
+    with timer.step("rerank"):
+        top_chunks = rerank(sentence, candidates, top_k=evidence_count)
+        evidence_blocks = fit_blocks(expand_with_neighbors(conn, top_chunks))
+
+    with timer.step("judge_llm"):
+        raw_response = ask_ollama(ollama_url, model, build_judge_prompt(sentence, evidence_blocks, judge_template), JUDGE_SCHEMA)
+    first = parse_judge_response(raw_response, len(evidence_blocks))
+    if first is None:
         # 형식 오류 - 이 문장은 판단불가로 취급(§10), 결과에 포함하지 않는다. 다만 조용히
-        # 넘어가면 LLM 출력이 계속 깨지고 있어도 알아챌 방법이 없으므로 경고 로그를 남긴다
-        # (계획 Global Constraints 19행, 스펙 §10, 2026-09-30 리뷰).
-        logging.warning(
-            "LLM 응답 형식 오류로 문장을 판단불가 처리함: sentence=%r raw_response=%r",
-            sentence, raw_response,
-        )
+        # 넘어가면 LLM 출력이 계속 깨지고 있어도 알아챌 방법이 없으므로 경고 로그를 남긴다.
+        logger.warning("LLM 응답 형식 오류로 문장을 판단불가 처리함: sentence=%r raw_response=%r", sentence, raw_response)
+    logger.debug(
+        "1차 판정: sentence=%r verdict=%r evidence_titles=%r",
+        sentence, first, [title for title, _ in evidence_blocks],
+    )
+    if first is None:
+        timer.outcome = "judge_format_error"
         return None
-    if verdict["label"] != "반박":
+    # 모든 판정의 핵심 주장·판정·이유를 남긴다 - 10-14 실측에서 문장이 not_refuted로 끝났는데 LLM이 무엇을 핵심 주장으로
+    # 정리했고 왜 반박이 아니라고 했는지 로그에 없어 원인을 알 수 없었다. 사용자 문장에서 나온 내용이 들어간다.
+    logger.info(
+        "judge_result label=%s core_claim=%r reason=%r cited=%s",
+        first["label"], first["core_claim"], first["reason"],
+        [evidence_blocks[i - 1][0] for i in first["evidence_ids"]],
+    )
+    if first["label"] != "반박" or not first["evidence_ids"]:
+        timer.outcome = "not_refuted"
         return None
-    return build_claim(sentence, verdict, top_chunks)
+
+    # LLM의 반박 판정은 버리지 않는다(2026-10-14 사용자 결정). 예전에는 NLI가 근거 문장을 0.8 이상으로 못 찾으면 판정을
+    # 버렸는데, 위키가 "선풍기 사망설이란 … 미신이다"처럼 쓰면 NLI가 0.06을 줘서 LLM이 맞는 근거와 이유를 냈는데도
+    # 탐지가 비었다(10-13 이미지 실측 2회). NLI는 화면에 보여줄 근거 문장을 고르는 데만 쓴다:
+    # - e5로 주장과 가까운 후보 15개를 NLI가 채점해 0.8 이상인 문장(기록 대조상 이유와 가까운 문장보다 정확했다). 여럿이면 그중 판정 이유와 가장 가까운 문장.
+    #   후보는 판정이 인용한 문단만이 아니라 검색된 문단 전체에서 고른다 - 판정이 엉뚱한 문단을 인용해 맞는 근거
+    #   ("학계의 중론은 … 자폐증 발생률을 증가시키지 않았으며")를 놓친 경우가 있었다(2026-10-01).
+    # - 없으면 판정이 인용한 문단에서 판정 이유와 가장 가까운 원문 문장. 인용 문단에 쓸 문장이 없을 때만 전체에서 찾는다.
+    claim = first["core_claim"]
+    # 1차 판정의 번호는 evidence_blocks 기준이다.
+    reason = replace_block_numbers(first["reason"], evidence_blocks)
+    with timer.step("shortlist"):
+        candidates = shortlist_sentences(claim, candidate_sentences(evidence_blocks))
+    if not candidates:
+        timer.outcome = "no_candidate_sentences"
+        return None
+    with timer.step("nli"):
+        best, scored = pick_best_contradiction(nli, candidates, claim)
+    if best is not None:
+        # 기준을 넘는 문장이 여럿이면 판정 이유와 가장 가까운 문장을 쓴다. NLI 최고점만 보면 주제만 같은 문장이 뽑혔다
+        # (10-15 회귀: "지구는 평평하다" → 지구본 받침대 베어링). 기록 46건 대조에서 근거 단어 채점 36 → 38, 나빠진 건 0건.
+        passing = [(c["title"], c["sentence"]) for c in scored if c["score"] >= NLI_THRESHOLD]
+        evidence, timer.outcome, evidence_by = closest_to_reason(reason, passing), "refuted", "nli"
+    else:
+        cited = [evidence_blocks[i - 1] for i in first["evidence_ids"]]
+        with timer.step("reason_match"):
+            evidence = closest_to_reason(reason, candidate_sentences(cited) or candidate_sentences(evidence_blocks))
+        timer.outcome, evidence_by = "refuted_reason_match", "reason_match"
+    # 반박 문장마다 핵심 주장, 근거를 고른 방식, NLI 점수가 높은 문장 3개를 남긴다 - 근거가 이상할 때 서버 로그만으로
+    # 원인을 찾을 수 있게(2026-10-13). 사용자 문장에서 나온 내용이 들어간다.
+    top_scored = sorted(scored, key=lambda item: item["score"], reverse=True)[:3]
+    logger.info(
+        "refutation_check core_claim=%r threshold=%s evidence_by=%s top=%s", claim, NLI_THRESHOLD, evidence_by,
+        "; ".join(f"({c['title']}) nli={c['score']:.2f} {c['sentence'][:80]}" for c in top_scored) or "(없음)",
+    )
+    # 화면에는 근거 문장 하나와 문서 링크만 보여준다 - 판정에 쓴 긴 문맥(앞뒤 문단)을 그대로 내보내면
+    # 핵심 문장이 무관한 내용 사이에 묻힌다(2026-10-01 사용자 결정).
+    return build_claim(sentence, reason, [evidence])
+
+
+# --- 말한 사람 판별 분류기를 쓰는 판정(--judge-mode speaker, 2026-10-17) ---------------------------------------------
+# 4B는 위키 없이 문장에서 따질 내용만 옮기고(정리), 말한 사람이 그 내용을 맞다고 하는지 아니라고 하는지는 분류기가 정하고,
+# 판정은 그 내용 하나의 참/거짓만 본다. 배경은 misinfo_lib의 같은 이름 절.
+
+# 정리된 내용의 명사·숫자·영문이 원문에 있는지 본다(10-16 정리 단계에서 옮김). 동사·형용사는 높임말·활용으로 형태가 자주
+# 바뀌어("만드셨" → "만들었다") 빼고, 글자 하나 차이는 같은 말로 본다 - 정리 단계가 OCR 오타를 고친 경우("서을" → "서울")를
+# 막지 않게.
+_GROUNDED_TAGS = {"NNG", "NNP", "SN", "SL"}
+
+
+def _one_edit_apart(a: str, b: str) -> bool:
+    if abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) <= 1
+    short, long_ = (a, b) if len(a) < len(b) else (b, a)
+    return any(long_[:i] + long_[i + 1:] == short for i in range(len(long_)))
+
+
+def unsupported_words(kiwi: Kiwi, sentence: str, claim: str) -> list[str]:
+    """정리 단계가 원문에 없는 말을 지어냈는지: claim의 명사·숫자·영문 중 원문에 없는 것(2026-10-15 노트북 시험:
+    "뇌틀 10%만 쓴다는 건 잘못 알려진 거래요" → "…쓰면 뇌졸중이 예방된다"). 지어낸 내용으로 판정해 띄우면 사용자가
+    하지도 않은 말을 틀렸다고 표시하게 된다."""
+    # 원문 글자에 그대로 들어 있으면 지어낸 말이 아니다 - OCR 오타 문장은 형태소 분석이 원문을 다르게 쪼개기도 한다.
+    source = {t.form for t in kiwi.tokenize(sentence) if t.tag in _GROUNDED_TAGS}
+    return [
+        t.form for t in kiwi.tokenize(claim)
+        if t.tag in _GROUNDED_TAGS and t.form not in source and t.form not in sentence
+        and not (len(t.form) >= 2 and any(_one_edit_apart(t.form, s) for s in source))
+    ]
+
+
+def extract_claim(sentence: str, ollama_url: str, model: str, timer: StepTimer) -> str | None:
+    """정리된 내용(따질 사실이 없으면 빈 문자열), 형식 오류면 None."""
+    with timer.step("extract_llm"):
+        raw = ask_ollama(ollama_url, model, build_extract_prompt(sentence), EXTRACT_SCHEMA)
+    claim = parse_extract_response(raw)
+    if claim is None:
+        logger.warning("LLM 정리 응답 형식 오류로 문장을 판단불가 처리함: sentence=%r raw_response=%r", sentence, raw)
+        timer.outcome = "extract_format_error"
+    return claim
+
+
+def speaker_of(speaker_model: NliModel, sentence: str, claim: str) -> str:
+    """말한 사람이 claim을 맞다고 함/아니라고 함/사실 없음 중 무엇으로 말하는지(가장 높은 확률의 라벨)."""
+    probs = speaker_model.label_probabilities([sentence], claim)[0]
+    return SPEAKER_FROM_NLI[max(probs, key=probs.get)]
+
+
+def judge_claim(
+    kiwi: Kiwi, conn, claim: str, ollama_url: str, model: str, evidence_count: int, wiki_search: bool, timer: StepTimer,
+    judge_template: str,
+) -> tuple[list[tuple[str, str]], dict] | None:
+    """정리된 내용으로 위키를 찾고 그 내용의 참/거짓을 판정한다. (판정 입력 문단, 판정) 또는 None."""
+    with timer.step("search"):
+        # 원문이 아니라 정리된 내용으로 찾는다 - 원문의 "맘카페", "평생", "속고" 같은 말이 엉뚱한 문서를 끌어왔다
+        # (06ba7c5 회귀 검색 실패 4건).
+        keywords = extract_keywords(kiwi, claim)
+        candidates = search(conn, keywords, limit=50) if keywords else []
+        if wiki_search:
+            seen = {c.rowid for c in candidates}
+            for title in wiki_search_titles(web_search_terms(kiwi, claim)):
+                for chunk in title_chunks(conn, title, keywords):
+                    if chunk.rowid not in seen:
+                        seen.add(chunk.rowid)
+                        candidates.append(chunk)
+    if not candidates:
+        timer.outcome = "no_evidence_found"
+        return None
+    with timer.step("rerank"):
+        top_chunks = rerank(claim, candidates, top_k=evidence_count)
+        evidence_blocks = fit_blocks(expand_with_neighbors(conn, top_chunks))
+    with timer.step("judge_llm"):
+        raw = ask_ollama(ollama_url, model, build_judge_prompt(claim, evidence_blocks, judge_template), CLAIM_JUDGE_SCHEMA)
+    verdict = parse_claim_judge_response(raw, len(evidence_blocks))
+    if verdict is None:
+        logger.warning("LLM 응답 형식 오류로 문장을 판단불가 처리함: claim=%r raw_response=%r", claim, raw)
+        timer.outcome = "judge_format_error"
+        return None
+    return evidence_blocks, verdict
+
+
+def show_if_wrong(
+    sentence: str, claim: str, speaker: str, evidence_blocks: list[tuple[str, str]], verdict: dict,
+    nli: ContradictionScorer, nli_support: ContradictionScorer, timer: StepTimer,
+) -> dict | None:
+    """문장이 틀렸으면(맞다고 한 내용이 거짓, 아니라고 한 내용이 참) 화면에 나갈 결과, 아니면 None."""
+    logger.info(
+        "judge_result label=%s speaker=%s claim=%r reason=%r cited=%s",
+        verdict["label"], speaker, claim, verdict["reason"], [evidence_blocks[i - 1][0] for i in verdict["evidence_ids"]],
+    )
+    if not sentence_is_wrong(speaker, verdict["label"]) or not verdict["evidence_ids"] or not verdict["reason"].strip():
+        timer.outcome = "not_refuted"
+        return None
+    # 근거 문장 고르기는 judge_sentence와 같다. 맞다고 한 내용이 거짓이면 그 내용과 모순인 문장, 아니라고 한 내용이 참이면
+    # 그 내용을 뒷받침하는(함의) 문장을 NLI로 찾는다.
+    reason = replace_block_numbers(verdict["reason"], evidence_blocks)
+    with timer.step("shortlist"):
+        candidates = shortlist_sentences(claim, candidate_sentences(evidence_blocks))
+    if not candidates:
+        timer.outcome = "no_candidate_sentences"
+        return None
+    with timer.step("nli"):
+        best, scored = pick_best_contradiction(nli_support if speaker == SPEAKER_DENIES else nli, candidates, claim)
+    if best is not None:
+        passing = [(c["title"], c["sentence"]) for c in scored if c["score"] >= NLI_THRESHOLD]
+        evidence, timer.outcome, evidence_by = closest_to_reason(reason, passing), "refuted", "nli"
+    else:
+        cited = [evidence_blocks[i - 1] for i in verdict["evidence_ids"]]
+        with timer.step("reason_match"):
+            evidence = closest_to_reason(reason, candidate_sentences(cited) or candidate_sentences(evidence_blocks))
+        timer.outcome, evidence_by = "refuted_reason_match", "reason_match"
+    top_scored = sorted(scored, key=lambda item: item["score"], reverse=True)[:3]
+    logger.info(
+        "refutation_check speaker=%s claim=%r threshold=%s evidence_by=%s top=%s", speaker, claim, NLI_THRESHOLD, evidence_by,
+        "; ".join(f"({c['title']}) nli={c['score']:.2f} {c['sentence'][:80]}" for c in top_scored) or "(없음)",
+    )
+    return build_claim(sentence, reason, [evidence])
+
+
+def judge_sentence_speaker(
+    kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str, evidence_count: int, nli: ContradictionScorer,
+    nli_support: ContradictionScorer, speaker_model: NliModel, wiki_search: bool = False, timer: StepTimer | None = None,
+    judge_template: str = CLAIM_JUDGE_TEMPLATE_A,
+) -> dict | None:
+    timer = timer or StepTimer()
+    claim = extract_claim(sentence, ollama_url, model, timer)
+    if claim is None:
+        return None
+    if not claim:
+        timer.outcome = "no_fact"
+        return None
+    with timer.step("speaker"):
+        speaker = speaker_of(speaker_model, sentence, claim)
+    # 위키를 보기 전에 정리한 내용과 분류기 판단 - 판정이 틀렸을 때 어느 단계가 틀렸는지 가르는 데 쓴다.
+    logger.info("extract_result speaker=%s claim=%r", speaker, claim)
+    if speaker == SPEAKER_NO_FACT:
+        timer.outcome = "no_fact_speaker"
+        return None
+    invented = unsupported_words(kiwi, sentence, claim)
+    if invented:
+        # 판단불가로 물러난다 - 원문에 없는 말로 판정하면 사용자가 하지 않은 말을 틀렸다고 띄울 수 있다.
+        logger.info("extract_unfaithful words=%r", invented)
+        timer.outcome = "extract_unfaithful"
+        return None
+    judged = judge_claim(kiwi, conn, claim, ollama_url, model, evidence_count, wiki_search, timer, judge_template)
+    if judged is None:
+        return None
+    return show_if_wrong(sentence, claim, speaker, *judged, nli, nli_support, timer)
+
+
+def judge_sentence_split(
+    kiwi: Kiwi, conn, sentence: str, ollama_url: str, model: str, evidence_count: int, nli: ContradictionScorer,
+    nli_support: ContradictionScorer, speaker_model: NliModel, wiki_search: bool = False, timer: StepTimer | None = None,
+) -> dict | None:
+    """나눔+A(2026-10-18 마지막 측정에서 채택): 분류기가 "아니라고 함"으로 보는 부정 문장만 분류기 방식(정리된 내용으로 검색·
+    판정)으로, 나머지는 지금 방식(문장으로 검색·판정)으로 판정하고, 둘 다 판정 지시문 A를 쓴다.
+    분류기 방식이 나았던 문장은 거의 다 부정 문장이었고 놓친 문장은 평범한 문장이었다(225문장). 학습·설계에 쓰지 않은 새 문장
+    70개에서 위험 오답 6 -> 0, 탐지 27 -> 27, 전체 295문장에서 위험 오답 25 -> 9, 탐지 107 -> 105(주로 OCR 오타 문장)."""
+    timer = timer or StepTimer()
+    claim = extract_claim(sentence, ollama_url, model, timer)
+    speaker = None
+    if claim:
+        with timer.step("speaker"):
+            speaker = speaker_of(speaker_model, sentence, claim)
+    logger.info("extract_result speaker=%s claim=%r", speaker, claim)
+    if speaker == SPEAKER_DENIES and not unsupported_words(kiwi, sentence, claim):
+        judged = judge_claim(kiwi, conn, claim, ollama_url, model, evidence_count, wiki_search, timer, CLAIM_JUDGE_TEMPLATE_A)
+        if judged is None:
+            return None
+        return show_if_wrong(sentence, claim, speaker, *judged, nli, nli_support, timer)
+    # 부정 문장이 아니면(맞다고 함·사실 없음·정리 실패 포함) 지금 방식 그대로 문장으로 판정한다 - 분류기 방식은 평범한 문장을
+    # 놓쳤다(세종대왕 고려, 임진왜란 1392 등).
+    return judge_sentence(kiwi, conn, sentence, ollama_url, model, evidence_count, nli, wiki_search=wiki_search, timer=timer,
+                          judge_template=JUDGE_TEMPLATE_A)
+
+
+JUDGE_MODES = ("current", "a", "speaker", "split")
 
 
 def main() -> None:
@@ -148,9 +523,28 @@ def main() -> None:
     parser.add_argument("--ollama-url", required=True)
     parser.add_argument("--ollama-model", required=True)
     parser.add_argument("--evidence-count", type=int, default=5)
+    parser.add_argument("--nli-model", default=default_model_path())
+    parser.add_argument("--wiki-search", action="store_true", help="위키백과 검색 기능도 함께 쓴다(핵심 단어만 외부 전송)")
+    # 기본값 current는 06ba7c5와 같은 판정이다. a = 판정 지시문 A, speaker = 4B 정리 + 말한 사람 판별 분류기 + 지시문 A
+    # (2026-10-17, 서버 경로 측정으로 06ba7c5보다 나은지 확인한 뒤에만 켠다).
+    parser.add_argument("--judge-mode", choices=JUDGE_MODES, default="current")
+    parser.add_argument("--speaker-model", help="--judge-mode speaker일 때 말한 사람 판별 모델 폴더")
     args = parser.parse_args()
+    if args.judge_mode in ("speaker", "split") and not args.speaker_model:
+        parser.error(f"--judge-mode {args.judge_mode}에는 --speaker-model이 필요하다")
+    # 서버(misinfo_runner.py)가 이 프로세스의 stderr를 서버 로그로 올린다 - 단계별 시간과 경고가 거기 보인다.
+    configure_script_logging()
+    # 어떤 NLI 모델 폴더와 설정으로 돌았는지 - 회귀 테스트와 실서버가 다른 모델로 돌던 문제(2026-10-13)를 로그로 확인한다.
+    logger.info(
+        "misinfo_config nli_model=%s ollama_model=%s wiki_search=%s judge_mode=%s speaker_model=%s",
+        args.nli_model, args.ollama_model, args.wiki_search, args.judge_mode, args.speaker_model,
+    )
+    setup_start = time.perf_counter()
+    startup_seconds = setup_start - _PROCESS_START
 
     sentences = json.loads(args.sentences.read_text(encoding="utf-8"))
+    nli = NliModel(args.nli_model)
+    speaker_model = NliModel(args.speaker_model, load_step="load_speaker") if args.judge_mode in ("speaker", "split") else None
 
     # 읽기 전용으로 연다 - 일반 sqlite3.connect(path)는 파일이 없으면 빈 DB 파일을 새로
     # 만들어버려서(스키마 없는 깨진 wiki_index.sqlite3), 이후 모든 검색이 "그냥 결과 없음"으로
@@ -162,16 +556,50 @@ def main() -> None:
     conn = sqlite3.connect(wiki_index_uri, uri=True)
     snapshot = get_snapshot(conn)
 
-    kiwi = Kiwi()
+    with logged_step("load_kiwi"):
+        kiwi = Kiwi()
+    setup_seconds = time.perf_counter() - setup_start
     claims = []
+    sentences_start = time.perf_counter()
+    unload_seconds = 0.0
     try:
-        for sentence in sentences:
-            claim = judge_sentence(kiwi, conn, sentence, args.ollama_url, args.ollama_model, args.evidence_count)
+        for index, sentence in enumerate(sentences, start=1):
+            timer = StepTimer()
+            sentence_start = time.perf_counter()
+            if args.judge_mode == "split":
+                claim = judge_sentence_split(
+                    kiwi, conn, sentence, args.ollama_url, args.ollama_model, args.evidence_count, nli.contradiction_scores,
+                    nli.entailment_scores, speaker_model, wiki_search=args.wiki_search, timer=timer,
+                )
+            elif speaker_model is not None:
+                claim = judge_sentence_speaker(
+                    kiwi, conn, sentence, args.ollama_url, args.ollama_model, args.evidence_count, nli.contradiction_scores,
+                    nli.entailment_scores, speaker_model, wiki_search=args.wiki_search, timer=timer,
+                )
+            else:
+                claim = judge_sentence(
+                    kiwi, conn, sentence, args.ollama_url, args.ollama_model, args.evidence_count, nli.contradiction_scores,
+                    wiki_search=args.wiki_search, timer=timer,
+                    judge_template=JUDGE_TEMPLATE_A if args.judge_mode == "a" else JUDGE_TEMPLATE,
+                )
+            # 사용자 문장 본문은 싣지 않고 번호만 남긴다.
+            logger.info(
+                "sentence %d/%d total=%.1fs outcome=%s %s",
+                index, len(sentences), time.perf_counter() - sentence_start, timer.outcome, timer.summary(),
+            )
             if claim is not None:
                 claims.append(claim)
     finally:
         # 도중에 예외가 나도(Ollama 호출 실패 등) 반드시 모델을 내린다(스펙 §5, 2026-09-30 리뷰).
+        unload_start = time.perf_counter()
         unload_ollama_model(args.ollama_url, args.ollama_model)
+        unload_seconds = time.perf_counter() - unload_start
+    logger.info(
+        "misinfo_summary sentences=%d refuted=%d startup=%.1fs setup=%.1fs sentences_total=%.1fs unload=%.1fs total=%.1fs",
+        len(sentences), len(claims), startup_seconds, setup_seconds,
+        time.perf_counter() - sentences_start - unload_seconds, unload_seconds,
+        time.perf_counter() - _PROCESS_START,
+    )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     result = {"model": args.ollama_model, "wiki_snapshot": snapshot, "claims": claims}

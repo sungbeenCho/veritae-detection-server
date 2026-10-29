@@ -1,0 +1,757 @@
+# 데스크탑 설치·실행 안내
+
+veritae-detection-server를 GPU 데스크탑(RTX 3060 Ti, Windows)에 처음부터 설치하고 실행하는 절차다. 프로젝트 소개와 구조는 저장소 첫 화면의 [README](../README.md)를 본다.
+
+아래 절차는 **그 데스크탑에 아무것도 설치되어 있지 않다는 전제**로, 처음부터 끝까지 순서대로 따라가면 된다. 명령어는 PowerShell 기준. 0~11절은 이미지(SPAI) 기본 설치, 12절은 Spring 서버 연결이고, 음성·영상·사기 위험도·가짜정보 설정은 그 뒤 절에 이어진다.
+
+## 왜 conda 환경을 나누는지
+
+기본 설치(0~11절)는 아래 두 환경을 쓴다. 뒤의 음성·영상·글자 추출 설정도 같은 이유로 환경을 하나씩 더 만든다(`antideepfake`, `dfdc`, `text-extraction`).
+
+- `spai` 환경: SPAI 모델 실행 전용 (PyTorch, CUDA 필요, 무거움)
+- `detection-api` 환경: 이 FastAPI 서버 실행 전용 (FastAPI, uvicorn만 필요, 가벼움)
+
+이 서버는 SPAI를 파이썬에서 직접 import하지 않고, **별도 프로세스로 실행**시킨 뒤 결과 CSV를 읽어온다 (SPAI가 라이브러리가 아니라 CLI 도구로 설계되어 있기 때문). 그래서 두 환경을 완전히 분리해도 되고, 오히려 분리하는 게 의존성 충돌을 피하는 데 유리하다.
+
+## 이 문서에서 쓰는 작업 폴더 경로
+
+아래 모든 명령어는 작업 폴더를 **`C:\ai`로 고정**해서 작성했다. 그대로 복사해서 쓰면 된다. 다른 위치를 쓰고 싶다면, 이 문서에 나오는 `C:\ai`를 전부 그 경로로 바꿔서 실행하면 된다 (일부만 바꾸면 경로가 안 맞아서 에러 난다).
+
+---
+
+## 0. 사전 준비 확인
+
+PowerShell을 열고 아래를 각각 실행해서 이미 설치된 게 있는지 확인한다. `찾을 수 없음` 계열 에러가 나오면 다음 단계에서 설치하면 된다.
+
+```powershell
+git --version
+conda --version
+nvidia-smi
+```
+
+`nvidia-smi`는 3060Ti 드라이버가 정상 설치되어 있는지 확인하는 용도다. 여기서 GPU 정보가 안 뜨면 [NVIDIA 드라이버](https://www.nvidia.com/Download/index.aspx)부터 설치해야 한다.
+
+## 1. Git 설치 (없다면)
+
+```powershell
+winget install --id Git.Git -e --source winget
+```
+
+설치 후 PowerShell 새로 열기.
+
+## 2. VS Code 설치 (선택, 추천)
+
+필수는 아니다 — 이후 모든 단계는 PowerShell만으로 그대로 진행 가능하다. 다만 나중에 버그 수정 등으로 코드를 직접 열어보거나, 서버를 켜고 끄는 걸 터미널 창 여러 개 대신 IDE 하나로 편하게 하고 싶으면 깔아두면 좋다.
+
+```powershell
+winget install --id Microsoft.VisualStudioCode -e --source winget
+```
+
+설치 후에는 `code C:\ai\veritae-detection-server` 로 폴더를 열거나, VS Code에서 `파일 > 폴더 열기`로 열면 된다. 이후 나오는 PowerShell 명령어들은 VS Code 하단의 **통합 터미널**(`Ctrl+\``)에 그대로 쳐도 되고, 지금처럼 별도 PowerShell 창에 쳐도 된다 — 결과는 동일하다. VS Code는 명령어를 바꾸지 않고, 그냥 그 명령어를 칠 곳과 파일을 볼 곳을 하나로 묶어줄 뿐이다.
+
+## 3. Miniconda 설치 (없다면)
+
+```powershell
+winget install --id Anaconda.Miniconda3 -e --source winget
+```
+
+설치 후 PowerShell 새로 열기. `conda --version`으로 확인.
+
+## 4. 작업 폴더 만들고 레포 두 개 clone
+
+```powershell
+mkdir C:\ai
+cd C:\ai
+git clone https://github.com/sungbeenCho/veritae-detection-server.git
+git clone https://github.com/mever-team/spai.git
+```
+
+## 5. `spai` conda 환경 구성 (SPAI 모델 실행용)
+
+```powershell
+conda create -n spai python=3.11 -y
+conda activate spai
+conda install pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia -y
+cd C:\ai\spai
+pip install -r requirements.txt
+```
+
+시간이 꽤 걸린다 (PyTorch + CUDA 다운로드).
+
+## 6. SPAI 모델 가중치 다운로드
+
+1. [Google Drive 링크](https://drive.google.com/file/d/1vvXmZqs6TVJdj8iF1oJ4L_fcgdQrp_YI/view?usp=sharing)에서 가중치 파일 다운로드
+2. `C:\ai\spai\weights\` 폴더를 만들고 그 안에 다운로드한 파일을 넣는다 (파일명은 `spai.pth`로 맞추면 아래 기본값과 그대로 맞는다)
+
+```powershell
+mkdir C:\ai\spai\weights
+# 다운로드한 파일을 C:\ai\spai\weights\spai.pth 로 이동
+```
+
+## 7. `spai` 환경의 python.exe 절대경로 확인
+
+아래 환경변수 설정에 필요하다.
+
+```powershell
+conda activate spai
+(Get-Command python).Source
+```
+
+출력된 경로를 메모해둔다 (예: `C:\Users\<user>\miniconda3\envs\spai\python.exe`).
+
+## 8. `detection-api` conda 환경 구성 (FastAPI 서버 실행용)
+
+```powershell
+conda deactivate
+conda create -n detection-api python=3.11 -y
+conda activate detection-api
+cd C:\ai\veritae-detection-server
+pip install -r requirements.txt
+```
+
+## 9. 환경변수 설정
+
+이 서버가 SPAI를 어디서 어떻게 실행할지 알려주는 값들이다. PowerShell 세션마다 설정해야 하니, 매번 치기 귀찮으면 아래를 `C:\ai\veritae-detection-server\run.ps1` 같은 스크립트로 저장해두고 실행하면 편하다.
+
+```powershell
+$env:SPAI_REPO_DIR = "C:\ai\spai"
+$env:SPAI_PYTHON   = "C:\Users\<user>\miniconda3\envs\spai\python.exe"   # 7번에서 확인한 경로
+$env:SPAI_CFG      = "./configs/spai.yaml"
+$env:SPAI_MODEL    = "./weights/spai.pth"
+$env:SPAI_RESIZE_TO = "1024"   # 안 정하면 기본값 1024. 8GB급 GPU에서 폰 원본 사진(3000px+)을 그대로 돌리면 CUDA OOM 남
+```
+
+## 10. 서버 실행
+
+PowerShell 창이든 VS Code 통합 터미널이든 상관없다.
+
+```powershell
+conda activate detection-api
+cd C:\ai\veritae-detection-server
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+끌 때는 이 터미널에서 `Ctrl+C`.
+
+## 11. 정상 동작 확인
+
+새 PowerShell 창을 열고 (서버는 10번에서 계속 켜둔 채로):
+
+```powershell
+curl http://localhost:8000/health
+# {"status":"ok"} 가 나오면 서버는 정상
+```
+
+이 단계에서는 `/health`까지만 확인한다. `/process/image`·`/process/audio`·`/process/video`는 AI 판독과 함께 글자 추출·사기 판정·가짜정보 판정을 한 요청 안에서 하고, 그중 하나라도 준비가 안 돼 있으면 요청 전체가 502로 끝난다. 그래서 분석 요청 확인은 아래 [사기 위험도 분석](#사기-위험도-분석text-extraction-설정)·[가짜정보 판별](#가짜정보허위정보-판별-설정) 설정까지 마친 뒤에 한다. [접근 키](#접근-키-detection_api_key)를 설정했다면 분석 요청에 `-H "X-Detection-Key: <키>"`를 붙인다.
+
+## 12. Spring 서버와 연결
+
+운영에서는 Spring 서버(AWS EC2)와 이 데스크탑을 **Tailscale 사설망**으로 연결한다. 두 기기에 Tailscale을 설치해 같은 계정으로 로그인한 뒤, 데스크탑의 Tailscale IP(`tailscale ip -4`, `100.x.x.x`)를 Spring의 `DETECTION_SERVICE_URL` 환경변수에 `http://<Tailscale IP>:8000`으로 넣는다. 인터넷에 8000번 포트를 열 필요가 없다.
+
+같은 공유기 안의 PC에서 Spring을 로컬로 돌려 시험할 때는, 관리자 권한 PowerShell에서 8000번 포트를 허용하고 `ipconfig`의 `IPv4 주소`를 쓴다.
+
+```powershell
+New-NetFirewallRule -DisplayName "Veritae Detection Server" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow
+```
+
+어느 경우든 Spring만 분석을 시킬 수 있도록 아래 [접근 키 (DETECTION_API_KEY)](#접근-키-detection_api_key) 설정을 함께 한다.
+
+---
+
+## 음성(AntiDeepfake) 셋업
+
+이 서버는 이미지뿐만 아니라 음성 파일의 AI 생성(deepfake) 여부도 탐지할 수 있다. SPAI와 달리 AntiDeepfake는 CPU에서 충분히 빠르게 동작하므로, 별도의 GPU 설정 없이 설치할 수 있다.
+
+### 0. (필수) 사전 준비 세 가지 — 안 하면 다음 단계 또는 실제 추론에서 에러난다
+
+fairseq는 C 확장 모듈을 포함하고 있어서 컴파일러가 필요하고, 설치 스크립트가 심볼릭 링크도 만든다. 아래 a, b를 먼저 해두지 않으면 2번 단계(`pip install -e .`)에서 100% 에러난다. c(ffmpeg)는 설치 자체엔 필요 없지만, 폰 녹음 파일(m4a/mp4 등 압축 포맷)로 실제 추론할 때 필요하다 — 없으면 `soundfile.LibsndfileError: Format not recognised`로 실패한다(실측 확인됨, wav/flac은 ffmpeg 없이도 됨).
+
+**a. Visual C++ Build Tools 설치** (없으면 `Microsoft Visual C++ 14.0 or greater is required` 에러):
+
+```powershell
+winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+```
+
+몇 GB 다운로드라 시간이 걸린다(회선에 따라 10~20분+). 설치 후 아래 b로.
+
+**b. 2번 단계(`pip install -e .`)는 관리자 권한 PowerShell에서 실행한다** — fairseq 설치 스크립트가 심볼릭 링크를 만드는데, 일반 권한으로 실행하면 `WinError 1314: 클라이언트가 필요한 권한을 가지고 있지 않습니다` 에러가 난다. 시작 메뉴에서 PowerShell 우클릭 → "관리자 권한으로 실행"으로 새 창을 연다. **관리자 권한이 필요한 건 이 한 단계뿐** — 1번(conda 환경 구성)과 3번 이후(나머지 패키지, AntiDeepfake clone, 체크포인트 다운로드, 서버 실행)는 전부 일반 권한으로 하면 된다. SPAI 셋업에 이 단계가 없었던 이유도 SPAI는 심볼릭 링크를 만들지 않기 때문이다.
+
+**c. ffmpeg 설치** (m4a/mp4 등 압축 오디오 파일을 처리하려면 필요, wav/flac만 쓸 거면 생략 가능):
+
+```powershell
+winget install ffmpeg
+```
+
+설치 후 새 PowerShell 창 열기 (PATH 반영을 위해 필수). `scripts/antideepfake_infer.py`가 압축 포맷이 들어오면 자동으로 이 ffmpeg를 호출해서 wav로 변환한 뒤 추론한다 — 별도 수동 변환 필요 없다.
+
+### 1. `antideepfake` conda 환경 구성
+
+```powershell
+conda create -n antideepfake python==3.9.0 -y
+conda activate antideepfake
+pip install torch==2.6.0 torchaudio==2.6.0
+```
+
+**중요:** SPAI와 달리 `--index-url`을 붙이지 않는다. CPU 전용 빌드이므로 PyTorch의 기본 pip 버전으로 충분하다.
+
+시간이 꽤 걸린다 (PyTorch 다운로드).
+
+### 2. fairseq 특정 커밋 체크아웃 및 editable 설치
+
+**여기서부터는 관리자 권한 PowerShell로** (0-b 참고). `conda activate antideepfake`도 이 창에서 다시 해야 한다 — 환경변수는 PowerShell 창마다 따로다.
+
+```powershell
+cd C:\ai
+git clone https://github.com/pytorch/fairseq.git
+cd fairseq
+git checkout 862efab86f649c04ea31545ce28d13c59560113d
+python -m pip install "pip<24.1"
+pip install -e .
+```
+
+**`pip<24.1`이 왜 필요한가:** fairseq가 요구하는 구버전 `omegaconf`(2.0.x)의 패키지 메타데이터가 최신 pip(24.1 이상)에서는 `invalid metadata` 에러로 거부된다. pip을 24.1 미만으로 내려야 설치가 된다 — 이 변경은 `antideepfake` conda 환경 안에서만 적용되고 다른 env(`spai`, `detection-api`)에는 영향 없다.
+
+### 3. 나머지 패키지 설치
+
+```powershell
+pip install librosa scikit-learn julius soundfile h5py
+```
+
+### 4. AntiDeepfake 저장소 클론
+
+```powershell
+cd C:\ai
+git clone https://github.com/nii-yamagishilab/AntiDeepfake.git
+```
+
+### 5. 모델 체크포인트 다운로드
+
+```powershell
+mkdir C:\ai\AntiDeepfake\downloads
+cd C:\ai\AntiDeepfake\downloads
+wget -O mms_300m.ckpt https://zenodo.org/records/15580543/files/mms_300m.ckpt
+```
+
+Windows에 wget이 없으면 PowerShell의 `curl`을 사용할 수 있다:
+
+```powershell
+curl -o mms_300m.ckpt https://zenodo.org/records/15580543/files/mms_300m.ckpt
+```
+
+### 6. `antideepfake` 환경의 python.exe 절대경로 확인
+
+아래 환경변수 설정에 필요하다.
+
+```powershell
+conda activate antideepfake
+(Get-Command python).Source
+```
+
+출력된 경로를 메모해둔다 (예: `C:\Users\<user>\miniconda3\envs\antideepfake\python.exe`).
+
+### 7. veritae-detection-server 최신 코드 적용
+
+```powershell
+cd C:\ai\veritae-detection-server
+git pull origin main
+```
+
+### 8. 환경변수 설정
+
+이 서버가 AntiDeepfake를 어디서 어떻게 실행할지 알려주는 값들이다. PowerShell 세션마다 설정해야 하니, 매번 치기 귀찮으면 아래를 `C:\ai\veritae-detection-server\run.ps1` 같은 스크립트에 추가해서 실행하면 편하다.
+
+```powershell
+$env:ANTIDEEPFAKE_REPO_DIR       = "C:\ai\AntiDeepfake"
+$env:ANTIDEEPFAKE_CHECKPOINT     = "C:\ai\AntiDeepfake\downloads\mms_300m.ckpt"
+$env:ANTIDEEPFAKE_PYTHON         = "C:\Users\<user>\miniconda3\envs\antideepfake\python.exe"   # 위에서 확인한 경로
+```
+
+### 9. 서버 실행 (또는 재시작)
+
+이미 detection-api 서버가 켜져 있다면, 환경변수가 적용되도록 다시 시작해야 한다.
+
+```powershell
+conda activate detection-api
+cd C:\ai\veritae-detection-server
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### 10. 정상 동작 확인
+
+새 PowerShell 창을 열고 (서버는 9번에서 계속 켜둔 채로):
+
+```powershell
+curl -X POST -F "file=@C:\path\to\test.wav" http://localhost:8000/process/audio
+```
+
+아래 응답 예시는 AI 판독 칸만 보인 것이다. 실제 응답에는 `scam_detection`·`misinformation_detection` 칸도 함께 오며, 사기 위험도·가짜정보 설정을 마치기 전에는 요청이 502로 끝난다(11절 참고).
+
+정상이면 다음과 같은 응답이 나온다:
+
+```json
+{
+  "ai_detection": {
+    "model": "antideepfake",
+    "score": 0.xx,
+    "evidence": []
+  }
+}
+```
+
+score가 높으면(AI 생성 확률이 높으면) `evidence` 배열에 탐지된 근거들(의심 구간의 시작/종료, 설명)이 채워진다.
+
+**이 단계에서 주의:** 이 curl 호출이 실제로 작동하는 것이 매우 중요하다. 추론 스크립트를 작성할 때는 실제 체크포인트 없이 소스코드만 읽고 다음 세 지점을 추정했기 때문에, 이것이 그 추정들을 실제로 검증하는 첫 번째 시험대다. 만약 에러가 나거나 score가 항상 0 또는 1처럼 이상하면, 다음 세 지점을 의심해야 한다:
+- fairseq의 frame stride 설정이 실제 체크포인트와 맞는가
+- AntiDeepfake 코드의 `FAKE_CLASS_INDEX` 값이 맞는가
+- `load_weights` 함수의 반환 방식이 예상대로 동작하는가
+
+자세한 내용은 프로젝트 문서의 음성 AI 판독 설계 섹션을 참고하고, 필요하면 추론 스크립트의 로그 출력을 추가해서 각 단계를 점검하자.
+
+---
+
+## 영상(dfdc) 셋업
+
+이 서버는 이미지, 음성뿐만 아니라 영상 파일의 얼굴 조작(딥페이크) 여부도 탐지할 수 있다. `selimsef/dfdc_deepfake_challenge`(Kaggle DFDC 대회 1위 솔루션)의 얼굴 검출(facenet-pytorch MTCNN) + CNN 분류(EfficientNet) 파이프라인을 그대로 재사용한다. SPAI/AntiDeepfake와 마찬가지로 무거운 의존성은 별도 conda env(`dfdc`)에 격리하고, `detection-api` env는 subprocess로만 부른다.
+
+**중요:** `app/config.py`의 `Settings`는 이미지(SPAI)/음성(AntiDeepfake)/영상(dfdc) 세 모델의 설정을 한 클래스에 다 넣고 있고, `DFDC_REPO_DIR`이 없으면 `Settings()` 생성 자체가 `RuntimeError`로 실패한다. 이 `Settings` 객체는 `get_settings()`로 **모든 라우터(이미지/음성/영상)가 공유**하므로, `DFDC_REPO_DIR`을 설정하지 않고 서버를 켜면 (영상 기능을 안 쓰더라도) **이미지·음성 엔드포인트까지 전부 500**이 된다. `git pull`로 이 셋업 섹션이 추가된 코드를 받았다면, 아래 환경변수 설정(8번)까지 반드시 같이 해야 한다.
+
+### 1. `dfdc` conda 환경 구성
+
+```powershell
+conda create -n dfdc python=3.9 -y
+conda activate dfdc
+conda install pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia -y
+```
+
+시간이 꽤 걸린다 (PyTorch + CUDA 다운로드, SPAI 셋업 5번과 동일).
+
+### 2. 나머지 패키지 설치
+
+```powershell
+pip install opencv-python facenet-pytorch grad-cam timm albumentations==1.3.1
+```
+
+- `opencv-python`: 프레임 추출(`kernel_utils.VideoReader`)
+- `facenet-pytorch`: 얼굴 검출(MTCNN, `kernel_utils.FaceExtractor`)
+- `grad-cam`: 얼굴 히트맵(Grad-CAM, best-effort 기능). PyPI 배포 패키지명은 `grad-cam`이지만
+  import 시 모듈명은 여전히 `pytorch_grad_cam`이다(GitHub 저장소 이름은 `pytorch-grad-cam`이라
+  헷갈리기 쉬움 - `pip install pytorch-grad-cam`으로는 설치 안 됨).
+- `timm`: EfficientNet 인코더(`training.zoo.classifiers.DeepFakeClassifier`가 내부적으로 사용)
+- `albumentations==1.3.1`: **버전 고정 필수** - `kernel_utils.py`가 옛날 경로
+  (`albumentations.augmentations.functional.image_compression`)로 import하는데, 최신
+  albumentations(1.4.0+)는 내부 구조가 재편되면서 그 경로에서 함수가 빠져
+  `ModuleNotFoundError`가 난다(2026-08-27, 데스크탑 실제 실행에서 발견). GitHub으로 버전별
+  소스 대조 결과 1.3.1까지는 그 경로에 함수가 그대로 있음 - 버전 안 박고 설치하면 최신이
+  깔려서 깨진다.
+
+### 3. dfdc_deepfake_challenge 저장소 클론
+
+```powershell
+cd C:\ai
+git clone https://github.com/selimsef/dfdc_deepfake_challenge.git
+```
+
+### 4. 모델 체크포인트 다운로드
+
+저장소가 배포하는 7개 체크포인트(`tf_efficientnet_b7_ns` 계열, `predict_submission.sh`가 쓰는 실제 우승 앙상블 구성) 전부를 받는다. (예전엔 8GB GPU를 이유로 1개만 쓰는 걸로 축소했었는데, 그 GPU 메모리 근거가 실제로는 이 저장소 README에 없는 걸로 확인돼 2026-08-27 원복했다 — README에 나오는 유일한 GPU 메모리 수치인 "12gb+"는 4-GPU **학습(training)** 요구사항이지 추론 요구사항이 아니다.)
+
+저장소가 제공하는 `download_weights.sh`는 bash 스크립트라 Windows PowerShell에서 그대로 실행 안 된다 - 같은 URL/파일명을 PowerShell로 옮긴 버전을 쓴다:
+
+```powershell
+cd C:\ai\dfdc_deepfake_challenge
+mkdir weights -Force | Out-Null
+
+$tag = "0.0.1"
+$files = @(
+    "final_111_DeepFakeClassifier_tf_efficientnet_b7_ns_0_36",
+    "final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19",
+    "final_777_DeepFakeClassifier_tf_efficientnet_b7_ns_0_29",
+    "final_777_DeepFakeClassifier_tf_efficientnet_b7_ns_0_31",
+    "final_888_DeepFakeClassifier_tf_efficientnet_b7_ns_0_37",
+    "final_888_DeepFakeClassifier_tf_efficientnet_b7_ns_0_40",
+    "final_999_DeepFakeClassifier_tf_efficientnet_b7_ns_0_23"
+)
+
+foreach ($f in $files) {
+    $url = "https://github.com/selimsef/dfdc_deepfake_challenge/releases/download/$tag/$f"
+    Write-Host "Downloading $f..."
+    Invoke-WebRequest -Uri $url -OutFile "weights\$f"
+}
+```
+
+7개 합쳐 약 1.87GB. `weights/` 폴더에 7개 파일이 받아지면 아래 `DFDC_CHECKPOINTS` 기본값과 파일명이 그대로 맞는다.
+
+### 5. `dfdc` 환경의 python.exe 절대경로 확인
+
+아래 환경변수 설정에 필요하다.
+
+```powershell
+conda activate dfdc
+(Get-Command python).Source
+```
+
+출력된 경로를 메모해둔다 (예: `C:\Users\<user>\miniconda3\envs\dfdc\python.exe`).
+
+### 6. veritae-detection-server 최신 코드 적용
+
+```powershell
+cd C:\ai\veritae-detection-server
+git pull origin main
+```
+
+### 7. 환경변수 설정
+
+이 서버가 dfdc를 어디서 어떻게 실행할지 알려주는 값들이다. `DFDC_REPO_DIR`은 **필수**(없으면 위에서 설명한 대로 서버 전체가 500이 된다) — 나머지는 선택이고 `app/config.py`에 기본값이 있다. PowerShell 세션마다 설정해야 하니, 매번 치기 귀찮으면 아래를 `C:\ai\veritae-detection-server\run.ps1` 같은 스크립트에 추가해서 실행하면 편하다.
+
+```powershell
+$env:DFDC_REPO_DIR = "C:\ai\dfdc_deepfake_challenge"   # 필수
+$env:DFDC_PYTHON    = "C:\Users\<user>\miniconda3\envs\dfdc\python.exe"   # 5번에서 확인한 경로 (기본값: "python")
+$env:DFDC_CHECKPOINTS = "./weights/final_111_DeepFakeClassifier_tf_efficientnet_b7_ns_0_36,./weights/final_555_DeepFakeClassifier_tf_efficientnet_b7_ns_0_19,./weights/final_777_DeepFakeClassifier_tf_efficientnet_b7_ns_0_29,./weights/final_777_DeepFakeClassifier_tf_efficientnet_b7_ns_0_31,./weights/final_888_DeepFakeClassifier_tf_efficientnet_b7_ns_0_37,./weights/final_888_DeepFakeClassifier_tf_efficientnet_b7_ns_0_40,./weights/final_999_DeepFakeClassifier_tf_efficientnet_b7_ns_0_23"   # 기본값이 이미 이 값(7개 풀 앙상블) - 4번에서 download_weights.sh로 전부 받았다면 생략 가능
+$env:DFDC_TIMEOUT_SECONDS = "600"   # 기본값 600s. 얼굴검출+CNN추론이 여러 프레임에 걸쳐 오디오(300s)보다 오래 걸릴 걸로 예상되나 실측 전이라 넉넉하게 잡음
+$env:DFDC_WORK_DIR = "./tmp"   # 기본값 ./tmp (SPAI/AntiDeepfake와 동일)
+```
+
+### 8. 서버 실행 (또는 재시작)
+
+이미 detection-api 서버가 켜져 있다면, 환경변수가 적용되도록 다시 시작해야 한다.
+
+```powershell
+conda activate detection-api
+cd C:\ai\veritae-detection-server
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### 9. 정상 동작 확인
+
+새 PowerShell 창을 열고 (서버는 8번에서 계속 켜둔 채로):
+
+```powershell
+curl -X POST -F "file=@C:\path\to\test.mp4;type=video/mp4" http://localhost:8000/process/video
+```
+
+아래 응답 예시는 AI 판독 칸만 보인 것이다. 실제 응답에는 `scam_detection`·`misinformation_detection` 칸도 함께 오며, 사기 위험도·가짜정보 설정을 마치기 전에는 요청이 502로 끝난다(11절 참고).
+
+정상이면 다음과 같은 응답이 나온다:
+
+```json
+{
+  "ai_detection": {
+    "model": "dfdc",
+    "score": 0.xx,
+    "evidence": [],
+    "evidence_image": null
+  }
+}
+```
+
+score가 높으면(얼굴 조작 확률이 높으면) `evidence` 배열에 탐지된 시간 구간이, `evidence_image`에 Grad-CAM 히트맵(base64 PNG)이 채워질 수 있다(둘 다 best-effort — 실패해도 전체 분석은 성공한다).
+
+실제 데스크탑 검증 완료(2026-09-12): 실제 얼굴 바꾸기 영상에서 점수(0.98), 시간 구간, Grad-CAM 히트맵이 모두 나오는 것을 확인했다.
+
+---
+
+## 사기 위험도 분석(text-extraction) 설정
+
+OCR(EasyOCR)/STT(faster-whisper)/문장분리(kss)를 위한 새 conda env를 만든다. GitHub repo clone은 필요 없다(전부 pip 패키지).
+
+사기 판정 자체는 이 env가 아니라 가짜정보탐지와 같은 Ollama 모델(`OLLAMA_MODEL`, 기본 qwen3.5:4b)이 한다(2026-10-28, Lilju 대체). 추출이 끝나면 `app/services/text_judge.py`가 GPU 대기열 자리 하나 안에서 사기 판정 → 가짜정보 판정을 이어서 하고 모델을 내린다. 그래서 사기감지에도 아래 "가짜정보탐지" 절의 Ollama 설치가 필요하다. 지시문은 `scripts/measure_scam_llm.py`의 v3와 글자 그대로 같아야 한다(`tests/test_scam_judge.py`가 확인).
+
+**중요 - 실기 검증에서 확인된 주의사항 (2026-09-15, 3060Ti):**
+- **OCR은 PaddleOCR이 아니라 EasyOCR을 쓴다.** PaddleOCR은 최신(3.x)에서 CPU 크래시/GPU cuDNN 버전 충돌이 있었고, 안정판(2.x)으로 내려도 "국민은행" 같은 특정 단어를 일관되게 잘못 인식하는 문제가 있었다. 같은 이미지로 EasyOCR과 직접 비교해 EasyOCR이 명확히 더 정확함을 확인하고 교체했다.
+- **EasyOCR은 CPU로 고정한다(`gpu=False`).** GPU로 돌리면 아래 faster-whisper용으로 설치한 CUDA 12용 cuDNN과 같은 env 안에서 다시 충돌할 위험이 있다. 이미지 한 장 처리라 CPU로도 속도 차이는 체감되지 않는다.
+- **`PADDLEOCR_LANG` 환경변수 값이 `korean`에서 `ko`로 바뀌었다** (변수명 자체는 하위 호환을 위해 그대로 둠 - EasyOCR의 언어 코드 표기 방식이 다름). 새로 설정하는 경우 기본값(`ko`)을 그대로 쓰면 되고, 예전에 `korean`으로 이미 설정해뒀다면 `ko`로 바꿔야 한다.
+- faster-whisper(STT)는 GPU가 필요하다 — `large-v3` 모델은 CPU에서 너무 느리다. 이건 CUDA **12**용 cuBLAS/cuDNN을 pip로 따로 설치해서 쓴다(아래 3번).
+- **영상은 음성뿐 아니라 화면 텍스트(자막/문구)도 본다(2026-09-15 추가).** ffmpeg로 3초에 한 장씩 프레임을 뽑고, `imagehash`(perceptual hash)로 직전 프레임과 거의 같은 화면이면 건너뛴 뒤, 남은(변화가 있는) 프레임만 EasyOCR로 읽는다. 그래서 `imagehash` 패키지가 추가로 필요하다.
+
+### 1. `text-extraction` conda 환경 구성
+
+```powershell
+conda create -n text-extraction python=3.10 -y
+conda activate text-extraction
+pip install easyocr faster-whisper transformers torch kss imagehash
+```
+
+### 2. ffmpeg 확인
+
+`ffmpeg`는 음성 판독(AntiDeepfake) 설정에서 이미 설치했다면 그대로 재사용한다(영상에서 오디오 트랙을 뽑을 때도 동일하게 사용). 아직 설치하지 않았다면:
+
+```powershell
+winget install ffmpeg
+```
+
+설치 후 새 PowerShell 창 열기 (PATH 반영을 위해 필수).
+
+### 3. faster-whisper GPU 활성화 (cuBLAS/cuDNN 설치 + PATH 등록)
+
+faster-whisper(STT)가 GPU를 쓰려면 CUDA 12용 cuBLAS/cuDNN 런타임 DLL이 필요하다. 이게 없으면 `Library cublas64_12.dll is not found or cannot be loaded` 에러가 난다.
+
+```powershell
+conda activate text-extraction
+pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
+```
+
+설치된 DLL이 있는 폴더를 PATH에 **영구** 등록한다. **`setx PATH ...`는 절대 쓰지 않는다** — PATH는 이미 길어서 `setx`의 1024자 제한에 걸려 잘려나갈 위험이 있다. 대신 아래처럼 .NET API로 등록한다(길이 제한 없음):
+
+```powershell
+$cublasPath = "$env:USERPROFILE\miniconda3\envs\text-extraction\lib\site-packages\nvidia\cublas\bin"
+$cudnnPath = "$env:USERPROFILE\miniconda3\envs\text-extraction\lib\site-packages\nvidia\cudnn\bin"
+
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+[Environment]::SetEnvironmentVariable("Path", "$currentPath;$cublasPath;$cudnnPath", "User")
+```
+
+**등록 후 새 PowerShell 창을 열어야 적용된다** (지금 열려 있는 창엔 반영 안 됨). 새 창에서 확인:
+
+```powershell
+Test-Path "$env:USERPROFILE\miniconda3\envs\text-extraction\lib\site-packages\nvidia\cublas\bin\cublas64_12.dll"
+```
+`True`가 나오면 정상이다.
+
+### 4. `text-extraction` 환경의 python.exe 절대경로 확인
+
+아래 환경변수 설정에 필요하다.
+
+```powershell
+conda activate text-extraction
+(Get-Command python).Source
+```
+
+출력된 경로를 메모해둔다 (예: `C:\Users\<user>\miniconda3\envs\text-extraction\python.exe`).
+
+### 5. 환경변수 설정 (영구)
+
+이 서버가 text-extraction을 어디서 어떻게 실행할지 알려주는 값들이다. 모두 기본값이 있어 필수는 아니다. 이 값들은(PATH와 달리) 짧은 단일 값이라 `setx`로 영구 저장해도 안전하다.
+
+```powershell
+setx TEXT_EXTRACTION_PYTHON "C:\Users\<user>\miniconda3\envs\text-extraction\python.exe"
+setx PADDLEOCR_LANG "ko"
+setx WHISPER_MODEL_SIZE "large-v3"
+setx TEXT_EXTRACTION_TIMEOUT_SECONDS "300"
+```
+
+**HuggingFace 토큰:** EasyOCR·Whisper 등 모델은 최초 실행 시 자동 다운로드한다. 이후로는 로컬에 캐시되어 다시 안 받으므로, 보통은 설정 안 해도 된다. 반복 실행이 많아 rate limit 에러를 실제로 만났을 때만 설정:
+
+```powershell
+setx HF_TOKEN "your_huggingface_token_here"
+```
+
+### 6. 서버 실행 (또는 재시작)
+
+`setx`로 등록한 환경변수는 **새 PowerShell 창부터** 적용된다. 이미 detection-api 서버가 켜져 있다면, 새 창에서 다시 시작해야 한다.
+
+```powershell
+conda activate detection-api
+cd C:\ai\veritae-detection-server
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+---
+
+## 가짜정보(허위정보) 판별 설정
+
+이 서버는 텍스트에서 뽑은 문장 중 한국어 위키백과 내용과 어긋나는 주장을 찾아준다. 판정은 로컬 LLM(Ollama)으로 하고, 검색은 미리 만들어둔 위키 인덱스(SQLite 파일)로 한다 - 둘 다 이 데스크탑에서만 돌고 분석 요청 자체는 외부로 나가지 않는다. 다만 재정렬용 e5 모델은 최초 1회 HuggingFace에서 자동 다운로드되니(아래 4번 참고) 완전히 오프라인은 아니다.
+
+### 1. Ollama 설치 및 모델 다운로드
+
+```powershell
+winget install --id Ollama.Ollama -e
+```
+
+**설치 프로그램이 시작 프로그램에 자동 등록한다 - 데스크탑에서는 이게 의도된 동작이다**(항상 켜둬야 하는 서버이므로). 설치 후 새 PowerShell 창에서:
+
+```powershell
+ollama pull qwen3.5:4b
+```
+
+### 2. `text-extraction` 환경에 패키지 2개 추가
+
+기존 사기 위험도 분석 설정에서 만든 `text-extraction` conda 환경을 그대로 재사용한다(새 환경 안 만듦).
+
+```powershell
+conda activate text-extraction
+pip install kiwipiepy mwparserfromhell
+```
+
+### 2-1. 반박 확인용 NLI 모델 학습 (최초 1회, 약 1~2시간)
+
+LLM이 "거짓"이라고 판정한 문장의 화면 근거는, 문장 두 개의 모순 여부만 판정하는 NLI 분류기가 위키 문단의 문장들을 채점해 모순 점수 0.8 이상인 문장 중 판정 이유와 가장 가까운 문장 하나로 고른다(`scripts/nli_check.py`). 그런 문장이 없으면 판정이 인용한 문단에서 판정 이유와 가장 가까운 문장을 쓴다 - NLI는 판정을 버리지 않는다(2026-10-14). 라이선스가 명시된 한국어 NLI 모델이 없어 `klue/roberta-large`를 KLUE-NLI로 직접 학습한다. 학습에는 GPU가 필요한데 `text-extraction` 환경의 PyTorch는 CPU 전용이라, 학습 전용 환경을 따로 만든다. 기존 환경은 건드리지 않는다.
+
+먼저 `text-extraction`의 transformers 버전을 확인한다. 학습 환경도 같은 버전으로 맞춰야 학습한 모델을 판정 쪽에서 문제없이 읽는다.
+
+```powershell
+conda activate text-extraction
+python -c "import transformers; print(transformers.__version__)"
+```
+
+학습 환경을 만들고 학습한다. `<위 버전>` 자리에 방금 나온 버전을 넣는다. PyTorch는 SPAI 환경과 같은 CUDA 12.4 빌드를 쓰되, 학습에 필요 없는 torchvision/torchaudio는 뺐다.
+
+```powershell
+conda create -n nli-train python=3.11 -y
+conda activate nli-train
+conda install pytorch pytorch-cuda=12.4 -c pytorch -c nvidia -y
+pip install transformers==<위 버전> datasets accelerate
+cd C:\ai\veritae-detection-server\scripts
+python train_nli.py --output C:\ai\veritae-detection-server\data\nli_model
+```
+
+학습 중에는 GPU를 거의 다 쓰므로 분석 요청을 보내지 않는다. 끝나면 `완료: KLUE-NLI 검증 정확도 0.8x -> ...`가 찍힌다(0.85 이상이 정상). 이어서 판정 환경에서 모델을 제대로 읽는지 확인한다. `0.9` 이상의 숫자가 나오면 정상이다.
+
+```powershell
+conda activate text-extraction
+cd C:\ai\veritae-detection-server\scripts
+python -c "from nli_check import NliModel; print(NliModel(r'C:\ai\veritae-detection-server\data\nli_model').contradiction_scores(['에펠탑은 프랑스 파리에 있다.'], '에펠탑은 독일에 있다.'))"
+```
+
+#### 보충 학습 (필수, 약 8분) - 서버가 실제로 쓰는 모델은 이쪽이다
+
+위 모델(`data\nli_model`)만으로는 "~라는 이야기를 들었어요" 같은 전해 들은 말이나 "근거 없는 미신이다" 같은 평가형 반박 문장을 모순으로 보지 못한다(예: "선풍기를 틀고 자면 사망한다는 이야기를 들었어요."의 정답 근거 점수 0.058, 통과 기준 0.8). 그래서 위 모델에서 이어서 평가형 반박 문장을 보충해 한 번 더 학습한 `data\nli_model_aug`가 **서버의 기본 모델**이다. 이 폴더가 없으면 가짜정보 판정 요청은 시작 시점에 `NLI 모델 폴더를 찾을 수 없습니다` 오류(502)로 실패한다(옛 모델로 대신 돌지 않는다).
+
+```powershell
+conda activate nli-train
+cd C:\ai\veritae-detection-server\scripts
+python train_nli.py --init-model C:\ai\veritae-detection-server\data\nli_model --augment --epochs 1 --output C:\ai\veritae-detection-server\data\nli_model_aug
+```
+
+끝나면 KLUE 검증 정확도와 평가형 반박 문장 정확도가 학습 전후로 찍힌다(KLUE 정확도가 0.89 안팎으로 크게 떨어지지 않았는지 본다). 모델 폴더 위치를 바꾸려면 환경변수 `MISINFO_NLI_MODEL`로 경로를 지정한다. 환경변수는 설정 **이후에 새로 연 창**에서 띄운 서버에만 적용된다. 학습 결과는 원재료(KLUE 데이터셋, KLUE-RoBERTa)의 라이선스인 CC BY-SA 4.0을 따른다.
+
+#### 2-2. 말한 사람 판별 분류기 학습 (필수, 약 17분) - 서버 기본 판정 방식(split)이 쓴다
+
+문장을 말한 사람이 그 내용을 **맞다고 하는지, 아니라고 하는지, 따질 사실이 없는지**만 가리는 작은 분류기다(2026-10-17). 4B 모델이 "선풍기 틀고 자면 죽는다는 건 미신이래요" 같은 부정 문장과 이중부정, 전해 들은 말을 거꾸로 읽는 문제를 이 분류기가 맡는다. 위 NLI 모델과는 다른 모델이고(`klue/roberta-base`, KLUE-NLI + `tests/speaker/speaker_train_v2.json`을 섞어 처음부터 학습), 같은 `nli-train` 환경에서 학습한다.
+
+```powershell
+conda activate nli-train
+cd C:\ai\veritae-detection-server\scripts
+python train_nli.py --base-model klue/roberta-base --extra-data ..\tests\speaker\speaker_train_v2.json --extra-eval ..\tests\speaker\speaker_eval_v2.json --output ..\data\speaker_model_v2
+```
+
+끝나면 `[학습 후] KLUE-NLI 검증 정확도 0.85 안팎, 말한 사람 판별 평가 세트 정확도 0.98 안팎`이 찍힌다. 채점은 `python eval_speaker.py --model ..\data\speaker_model_v2 --eval ..\tests\speaker\speaker_eval.json`(text-extraction 환경)으로 다시 볼 수 있다. 이 폴더가 없으면 판정 방식이 `split`일 때 요청 시작 시점에 `말한 사람 판별 모델 폴더를 찾을 수 없습니다` 오류(502)로 실패한다. 위치를 바꾸려면 `MISINFO_SPEAKER_MODEL`.
+
+### 3. 위키 인덱스 구축 (최초 1회, 이후 원할 때 재실행)
+
+한국어 위키백과 전체 덤프(약 1.4GB)를 받아서 인덱스를 만든다. **몇십 분이 아니라 훨씬 오래
+걸릴 수 있다** - 노트북(순수 파이썬 XML 파서)에서 실측한 결과 변환에만 7시간 이상 걸렸다
+(설계서 §4). 이 데스크탑은 C 확장 파서를 쓸 수 있어 더 빠를 것으로 예상되지만 실측된 적은
+없으니, 처음 돌릴 때는 여유 시간을 넉넉히 잡아야 한다. 5000페이지마다
+`pages=... chunks=... elapsed=...`를 stderr에 찍으니 진행 속도를 보고 남은 시간을 가늠하면
+된다. 급하게 동작만 확인하려면 `--limit 5000` 같은 옵션으로 일부만 먼저 만들어볼 수 있다.
+
+```powershell
+cd C:\ai\veritae-detection-server
+Invoke-WebRequest -Uri "https://dumps.wikimedia.org/kowiki/latest/kowiki-latest-pages-articles.xml.bz2" -OutFile "C:\ai\kowiki-latest-pages-articles.xml.bz2"
+conda activate text-extraction
+cd scripts
+python build_wiki_index.py --dump C:\ai\kowiki-latest-pages-articles.xml.bz2 --output C:\ai\veritae-detection-server\data\wiki_index.sqlite3 --snapshot 2026-09-01
+```
+
+`--snapshot`은 그날 날짜(YYYY-MM-DD)로 적으면 된다 - 응답의 `wikiSnapshot` 필드로 그대로 나간다.
+
+### 4. 환경변수 설정
+
+```powershell
+$env:WIKI_INDEX_PATH = "C:\ai\veritae-detection-server\data\wiki_index.sqlite3"
+$env:OLLAMA_URL = "http://localhost:11434"   # 기본값과 동일, 보통 안 바꿔도 됨
+$env:OLLAMA_MODEL = "qwen3.5:4b"             # 기본값과 동일
+$env:MISINFO_EVIDENCE_CHUNK_COUNT = "5"      # 판정마다 LLM에 넘길 근거 조각 수, 기본값과 동일
+$env:MISINFO_TIMEOUT_SECONDS = "300"         # 가짜정보 판정 서브프로세스 타임아웃(초), 기본값과 동일
+$env:MISINFO_WIKI_SEARCH = "0"               # 1이면 위키백과 검색도 같이 씀(문장의 핵심 단어가 위키백과로 전송됨), 기본 꺼짐
+$env:MISINFO_JUDGE_MODE = "split"            # 판정 방식, 기본값과 동일(아래 '판정 방식' 참고). 예전 판정으로 되돌리려면 "current"
+$env:MISINFO_SPEAKER_MODEL = "C:\ai\veritae-detection-server\data\speaker_model_v2"   # 말한 사람 판별 분류기 폴더, 기본값과 동일
+```
+
+**판정 방식(`MISINFO_JUDGE_MODE`)** - 2026-10-18 측정으로 `split`을 기본으로 정했다.
+
+| 값 | 하는 일 |
+|---|---|
+| `split` (기본) | 1) 4B가 위키 없이 문장에서 따질 내용만 뽑는다. 2) 말한 사람 판별 분류기가 그 내용을 맞다고/아니라고 하는지 본다. 3) **"아니라고 함"(부정 문장)이면** 뽑은 내용으로 위키를 검색해 그 내용의 참거짓을 판정하고, 맞다고 한 내용이 거짓이거나 아니라고 한 내용이 참이면 거짓 문장으로 띄운다. **그 외 문장은** 원래 문장으로 검색·판정한다(`current`와 같은 흐름). 4) 판정 지시문은 둘 다 "가장 직접 알려주는 근거 문단 하나만 고르고 이유는 그 문단으로만"(이유에 다른 문서 내용이 섞이지 않게). |
+| `current` | 06ba7c5 판정 그대로(분류기 안 씀). 문제가 있을 때 되돌리는 값 |
+| `a`, `speaker` | 측정용(`a` = current + 근거 문단 하나 지시문, `speaker` = 모든 문장을 분류기 방식으로) |
+
+측정(`scripts/measure_final.py`): 학습·설계에 쓰지 않은 새 문장 70개에서 맞는 문장을 틀렸다고 띄우는 경우 6 -> 0, 거짓 문장 탐지 27/32 -> 27/32. 전체 295문장에서 각각 25 -> 9, 107 -> 105(놓친 것은 주로 OCR 오타 문장). 4B 호출이 문장마다 한 번 늘어 문장당 1~2초 더 걸린다.
+
+**e5 재정렬 모델 최초 다운로드:** 첫 요청 처리 시 `intfloat/multilingual-e5-small`(재정렬용
+임베딩 모델, 약 470MB)을 HuggingFace에서 자동으로 받는다. 다른 모델과 마찬가지로 이후엔
+로컬 캐시를 쓰므로 다시 받지 않는다 - 서버를 처음 켜고 문장이 있는 첫 분석 요청을 보낼 때
+그만큼 응답이 느려질 수 있다는 점만 알아두면 된다.
+
+### 5. 서버 재시작 및 확인
+
+```powershell
+conda activate detection-api
+cd C:\ai\veritae-detection-server
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+가짜정보탐지가 실제로 잘 되는지, 프롬프트나 설정을 바꾼 뒤에도 정확도가 떨어지지 않았는지는 `tests/regression/README.md`의 회귀 테스트셋으로 확인한다.
+
+**서버를 통한 확인(필수).** 회귀 테스트는 판정 함수를 직접 부르고 모델을 한 번만 올려 둔다. 실서버는 요청마다 새 프로세스로 돌고 설정도 환경변수로 정해져서, 회귀 테스트가 통과해도 서버 결과가 다를 수 있다(2026-10-13: 테스트 21/30인데 서버는 옛 NLI 모델이라 탐지 실패). 설정을 바꾸거나 서버를 재시작한 뒤에는 서버를 띄워 둔 채 **다른 창**에서 아래를 실행한다. 사용자 앱과 같은 길(`POST /process/image`)로 샘플 이미지를 보내, 선풍기 문장이 거짓으로 탐지되는지와 걸린 시간을 한 번에 보여준다(성공하면 종료 코드 0).
+
+```powershell
+conda activate text-extraction
+cd C:\ai\veritae-detection-server
+python scripts\check_image_e2e.py --url http://localhost:8000
+```
+
+**알려진 약점(2026-10-18):** 판정 방식이 `split`이면 이 샘플 이미지의 선풍기 문장("선풍기틀 틀고 자면 사망하다는 이야기틀 들없어요")은 **탐지되지 않아 이 스크립트가 실패로 끝난다.** 분류기는 "맞다고 함"으로 바르게 읽지만 그 외 문장 흐름에서 4B가 내용을 "…라는 속설이 있다"로 잘못 정리하기 때문이다(`current`도 같은 잘못된 정리를 하는데, 그 위에서 우연히 거짓으로 판정해 통과했었다). 서버 경로·시간·설정 확인 용도로는 그대로 쓴다 - 서버 로그의 `misinfo_config ... judge_mode=split`과 시간을 본다.
+
+### 로그 읽는 법
+
+서버 콘솔에 요청 하나당 아래 줄들이 찍힌다(INFO). 원문 문장은 보통 싣지 않지만, 가짜정보 하위 프로세스 줄에는 문장에서 정리한 내용(`claim`, `core_claim`)과 근거 문장이 들어가고, LLM 답 형식이 깨진 경우에는 원문 문장도 경고(WARNING) 로그에 남는다.
+
+- `request_done method=POST path=/process/image status=200 seconds=..` : 요청 전체 시간과 결과 코드
+- `stage_done label=spai|scam|text_judge seconds=..` : 이미지 판독(SPAI), 글자 추출, 사기 판정+가짜정보 판정(Ollama 한 번 올림) 각각의 시간
+- `scam_judge probability=.. chars=..` : 사기 가능성(0~100)과 판정에 넣은 글자 수(3000자에서 자름)
+- `gpu_queue_acquired/released ... wait_seconds=.. run_seconds=..` : GPU 대기열 대기·점유 시간
+- `misinfo_infer 로그:` 아래 줄들(가짜정보 하위 프로세스):
+  - `load_kiwi / load_e5 / load_nli / load_speaker seconds=..` : 모델을 읽는 시간(요청마다 새 프로세스라 매번 든다)
+  - `extract_result speaker=.. claim=..` : (split) 4B가 위키 없이 뽑은 내용과 분류기 판단(맞다고 함/아니라고 함/사실 없음). 뽑은 내용이 비면 따질 사실이 없는 문장
+  - `ollama wall=.. load=.. prompt_eval=..(N tok) eval=..(N tok)` : LLM 호출 한 번의 총 시간 / 모델 로드 / 근거 읽기 / 답 쓰기
+  - `judge_result label=.. core_claim=.. reason=.. cited=[문서]` : 문장마다 LLM 판정 결과 - 문장을 무엇으로 정리했고(core_claim) 어떻게 판정했는지(지지/반박/판단불가)와 이유. 탐지가 안 됐을 때 원인을 여기서 본다. (split의 부정 문장은 `judge_result label=.. speaker=.. claim=..` - 뽑은 내용의 참거짓 판정)
+  - `sentence i/N total=..s outcome=.. search=.. rerank=.. judge_llm=.. shortlist=.. nli=.. reason_match=..` : 문장별 단계 시간과 **결과**
+  - `misinfo_config nli_model=.. ollama_model=.. wiki_search=.. judge_mode=.. speaker_model=..` : 이번 요청이 **어떤 NLI 모델 폴더**와 판정 방식·분류기로 돌았는지(옛 모델·옛 방식으로 도는지 바로 확인)
+  - `refutation_check core_claim=.. threshold=0.8 evidence_by=nli|reason_match top=(문서) nli=0.xx 문장; ...` : 거짓으로 판정된 문장의 근거를 고른 방식과 NLI 점수가 높은 후보 문장 3개
+  - `misinfo_summary ... startup= setup= sentences_total= unload= total=` : 전체 요약
+
+판정 기준(2026-10-14, split은 2026-10-18): 문장이 결국 말하는 내용으로 판단한다. split의 부정 문장은 분류기가 "아니라고 함"으로 본 내용의 참거짓으로 판단한다(아니라고 한 내용이 거짓이면 맞는 문장, 참이면 거짓 문장 - 이때 근거는 그 내용을 뒷받침하는 문장을 NLI 함의 점수로 고른다). 전해 들은 말("~라고 들었어요")과 속설 소개("~라는 속설이 있다")는 그 내용을, 속설을 부정하는 문장("~는 사실이 아니다")은 부정된 뜻을 판단한다. LLM이 "반박"이라고 판정하면 거짓으로 표시하고, NLI는 그 판정을 버리지 않고 화면 근거 문장을 고르는 데만 쓴다. `outcome`은 문장이 어디서 끝났는지 알려준다.
+
+| outcome | 뜻 |
+|---|---|
+| `refuted` | 거짓으로 탐지됨(화면에 나감). 근거 문장은 NLI 모순 점수 0.8 이상인 문장 중 판정 이유와 가장 가까운 문장 |
+| `refuted_reason_match` | 거짓으로 탐지됨(화면에 나감). NLI가 0.8을 넘는 문장을 못 찾아, 판정이 인용한 문단에서 판정 이유와 가장 가까운 문장을 근거로 씀 |
+| `no_evidence_found` | 위키 검색에서 근거 문서를 못 찾음 |
+| `not_refuted` | LLM이 반박이 아니라고(지지/판단불가) 판정 |
+| `judge_format_error` | LLM 판정의 답 형식이 깨짐 |
+| `no_candidate_sentences` | 검색된 문단에서 근거 후보 문장을 못 만듦 |
+
+### 접근 키 (DETECTION_API_KEY)
+
+배포 서버(Spring, AWS EC2)만 분석을 시킬 수 있게 공유 비밀 키를 둔다(2026-10-28). 이 서버는 `0.0.0.0`으로 열려 있어 집 공유기 안이나 Tailscale 안의 다른 기기도 닿을 수 있기 때문이다. 설정돼 있으면 `/health`를 뺀 모든 요청에 `X-Detection-Key` 헤더가 같아야 하고, 다르면 401을 돌려준다. 비워 두면 검사하지 않는다(로컬 개발 전용 - 시작 시 경고 로그).
+
+데스크탑에서 한 번 설정하고(값은 Spring 서버의 `DETECTION_API_KEY`와 같아야 한다), **새 PowerShell 창**에서 서버를 다시 켠다:
+
+```powershell
+setx DETECTION_API_KEY "<EC2 /etc/veritae/veritae.env 에 있는 값>"
+```
+
+### GPU 자원 큐
+
+SPAI/dfdc/사기감지(음성·영상)/가짜정보탐지가 전부 같은 GPU를 쓰기 때문에, 동시에 여러 요청이 오면 한 번에 하나씩만 실제로 GPU를 쓰고 나머지는 순서를 기다린다(`GPU_QUEUE_MAX_CONCURRENT`, 기본 1). 대기 중인 요청이 너무 많이 쌓이면(`GPU_QUEUE_MAX_DEPTH`, 기본 10) 새 요청은 503으로 즉시 거절된다. 필요하면 환경변수로 조정한다:
+
+```powershell
+$env:GPU_QUEUE_MAX_CONCURRENT = "1"
+$env:GPU_QUEUE_MAX_DEPTH = "10"
+```
+
+---
+
+## 로컬 개발 (테스트 실행)
+
+이 레포를 수정하는 개발 머신(이 컴퓨터)에서 테스트를 돌릴 때는 SPAI 없이도 가능하다 (테스트는 `run_spai_inference`를 mock 처리한다):
+
+```powershell
+pip install -r requirements-dev.txt
+pytest
+```
+
+## API
+
+엔드포인트 목록과 접근 키 규칙은 [README](../README.md#api)에 있다. 응답 JSON의 칸 구성은 `app/schemas.py`가 기준이다.

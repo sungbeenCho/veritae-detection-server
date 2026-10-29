@@ -4,9 +4,12 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.routers import audio as audio_router
+from app.services import text_judge
 from app.services.antideepfake_runner import AntiDeepfakeInferenceError, AntiDeepfakeResult
 from app.services.misinfo_runner import MisinfoInferenceError
+from app.services.scam_judge import ScamJudgeError
 from app.services.scam_runner import ScamInferenceError, ScamResult
+from tests.text_judge_stubs import FAKE_SCAM_JSON, stub_text_judge  # noqa: F401
 
 client = TestClient(app)
 
@@ -29,7 +32,7 @@ def test_process_audio_returns_score_and_evidence(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [], [])
+        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -70,7 +73,7 @@ def test_process_audio_returns_502_on_inference_failure(monkeypatch):
 
     monkeypatch.setattr(audio_router, "run_antideepfake_inference", raise_error)
     monkeypatch.setattr(
-        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [], [])
+        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -90,10 +93,10 @@ def test_process_audio_returns_scam_detection_when_present(monkeypatch):
     monkeypatch.setattr(
         audio_router,
         "run_scam_inference_audio",
-        lambda data, filename: ScamResult(0.82, [{"sentence": "계좌번호를 알려주세요", "score": 0.95}], ["계좌번호를 알려주세요"]),
+        lambda data, filename: ScamResult(["계좌번호를 알려주세요"]),
     )
     monkeypatch.setattr(
-        audio_router,
+        text_judge,
         "run_misinfo_inference",
         lambda sentences: type("R", (), {"model": "qwen3.5:4b", "wiki_snapshot": "2026-09-01", "claims": []})(),
     )
@@ -104,11 +107,7 @@ def test_process_audio_returns_scam_detection_when_present(monkeypatch):
     )
 
     assert response.status_code == 200
-    assert response.json()["scam_detection"] == {
-        "model": "lilju",
-        "score": 0.82,
-        "evidence": [{"sentence": "계좌번호를 알려주세요", "score": 0.95}],
-    }
+    assert response.json()["scam_detection"] == FAKE_SCAM_JSON
 
 
 def test_process_audio_omits_scam_detection_when_no_text(monkeypatch):
@@ -118,7 +117,7 @@ def test_process_audio_omits_scam_detection_when_no_text(monkeypatch):
         lambda data, filename: AntiDeepfakeResult(score=0.87, evidence=[]),
     )
     monkeypatch.setattr(
-        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [], [])
+        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -158,7 +157,7 @@ def test_process_audio_allows_exactly_300_seconds(monkeypatch):
         lambda data, filename: AntiDeepfakeResult(score=0.87, evidence=[]),
     )
     monkeypatch.setattr(
-        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [], [])
+        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -177,7 +176,7 @@ def test_process_audio_proceeds_when_duration_unknown(monkeypatch):
         lambda data, filename: AntiDeepfakeResult(score=0.87, evidence=[]),
     )
     monkeypatch.setattr(
-        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [], [])
+        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -219,10 +218,10 @@ def test_process_audio_includes_misinformation_detection_when_refuted(monkeypatc
     monkeypatch.setattr(
         audio_router,
         "run_scam_inference_audio",
-        lambda data, filename: ScamResult(None, [], ["선풍기를 틀고 자면 사망한다."]),
+        lambda data, filename: ScamResult(["선풍기를 틀고 자면 사망한다."]),
     )
     monkeypatch.setattr(
-        audio_router,
+        text_judge,
         "run_misinfo_inference",
         lambda sentences: type(
             "R", (), {"model": "qwen3.5:4b", "wiki_snapshot": "2026-09-01",
@@ -250,11 +249,11 @@ def test_process_audio_omits_misinformation_detection_when_no_sentences(monkeypa
         lambda data, filename: AntiDeepfakeResult(score=0.1, evidence=[]),
     )
     monkeypatch.setattr(
-        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult(None, [], [])
+        audio_router, "run_scam_inference_audio", lambda data, filename: ScamResult([])
     )
     called = []
     monkeypatch.setattr(
-        audio_router, "run_misinfo_inference", lambda sentences: called.append(sentences)
+        text_judge, "run_misinfo_inference", lambda sentences: called.append(sentences)
     )
 
     response = client.post(
@@ -275,13 +274,13 @@ def test_process_audio_returns_502_when_misinfo_inference_fails(monkeypatch):
     monkeypatch.setattr(
         audio_router,
         "run_scam_inference_audio",
-        lambda data, filename: ScamResult(None, [], ["아무 문장"]),
+        lambda data, filename: ScamResult(["아무 문장"]),
     )
 
     def raise_error(sentences):
         raise MisinfoInferenceError("boom")
 
-    monkeypatch.setattr(audio_router, "run_misinfo_inference", raise_error)
+    monkeypatch.setattr(text_judge, "run_misinfo_inference", raise_error)
 
     response = client.post(
         "/process/audio",
@@ -289,3 +288,29 @@ def test_process_audio_returns_502_when_misinfo_inference_fails(monkeypatch):
     )
 
     assert response.status_code == 502
+
+
+def test_process_audio_returns_502_when_scam_judgment_fails(monkeypatch):
+    monkeypatch.setattr(
+        audio_router,
+        "run_antideepfake_inference",
+        lambda data, filename: AntiDeepfakeResult(score=0.1, evidence=[]),
+    )
+    monkeypatch.setattr(
+        audio_router,
+        "run_scam_inference_audio",
+        lambda data, filename: ScamResult(["아무 문장"]),
+    )
+
+    def raise_error(sentences):
+        raise ScamJudgeError("boom")
+
+    monkeypatch.setattr(text_judge, "judge_scam", raise_error)
+
+    response = client.post(
+        "/process/audio",
+        files={"file": ("test.wav", io.BytesIO(b"fake-audio-bytes"), "audio/wav")},
+    )
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "사기감지 처리 중 오류가 발생했습니다."

@@ -95,9 +95,10 @@ class Settings:
         self.dfdc_work_dir = Path(os.environ.get("DFDC_WORK_DIR", "./tmp")).resolve()
         self.dfdc_work_dir.mkdir(parents=True, exist_ok=True)
 
-        # --- 사기 위험도 분석(fraud-risk) 설정. OCR(PaddleOCR)/STT(faster-whisper)/
-        # 문장분리(kss)/사기감지(Lilju/voicephishing_kobert)를 전부 별도 conda env
-        # (text-extraction)에 격리한다. GitHub repo clone이 필요 없는 pip 패키지들이라
+        # --- 사기 위험도 분석(fraud-risk) 글자 추출 설정. OCR(EasyOCR)/STT(faster-whisper)/
+        # 문장분리(kss)를 전부 별도 conda env(text-extraction)에 격리한다. 사기 판정 자체는
+        # Lilju 대신 로컬 LLM(ollama_url/ollama_model, 아래 가짜정보 설정과 같은 모델)이 한다(2026-10-28).
+        # GitHub repo clone이 필요 없는 pip 패키지들이라
         # SPAI/AntiDeepfake/dfdc와 달리 REPO_DIR 필수 설정은 없다.
         self.text_extraction_python = os.environ.get("TEXT_EXTRACTION_PYTHON", "python")
         self.text_extraction_script = Path(
@@ -106,7 +107,6 @@ class Settings:
                 str(Path(__file__).resolve().parent.parent / "scripts" / "scam_infer.py"),
             )
         )
-        self.lilju_model_id = os.environ.get("LILJU_MODEL_ID", "Lilju/voicephishing_kobert")
         # 변수명은 PaddleOCR 시절 그대로 남아있지만(호환성 유지), 값은 EasyOCR 언어 코드다
         # (2026-09-15, OCR 엔진을 PaddleOCR에서 EasyOCR로 교체 - 실기에서 EasyOCR이
         # 한글 인식 정확도가 더 높게 나옴).
@@ -137,6 +137,25 @@ class Settings:
         self.ollama_model = os.environ.get("OLLAMA_MODEL", "qwen3.5:4b")
         self.misinfo_evidence_chunk_count = int(os.environ.get("MISINFO_EVIDENCE_CHUNK_COUNT", "5"))
         self.misinfo_timeout_seconds = int(os.environ.get("MISINFO_TIMEOUT_SECONDS", "300"))
+        # 반박 확인용 NLI 분류기(scripts/train_nli.py로 학습한 모델 폴더, 2026-10-01 결정). 기본은 보충 학습한
+        # nli_model_aug - 옛 nli_model은 "~라는 이야기를 들었어요" 같은 전해 들은 말의 정답 근거에 낮은 점수를
+        # 줘서 맞는 반박을 버렸다(2026-10-13). scripts/nli_check.default_model_path()와 같은 값이어야 한다
+        # (tests/test_config.py가 확인) - 회귀 테스트와 실서버가 다른 모델로 돌지 않게.
+        self.misinfo_nli_model = Path(
+            os.environ.get("MISINFO_NLI_MODEL", str(Path(__file__).resolve().parent.parent / "data" / "nli_model_aug"))
+        )
+        # 위키백과 검색 기능을 같이 쓸지(2026-10-01). 사용자 문장의 핵심 단어가 위키백과(해외)로 전송되므로
+        # 기본은 꺼짐 - 켜려면 MISINFO_WIKI_SEARCH=1.
+        self.misinfo_wiki_search = os.environ.get("MISINFO_WIKI_SEARCH", "0") == "1"
+        # 판정 방식(2026-10-18 마지막 측정으로 채택). split = 나눔+A: 부정 문장은 말한 사람 판별 분류기 + 정리된 내용 판정,
+        # 나머지는 문장 판정, 둘 다 판정 지시문 A. current = 06ba7c5 판정(되돌릴 때 MISINFO_JUDGE_MODE=current).
+        self.misinfo_judge_mode = os.environ.get("MISINFO_JUDGE_MODE", "split")
+        # 말한 사람 판별 분류기(scripts/train_nli.py --extra-data로 학습, 2026-10-17 v2).
+        self.misinfo_speaker_model = Path(
+            os.environ.get(
+                "MISINFO_SPEAKER_MODEL", str(Path(__file__).resolve().parent.parent / "data" / "speaker_model_v2")
+            )
+        )
 
 
 @lru_cache

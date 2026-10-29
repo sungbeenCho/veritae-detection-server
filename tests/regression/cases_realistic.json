@@ -1,0 +1,580 @@
+[
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "우리 할머니가 그러시는데 여름에 문 닫고 선풍기 켜놓고 자면 죽을 수도 있으니까 꼭 타이머 맞춰놓으래요",
+  "evidence_keys": [
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "만리장성은 달에서도 맨눈으로 보인다던데 진짜 대단하다",
+  "evidence_keys": [
+   [
+    "우주",
+    "궤도",
+    "맨눈",
+    "육안",
+    "눈으로",
+    "달"
+   ],
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "사람은 평생 뇌의 10%밖에 못 쓴대요",
+  "evidence_keys": [
+   [
+    "10",
+    "퍼센트",
+    "%",
+    "일부"
+   ],
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "백신 맞으면 자폐 걸린다고 맘카페에서 봤어요",
+  "evidence_keys": [
+   [
+    "자폐"
+   ],
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정",
+    "무관",
+    "조작",
+    "철회",
+    "연관"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "부산이 우리나라 수도라고 하더라고요",
+  "evidence_keys": [
+   [
+    "서울"
+   ],
+   [
+    "수도"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "요즘 애들은 잘 모르는데 에펠탑은 원래 영국 런던에 세워진 탑이래",
+  "evidence_keys": [
+   [
+    "파리",
+    "프랑스"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "세종대왕은 고려 시대 왕이잖아",
+  "evidence_keys": [
+   [
+    "조선"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "한글은 세조가 만들었다고 배웠어요",
+  "evidence_keys": [
+   [
+    "세종",
+    "1443",
+    "1446"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "임진왜란은 1392년에 터졌어",
+  "evidence_keys": [
+   [
+    "1592"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "피카소가 독일 사람이래",
+  "evidence_keys": [
+   [
+    "스페인"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "베토벤은 영국에서 태어났다고 하더라",
+  "evidence_keys": [
+   [
+    "본에서",
+    "독일",
+    "신성 로마"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "고래는 물고기니까 아가미로 숨 쉬는 거야",
+  "evidence_keys": [
+   [
+    "포유",
+    "폐"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "후지산이 중국에 있는 산이라던데",
+  "evidence_keys": [
+   [
+    "일본",
+    "시즈오카",
+    "야마나시"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "달은 스스로 빛을 내서 밤에 밝은 거래",
+  "evidence_keys": [
+   [
+    "반사"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "토마토 원산지는 중국이래요",
+  "evidence_keys": [
+   [
+    "남아메리카",
+    "안데스",
+    "남미",
+    "중앙아메리카",
+    "멕시코",
+    "페루"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_false",
+  "sentence": "지구는 사실 평평한데 다들 속고 있는 거래",
+  "evidence_keys": [
+   [
+    "구형",
+    "둥근",
+    "둥글",
+    "타원체",
+    "구 모양",
+    "평평하지",
+    "평면설",
+    "구체"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "ocr_false",
+  "sentence": "선풍기틀 켜고 자면 죽는다고 들없어요",
+  "evidence_keys": [
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "ocr_false",
+  "sentence": "만리장성은 달에서도 보인다는 애기틀 들없어요",
+  "evidence_keys": [
+   [
+    "우주",
+    "궤도",
+    "맨눈",
+    "육안",
+    "눈으로",
+    "달"
+   ],
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정"
+   ]
+  ]
+ },
+ {
+  "expected": "contradiction",
+  "category": "ocr_false",
+  "sentence": "백신 맞으면 자폐가 생긴다고 들없어요",
+  "evidence_keys": [
+   [
+    "자폐"
+   ],
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정",
+    "무관",
+    "조작",
+    "철회",
+    "연관"
+   ]
+  ]
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_negation",
+  "sentence": "선풍기 틀고 자면 죽는다는 건 다 미신이래요, 걱정 안 해도 돼요"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_negation",
+  "sentence": "만리장성이 우주에서 맨눈으로 보인다는 건 사실이 아니라고 하더라고요"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_negation",
+  "sentence": "뇌를 10%만 쓴다는 얘기는 잘못 알려진 거래요"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_negation",
+  "sentence": "백신이 자폐를 일으킨다는 주장은 근거가 없는 것으로 밝혀졌다"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_negation",
+  "sentence": "번개가 같은 곳에 두 번 안 친다는 말은 사실이 아니야"
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_mention",
+  "sentence": "지구가 평평하다고 주장하는 사람들이 아직도 있대",
+  "evidence_keys": [
+   [
+    "구형",
+    "둥근",
+    "둥글",
+    "타원체",
+    "구 모양",
+    "평평하지",
+    "평면설",
+    "구체"
+   ]
+  ]
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_true",
+  "sentence": "고래를 물고기로 아는 사람이 많은데 고래는 포유류예요"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_negation",
+  "sentence": "금붕어 기억력이 3초라는 건 근거 없는 속설이라던데"
+ },
+ {
+  "expected": "contradiction",
+  "category": "chat_mention",
+  "sentence": "달 착륙이 조작됐다는 음모론이 있다",
+  "evidence_keys": [
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정",
+    "음모론",
+    "증거",
+    "실제로"
+   ]
+  ]
+ },
+ {
+  "expected": "entailment",
+  "category": "ocr_negation",
+  "sentence": "선풍기 사망설은 미신이라는 이야기틀 들없어요"
+ },
+ {
+  "expected": "entailment",
+  "category": "ocr_negation",
+  "sentence": "뇌틀 10%만 쓴다는 건 잘못 알려진 거래요"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_true",
+  "sentence": "세종대왕이 훈민정음을 만드셨잖아요"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_true",
+  "sentence": "에펠탑은 프랑스 파리에 있어요"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_true",
+  "sentence": "고래는 폐로 숨을 쉰다고 배웠어요"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_true",
+  "sentence": "임진왜란은 1592년에 일어났대요"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_true",
+  "sentence": "서울이 대한민국 수도잖아요"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_true",
+  "sentence": "피카소는 스페인 출신 화가래"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_true",
+  "sentence": "베토벤은 독일 본에서 태어났다고 들었어요"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_true",
+  "sentence": "후지산은 일본에서 제일 높은 산이에요"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_true",
+  "sentence": "광화문은 서울 종로구에 있다"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_true",
+  "sentence": "달은 햇빛을 반사해서 빛나는 거래"
+ },
+ {
+  "expected": "entailment",
+  "category": "chat_true",
+  "sentence": "토마토는 원래 남아메리카가 원산지래요"
+ },
+ {
+  "expected": "neutral",
+  "category": "daily",
+  "sentence": "오늘 저녁 뭐 먹을까?"
+ },
+ {
+  "expected": "neutral",
+  "category": "daily",
+  "sentence": "회의는 3시로 미뤄졌습니다."
+ },
+ {
+  "expected": "neutral",
+  "category": "daily",
+  "sentence": "엄마 나 오늘 좀 늦어"
+ },
+ {
+  "expected": "neutral",
+  "category": "daily",
+  "sentence": "주말에 등산 갈 사람?"
+ },
+ {
+  "expected": "neutral",
+  "category": "daily",
+  "sentence": "이 영화 진짜 재밌더라"
+ },
+ {
+  "expected": "neutral",
+  "category": "daily",
+  "sentence": "택배 문 앞에 두고 갔어요."
+ },
+ {
+  "expected": "neutral",
+  "category": "daily",
+  "sentence": "다들 감기 조심하세요!"
+ },
+ {
+  "expected": "neutral",
+  "category": "daily",
+  "sentence": "어제 너무 피곤해서 일찍 잤어"
+ },
+ {
+  "expected": "neutral",
+  "category": "daily",
+  "sentence": "계좌번호 다시 보내줄 수 있어?"
+ },
+ {
+  "expected": "neutral",
+  "category": "daily",
+  "sentence": "생일 축하해~~"
+ },
+ {
+  "expected": "neutral",
+  "category": "daily",
+  "sentence": "내일 비 온대 우산 챙겨"
+ },
+ {
+  "expected": "neutral",
+  "category": "daily",
+  "sentence": "우리 팀장님 진짜 좋은 분이야"
+ },
+ {
+  "expected": "neutral",
+  "category": "ocr_daily",
+  "sentence": "오늘 회의는 3시로 미뤄졌습니디"
+ },
+ {
+  "expected": "neutral",
+  "category": "unverifiable",
+  "sentence": "어제 강남역 근처에서 교통사고가 났대요"
+ },
+ {
+  "expected": "neutral",
+  "category": "unverifiable",
+  "sentence": "이번 달부터 버스 요금이 오른다고 합니다"
+ },
+ {
+  "expected": "neutral",
+  "category": "unverifiable",
+  "sentence": "옆집 아저씨가 복권 1등 됐대"
+ },
+ {
+  "expected": "neutral",
+  "category": "unverifiable",
+  "sentence": "동네 마트가 다음 주에 폐업한대요"
+ },
+ {
+  "expected": "neutral",
+  "category": "unverifiable",
+  "sentence": "김철수 씨가 이번에 과장으로 승진했다고 하네요"
+ },
+ {
+  "expected": "neutral",
+  "category": "unverifiable",
+  "sentence": "오늘 코스피가 2% 넘게 올랐대"
+ }
+]

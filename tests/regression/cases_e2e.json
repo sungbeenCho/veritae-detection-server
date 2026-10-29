@@ -32,57 +32,214 @@
  {
   "expected": "contradiction",
   "category": "e2e_wiki_search",
-  "sentence": "만리장성은 우주에서 맨눈으로 보인다."
+  "sentence": "만리장성은 우주에서 맨눈으로 보인다.",
+  "evidence_keys": [
+   [
+    "우주",
+    "궤도",
+    "맨눈",
+    "육안",
+    "눈으로"
+   ],
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정"
+   ]
+  ]
  },
  {
   "expected": "contradiction",
   "category": "e2e_wiki_search",
-  "sentence": "인간은 뇌의 10퍼센트만 사용한다."
+  "sentence": "인간은 뇌의 10퍼센트만 사용한다.",
+  "evidence_keys": [
+   [
+    "10",
+    "퍼센트",
+    "%",
+    "일부"
+   ],
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정"
+   ]
+  ]
  },
  {
   "expected": "contradiction",
   "category": "e2e_wiki_search",
-  "sentence": "선풍기를 틀고 자면 사망한다."
+  "sentence": "선풍기를 틀고 자면 사망한다.",
+  "evidence_keys": [
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정"
+   ]
+  ]
  },
  {
   "expected": "contradiction",
   "category": "e2e_wiki_search",
-  "sentence": "백신은 자폐증을 유발한다."
+  "sentence": "백신은 자폐증을 유발한다.",
+  "evidence_keys": [
+   [
+    "자폐"
+   ],
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정",
+    "무관",
+    "조작",
+    "철회",
+    "연관"
+   ]
+  ]
  },
  {
   "expected": "contradiction",
   "category": "e2e_wiki_search",
-  "sentence": "부산은 대한민국의 수도이다."
+  "sentence": "부산은 대한민국의 수도이다.",
+  "evidence_keys": [
+   [
+    "서울"
+   ],
+   [
+    "수도"
+   ]
+  ]
  },
  {
   "expected": "contradiction",
   "category": "e2e_wiki_search",
-  "sentence": "아폴로 11호의 달 착륙은 조작되었다."
+  "sentence": "아폴로 11호의 달 착륙은 조작되었다.",
+  "evidence_keys": [
+   [
+    "않",
+    "없",
+    "아니",
+    "거짓",
+    "잘못",
+    "오해",
+    "속설",
+    "미신",
+    "신화",
+    "근거",
+    "반박",
+    "사실무근",
+    "틀린",
+    "부정",
+    "음모론",
+    "증거",
+    "실제로"
+   ]
+  ]
  },
  {
   "expected": "contradiction",
   "category": "e2e_wiki_search",
-  "sentence": "지구는 평평하다."
+  "sentence": "지구는 평평하다.",
+  "evidence_keys": [
+   [
+    "구형",
+    "둥근",
+    "둥글",
+    "타원체",
+    "구 모양",
+    "평평하지",
+    "평면설"
+   ]
+  ]
  },
  {
   "expected": "contradiction",
   "category": "e2e_wiki_search",
-  "sentence": "에펠탑은 영국 런던에 있다."
+  "sentence": "에펠탑은 영국 런던에 있다.",
+  "evidence_keys": [
+   [
+    "파리"
+   ]
+  ]
  },
  {
   "expected": "contradiction",
   "category": "e2e_wiki_search",
-  "sentence": "세종대왕은 고려의 왕이었다."
+  "sentence": "세종대왕은 고려의 왕이었다.",
+  "evidence_keys": [
+   [
+    "조선"
+   ]
+  ]
  },
  {
   "expected": "contradiction",
   "category": "e2e_wiki_search",
-  "sentence": "한글은 조선 세조 때 만들어졌다."
+  "sentence": "한글은 조선 세조 때 만들어졌다.",
+  "evidence_keys": [
+   [
+    "세종",
+    "1443",
+    "1446"
+   ]
+  ]
  },
  {
   "expected": "contradiction",
   "category": "e2e_wiki_search",
-  "sentence": "태양은 지구 주위를 돈다."
+  "sentence": "태양은 지구 주위를 돈다.",
+  "evidence_keys": [
+   [
+    "공전",
+    "지동설",
+    "태양 주위",
+    "태양을 중심"
+   ]
+  ]
  },
  {
   "expected": "neutral",

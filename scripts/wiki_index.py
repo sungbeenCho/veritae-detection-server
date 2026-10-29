@@ -9,6 +9,7 @@ import re
 import sqlite3
 import urllib.parse
 from pathlib import Path
+from typing import NamedTuple
 
 import mwparserfromhell
 from kiwipiepy import Kiwi
@@ -29,6 +30,10 @@ def strip_wiki_markup(wikitext: str) -> str:
     plain = code.strip_code(normalize=True, collapse=True)
     lines = [line for line in plain.split("\n") if line.strip() and not _DROP_LINE.match(line.strip())]
     return "\n".join(lines)
+
+
+def split_sentences(text: str) -> list[str]:
+    return [s.strip() for s in _SENT_SPLIT.split(text) if s.strip()]
 
 
 def split_into_chunks(text: str, target_chars: int = 200) -> list[str]:
@@ -60,6 +65,17 @@ def extract_keywords(kiwi: Kiwi, text: str) -> str:
     # ("만리장성은"으로 검색해도 "만리장성" 문서를 찾도록 - 2026-09-29 실측으로 확인된 필요성).
     tokens = [t.form for t in kiwi.tokenize(text) if t.tag in _KEEP_TAGS]
     return " ".join(tokens)
+
+
+# 위키백과 검색 기능에 보낼 검색어에는 형용사 어근(XR)도 넣는다 - "지구는 평평하다"에서 "평평"이 빠지면
+# "지구"만 검색돼 지평설 문서를 못 찾았다(2026-10-01 확인). 로컬 인덱스는 _KEEP_TAGS로 만들어져 있어
+# 로컬 검색(extract_keywords)은 그대로 둔다.
+_WEB_SEARCH_TAGS = _KEEP_TAGS | {"XR"}
+
+
+def web_search_terms(kiwi: Kiwi, text: str) -> str:
+    """위키백과 검색에 보낼 핵심 단어. 사용자 문장을 그대로 보내지 않고 단어만 보낸다(조사·어미 제거)."""
+    return " ".join(t.form for t in kiwi.tokenize(text) if t.tag in _WEB_SEARCH_TAGS)
 
 
 def extract_keywords_batch(kiwi: Kiwi, texts: list[str]) -> list[str]:
@@ -108,7 +124,19 @@ def _quote_fts5_token(token: str) -> str:
     return '"' + token.replace('"', '""') + '"'
 
 
-def search(conn: sqlite3.Connection, keywords: str, limit: int = 50) -> list[tuple[str, str]]:
+class Chunk(NamedTuple):
+    title: str
+    text: str
+    rowid: int
+
+
+# 동음이의 문서("세종 (동음이의)")는 이름이 같은 대상을 나열만 하는 안내 페이지라 사실 근거가 될 수 없다.
+# 근거 후보에 두면 "주식회사 세종은 금융 기업이다" 같은 문장이 "세종대왕은 고려의 왕" 반박 근거로
+# 표시됐다(2026-10-01 데스크탑 실측). 위키 기반 사실검증(FEVER 등)에서도 표준적으로 제외한다.
+DISAMBIGUATION_SUFFIX = "(동음이의)"
+
+
+def search(conn: sqlite3.Connection, keywords: str, limit: int = 50) -> list[Chunk]:
     if not keywords.strip():
         return []
     # OR로 이어야 한다 - AND(공백 join)는 문장에서 뽑은 키워드가 ~200자 조각 하나에 전부
@@ -117,7 +145,96 @@ def search(conn: sqlite3.Connection, keywords: str, limit: int = 50) -> list[tup
     # 랭킹(ORDER BY rank)으로 일부만 일치해도 후보를 찾고 관련도 순으로 정렬한다.
     quoted = " OR ".join(_quote_fts5_token(t) for t in keywords.split())
     rows = conn.execute(
-        "SELECT title, text FROM chunks WHERE keywords MATCH ? ORDER BY rank LIMIT ?",
-        (quoted, limit),
+        "SELECT title, text, rowid FROM chunks WHERE keywords MATCH ? AND title NOT LIKE ? ORDER BY rank LIMIT ?",
+        (quoted, f"%{DISAMBIGUATION_SUFFIX}", limit),
     ).fetchall()
-    return [(row[0], row[1]) for row in rows]
+    return [Chunk(*row) for row in rows]
+
+
+def lead_rowid(conn: sqlite3.Connection, title: str) -> int | None:
+    """문서의 첫 조각(정의 문단) rowid. 한 문서의 조각은 연속된 rowid로 저장되므로 가장 작은 rowid가 첫 조각이다."""
+    try:
+        row = conn.execute(
+            "SELECT min(rowid) FROM chunks WHERE chunks MATCH ? AND title = ?",
+            (f"title : {_quote_fts5_token(title)}", title),
+        ).fetchone()
+    except sqlite3.OperationalError:
+        # 제목이 문장부호뿐이라 검색어가 비는 경우 등 - 첫 문단 없이 진행한다.
+        return None
+    return row[0] if row else None
+
+
+def title_chunks(conn: sqlite3.Connection, title: str, keywords: str, limit: int = 2) -> list[Chunk]:
+    """한 문서의 첫 조각과, 그 문서 안에서 keywords가 가장 많이 맞는 조각 limit개.
+    위키백과 검색으로 찾은 문서를 로컬 인덱스에서 꺼낼 때 쓴다 - 문서 내용은 로컬 인덱스의 것을 쓴다.
+    로컬 인덱스에 없는 제목(덤프 이후 생긴 문서 등)이면 빈 목록."""
+    if title.endswith(DISAMBIGUATION_SUFFIX):
+        return []
+    found: list[Chunk] = []
+    lead = lead_rowid(conn, title)
+    if lead is None:
+        return []
+    row = conn.execute("SELECT title, text, rowid FROM chunks WHERE rowid = ?", (lead,)).fetchone()
+    if row:
+        found.append(Chunk(*row))
+    if keywords.strip():
+        terms = " OR ".join(_quote_fts5_token(t) for t in keywords.split())
+        try:
+            rows = conn.execute(
+                "SELECT title, text, rowid FROM chunks WHERE chunks MATCH ? AND title = ? ORDER BY rank LIMIT ?",
+                (f"title : {_quote_fts5_token(title)} AND keywords : ({terms})", title, limit),
+            ).fetchall()
+        except sqlite3.OperationalError:
+            rows = []
+        found.extend(Chunk(*r) for r in rows if r[2] != lead)
+    return found
+
+
+def expand_with_neighbors(
+    conn: sqlite3.Connection, chunks: list[Chunk], include_lead: bool = True,
+) -> list[tuple[str, str]]:
+    """각 조각에 같은 문서의 바로 앞뒤 조각을 붙여 (제목, 본문) 묶음으로 돌려준다.
+
+    약 200자 조각 하나만 보면 "이런 가설이 있다"까지만 담기고 바로 뒤의 "과학적 근거가
+    없다"가 잘려, 판정도 근거 표시도 틀어진다(2026-10-01 선풍기 사망설 실측). 구축 시 한
+    문서의 조각은 연속된 rowid로 저장되므로 인덱스를 다시 만들지 않고 rowid±1로 찾는다.
+    겹치거나 맞닿는 묶음은 하나로 합치고, 묶음 순서는 그 안에 든 선택 조각의 순위를 따른다.
+
+    include_lead면 문서마다 첫 조각(정의 문단)도 붙인다. 위키 문서는 첫 문단에 "에펠탑은 프랑스
+    파리에 있는…", "고래는 … 포유류의 총칭이다" 같은 정의가 있는데, 키워드 검색은 이 문단 대신
+    다른 조각을 가져오는 경우가 많아 쉬운 거짓 문장도 놓쳤다(2026-10-01 데스크탑 실측: 에펠탑
+    런던, 고래 어류, 세종 고려). 첫 문단은 그 문서의 가장 높은 순위 묶음 바로 앞에 둔다 - 글자 수
+    상한(fit_blocks)에 걸려도 첫 문단만 따로 밀려나지 않게.
+    """
+    if not chunks:
+        return []
+    wanted: dict[int, set[str]] = {}
+    for chunk in chunks:
+        for rowid in (chunk.rowid - 1, chunk.rowid, chunk.rowid + 1):
+            wanted.setdefault(rowid, set()).add(chunk.title)
+
+    rank = {chunk.rowid: i for i, chunk in enumerate(chunks)}
+    if include_lead:
+        best_rank: dict[str, int] = {}
+        for i, chunk in enumerate(chunks):
+            best_rank.setdefault(chunk.title, i)
+        for title, i in best_rank.items():
+            lead = lead_rowid(conn, title)
+            if lead is not None:
+                wanted.setdefault(lead, set()).add(title)
+                rank.setdefault(lead, i)
+
+    placeholders = ",".join("?" * len(wanted))
+    rows = conn.execute(
+        f"SELECT rowid, title, text FROM chunks WHERE rowid IN ({placeholders})", list(wanted)
+    ).fetchall()
+    kept = {rowid: (title, text) for rowid, title, text in rows if title in wanted[rowid]}
+
+    runs: list[list[int]] = []
+    for rowid in sorted(kept):
+        if runs and runs[-1][-1] == rowid - 1 and kept[runs[-1][-1]][0] == kept[rowid][0]:
+            runs[-1].append(rowid)
+        else:
+            runs.append([rowid])
+    runs.sort(key=lambda run: min(rank.get(r, len(chunks)) for r in run))
+    return [(kept[run[0]][0], " ".join(kept[r][1] for r in run)) for run in runs]

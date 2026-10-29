@@ -1,0 +1,498 @@
+[
+ {
+  "expected": "entailment",
+  "category": "직접단언",
+  "sentence": "캐나다의 수도는 오타와입니다.",
+  "fact": "캐나다의 수도는 오타와이다.",
+  "fact_true": true,
+  "note": "참인 내용 단언"
+ },
+ {
+  "expected": "entailment",
+  "category": "직접단언",
+  "sentence": "광합성은 식물이 이산화탄소를 흡수해서 산소를 내보내는 과정이거든.",
+  "fact": "식물은 광합성으로 이산화탄소를 흡수하고 산소를 내보낸다.",
+  "fact_true": true,
+  "note": "참인 내용 단언"
+ },
+ {
+  "expected": "entailment",
+  "category": "직접단언",
+  "sentence": "상어는 어류에 속해요.",
+  "fact": "상어는 어류에 속한다.",
+  "fact_true": true,
+  "note": "참인 내용 단언"
+ },
+ {
+  "expected": "entailment",
+  "category": "직접단언",
+  "sentence": "세계에서 제일 높은 산은 에베레스트잖아.",
+  "fact": "세계에서 가장 높은 산은 에베레스트이다.",
+  "fact_true": true,
+  "note": "참인 내용 단언"
+ },
+ {
+  "expected": "contradiction",
+  "category": "직접단언",
+  "sentence": "호주 수도는 시드니임.",
+  "fact": "호주의 수도는 시드니이다.",
+  "fact_true": false,
+  "note": "실제 수도는 캔버라"
+ },
+ {
+  "expected": "contradiction",
+  "category": "직접단언",
+  "sentence": "개미는 거미류에 속하는 동물입니다.",
+  "fact": "개미는 거미류에 속한다.",
+  "fact_true": false,
+  "note": "개미는 곤충"
+ },
+ {
+  "expected": "contradiction",
+  "category": "직접단언",
+  "sentence": "타지마할은 파키스탄 라호르에 있는 건물이야.",
+  "fact": "타지마할은 파키스탄 라호르에 있다.",
+  "fact_true": false,
+  "note": "인도 아그라"
+ },
+ {
+  "expected": "contradiction",
+  "category": "직접단언",
+  "sentence": "금의 원소기호는 Ag예요 ㅎㅎ",
+  "fact": "금의 원소기호는 Ag이다.",
+  "fact_true": false,
+  "note": "금은 Au, Ag는 은"
+ },
+ {
+  "expected": "entailment",
+  "category": "전언",
+  "sentence": "마리 퀴리가 노벨상을 두 번 받았대.",
+  "fact": "마리 퀴리는 노벨상을 두 번 받았다.",
+  "fact_true": true,
+  "note": "참인 내용 전언"
+ },
+ {
+  "expected": "entailment",
+  "category": "전언",
+  "sentence": "훈민정음은 1446년에 반포됐다던데요.",
+  "fact": "훈민정음은 1446년에 반포되었다.",
+  "fact_true": true,
+  "note": "참인 내용 전언"
+ },
+ {
+  "expected": "entailment",
+  "category": "전언",
+  "sentence": "태양계에서 제일 뜨거운 행성은 금성이라고 하더라.",
+  "fact": "태양계에서 가장 뜨거운 행성은 금성이다.",
+  "fact_true": true,
+  "note": "참인 내용 전언"
+ },
+ {
+  "expected": "entailment",
+  "category": "전언",
+  "sentence": "나폴레옹이 프랑스 황제였다고 들었어요.",
+  "fact": "나폴레옹은 프랑스의 황제였다.",
+  "fact_true": true,
+  "note": "참인 내용 전언"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언",
+  "sentence": "스위스 수도가 취리히라고 하던데?",
+  "fact": "스위스의 수도는 취리히이다.",
+  "fact_true": false,
+  "note": "실제 수도는 베른"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언",
+  "sentence": "소리는 진공에서도 잘 전달된대요.",
+  "fact": "소리는 진공에서도 전달된다.",
+  "fact_true": false,
+  "note": "소리는 매질이 필요"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언",
+  "sentence": "다이아몬드는 규소로 이루어진 거라더라.",
+  "fact": "다이아몬드는 규소로 이루어져 있다.",
+  "fact_true": false,
+  "note": "탄소"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언",
+  "sentence": "태양계에서 가장 큰 행성은 토성이라고 하던데요.",
+  "fact": "태양계에서 가장 큰 행성은 토성이다.",
+  "fact_true": false,
+  "note": "목성"
+ },
+ {
+  "expected": "entailment",
+  "category": "부정",
+  "sentence": "거미는 곤충이 아니에요.",
+  "fact": "거미는 곤충이다.",
+  "fact_true": false,
+  "note": "거짓 내용을 부정"
+ },
+ {
+  "expected": "entailment",
+  "category": "부정",
+  "sentence": "만유인력은 아인슈타인이 발견한 게 아니야.",
+  "fact": "만유인력은 아인슈타인이 발견했다.",
+  "fact_true": false,
+  "note": "뉴턴"
+ },
+ {
+  "expected": "entailment",
+  "category": "부정",
+  "sentence": "브라질 공용어는 스페인어가 아닙니다.",
+  "fact": "브라질의 공용어는 스페인어이다.",
+  "fact_true": false,
+  "note": "포르투갈어"
+ },
+ {
+  "expected": "entailment",
+  "category": "부정",
+  "sentence": "콜로세움은 아테네에 있는 게 아니잖아.",
+  "fact": "콜로세움은 아테네에 있다.",
+  "fact_true": false,
+  "note": "로마"
+ },
+ {
+  "expected": "contradiction",
+  "category": "부정",
+  "sentence": "1기압에서 물은 100도에 끓지 않아요.",
+  "fact": "1기압에서 물은 100도에서 끓는다.",
+  "fact_true": true,
+  "note": "참인 내용을 부정"
+ },
+ {
+  "expected": "contradiction",
+  "category": "부정",
+  "sentence": "나일강은 아프리카에 있는 강이 아님.",
+  "fact": "나일강은 아프리카에 있다.",
+  "fact_true": true,
+  "note": "참인 내용을 부정"
+ },
+ {
+  "expected": "contradiction",
+  "category": "부정",
+  "sentence": "한글날이 10월 9일인 건 아니던데.",
+  "fact": "한글날은 10월 9일이다.",
+  "fact_true": true,
+  "note": "참인 내용을 부정"
+ },
+ {
+  "expected": "entailment",
+  "category": "전언부정",
+  "sentence": "나일강이 남아메리카에 있다는 건 사실이 아니래.",
+  "fact": "나일강은 남아메리카에 있다.",
+  "fact_true": false,
+  "note": "거짓 내용이 사실 아니라고 전함"
+ },
+ {
+  "expected": "entailment",
+  "category": "전언부정",
+  "sentence": "가장 큰 바다가 대서양이라는 건 사실이 아니라던데요.",
+  "fact": "세계에서 가장 큰 바다는 대서양이다.",
+  "fact_true": false,
+  "note": "태평양"
+ },
+ {
+  "expected": "entailment",
+  "category": "전언부정",
+  "sentence": "고려가 1392년에 세워졌다는 말은 틀린 거래.",
+  "fact": "고려는 1392년에 건국되었다.",
+  "fact_true": false,
+  "note": "1392년은 조선 건국"
+ },
+ {
+  "expected": "entailment",
+  "category": "전언부정",
+  "sentence": "캥거루가 아프리카에 산다는 건 맞는 말이 아니라고 하더라.",
+  "fact": "캥거루는 아프리카에 산다.",
+  "fact_true": false,
+  "note": "호주"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언부정",
+  "sentence": "오존층이 자외선을 흡수한다는 건 사실이 아니래.",
+  "fact": "오존층은 자외선을 흡수한다.",
+  "fact_true": true,
+  "note": "참인 내용이 사실 아니라고 전함"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언부정",
+  "sentence": "피사의 사탑이 이탈리아에 있다는 건 틀린 말이라던데요.",
+  "fact": "피사의 사탑은 이탈리아에 있다.",
+  "fact_true": true,
+  "note": "참인 내용을 틀렸다고 전함"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언부정",
+  "sentence": "뉴턴이 만유인력을 정리했다는 건 사실이 아니라고 하더라.",
+  "fact": "뉴턴은 만유인력 법칙을 정리했다.",
+  "fact_true": true,
+  "note": "참인 내용을 부정"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언부정",
+  "sentence": "6.25 전쟁이 1950년에 일어났다는 건 사실이 아니래요.",
+  "fact": "한국 전쟁은 1950년에 일어났다.",
+  "fact_true": true,
+  "note": "참인 내용을 부정"
+ },
+ {
+  "expected": "entailment",
+  "category": "이중부정",
+  "sentence": "6.25가 1960년에 터졌다는 게 사실이라고는 아무도 말 못 해.",
+  "fact": "한국 전쟁은 1960년에 일어났다.",
+  "fact_true": false,
+  "note": "1950년. 실질적으로 틀렸다고 함"
+ },
+ {
+  "expected": "entailment",
+  "category": "이중부정",
+  "sentence": "타지마할이 중국 베이징에 있다는 게 틀리지 않다고 말할 사람은 없을걸요.",
+  "fact": "타지마할은 중국 베이징에 있다.",
+  "fact_true": false,
+  "note": "인도 아그라. 실질적으로 틀렸다고 함"
+ },
+ {
+  "expected": "entailment",
+  "category": "오타",
+  "sentence": "태양은 스스로 빛을 내는 항서이야",
+  "fact": "태양은 스스로 빛을 내는 항성이다.",
+  "fact_true": true,
+  "note": "받침 누락"
+ },
+ {
+  "expected": "entailment",
+  "category": "오타",
+  "sentence": "물은 수소와 산소로 이루어저 있어요",
+  "fact": "물은 수소와 산소로 이루어져 있다.",
+  "fact_true": true,
+  "note": "받침 오류"
+ },
+ {
+  "expected": "entailment",
+  "category": "오타",
+  "sentence": "진시황이 중국틀 처음 통일했없어",
+  "fact": "진시황은 중국을 처음 통일했다.",
+  "fact_true": true,
+  "note": "를→틀, 었→없"
+ },
+ {
+  "expected": "entailment",
+  "category": "오타",
+  "sentence": "일본 수도는 도교잖아 ㅇㅇ",
+  "fact": "일본의 수도는 도쿄이다.",
+  "fact_true": true,
+  "note": "받침 누락(도쿄→도교)"
+ },
+ {
+  "expected": "contradiction",
+  "category": "오타",
+  "sentence": "이탈리아 수도느 밀라노야",
+  "fact": "이탈리아의 수도는 밀라노이다.",
+  "fact_true": false,
+  "note": "로마"
+ },
+ {
+  "expected": "contradiction",
+  "category": "오타",
+  "sentence": "지구가 태양틀 한 바퀴 도는 데 하루 걸렸없어",
+  "fact": "지구가 태양을 한 바퀴 도는 데 하루가 걸린다.",
+  "fact_true": false,
+  "note": "약 1년"
+ },
+ {
+  "expected": "contradiction",
+  "category": "오타",
+  "sentence": "산소의 원소기호느 C예요",
+  "fact": "산소의 원소기호는 C이다.",
+  "fact_true": false,
+  "note": "O"
+ },
+ {
+  "expected": "contradiction",
+  "category": "오타",
+  "sentence": "달에는 대기가 두꺼워서 바람이 불없어",
+  "fact": "달에는 두꺼운 대기가 있어 바람이 분다.",
+  "fact_true": false,
+  "note": "달은 대기가 거의 없음"
+ },
+ {
+  "expected": "entailment",
+  "category": "띄어쓰기없음",
+  "sentence": "북한의수도는평양이야",
+  "fact": "북한의 수도는 평양이다.",
+  "fact_true": true,
+  "note": "띄어쓰기 없음"
+ },
+ {
+  "expected": "entailment",
+  "category": "띄어쓰기없음",
+  "sentence": "이집트수도가카이로라던데요",
+  "fact": "이집트의 수도는 카이로이다.",
+  "fact_true": true,
+  "note": "띄어쓰기 없음, 전언"
+ },
+ {
+  "expected": "entailment",
+  "category": "띄어쓰기없음",
+  "sentence": "그리스수도는아테네입니다",
+  "fact": "그리스의 수도는 아테네이다.",
+  "fact_true": true,
+  "note": "띄어쓰기 없음"
+ },
+ {
+  "expected": "entailment",
+  "category": "띄어쓰기없음",
+  "sentence": "빛이소리보다훨씬빠르잖아",
+  "fact": "빛은 소리보다 훨씬 빠르다.",
+  "fact_true": true,
+  "note": "띄어쓰기 없음"
+ },
+ {
+  "expected": "contradiction",
+  "category": "띄어쓰기없음",
+  "sentence": "중국수도는상하이래",
+  "fact": "중국의 수도는 상하이이다.",
+  "fact_true": false,
+  "note": "베이징"
+ },
+ {
+  "expected": "contradiction",
+  "category": "띄어쓰기없음",
+  "sentence": "터키수도가이스탄불이라고하더라",
+  "fact": "튀르키예의 수도는 이스탄불이다.",
+  "fact_true": false,
+  "note": "앙카라"
+ },
+ {
+  "expected": "contradiction",
+  "category": "띄어쓰기없음",
+  "sentence": "소리가빛보다빠르다던데요",
+  "fact": "소리는 빛보다 빠르다.",
+  "fact_true": false,
+  "note": "빛이 훨씬 빠름"
+ },
+ {
+  "expected": "contradiction",
+  "category": "띄어쓰기없음",
+  "sentence": "이집트수도는알렉산드리아야",
+  "fact": "이집트의 수도는 알렉산드리아이다.",
+  "fact_true": false,
+  "note": "카이로"
+ },
+ {
+  "expected": "entailment",
+  "category": "전언덧붙임",
+  "sentence": "독일 수도가 베를린이래 그래서 다음 달에 베를린으로 출장 간대.",
+  "fact": "독일의 수도는 베를린이다.",
+  "fact_true": true,
+  "note": "참인 내용 전언 뒤 덧붙임"
+ },
+ {
+  "expected": "entailment",
+  "category": "전언덧붙임",
+  "sentence": "철은 자석에 붙는다더라 그래서 냉장고 문에 자석이 붙는 거라던데.",
+  "fact": "철은 자석에 붙는다.",
+  "fact_true": true,
+  "note": "참인 내용 전언 뒤 덧붙임"
+ },
+ {
+  "expected": "entailment",
+  "category": "전언덧붙임",
+  "sentence": "수성이 태양에서 제일 가깝대 그래서 공전 주기가 엄청 짧은 거래.",
+  "fact": "수성은 태양에서 가장 가까운 행성이다.",
+  "fact_true": true,
+  "note": "참인 내용 전언 뒤 덧붙임"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언덧붙임",
+  "sentence": "해왕성이 태양이랑 제일 가깝대 그래서 엄청 뜨거운 거래.",
+  "fact": "해왕성은 태양에서 가장 가까운 행성이다.",
+  "fact_true": false,
+  "note": "수성"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언덧붙임",
+  "sentence": "나비는 거미랑 같은 종류라던데 그래서 다리가 여덟 개인 거라더라.",
+  "fact": "나비는 거미와 같은 분류군이며 다리가 여덟 개이다.",
+  "fact_true": false,
+  "note": "나비는 곤충, 다리 6개"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언덧붙임",
+  "sentence": "러시아 수도가 상트페테르부르크래요 그래서 거기로 정부 건물이 다 모여 있대요.",
+  "fact": "러시아의 수도는 상트페테르부르크이다.",
+  "fact_true": false,
+  "note": "모스크바"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언덧붙임",
+  "sentence": "모나리자는 피카소가 그렸다던데 그래서 루브르에 걸려 있는 거래.",
+  "fact": "모나리자는 피카소가 그렸다.",
+  "fact_true": false,
+  "note": "레오나르도 다 빈치"
+ },
+ {
+  "expected": "neutral",
+  "category": "사실없음",
+  "sentence": "이거 진짜야?",
+  "fact": "",
+  "fact_true": true,
+  "note": "대상 불분명한 질문"
+ },
+ {
+  "expected": "neutral",
+  "category": "사실없음",
+  "sentence": "오늘 저녁에 뭐 먹을까요?",
+  "fact": "",
+  "fact_true": true,
+  "note": "질문"
+ },
+ {
+  "expected": "neutral",
+  "category": "사실없음",
+  "sentence": "너무 보고 싶다 ㅠㅠ",
+  "fact": "",
+  "fact_true": true,
+  "note": "감정"
+ },
+ {
+  "expected": "neutral",
+  "category": "사실없음",
+  "sentence": "내일 3시에 회의 있으니까 늦지 마세요.",
+  "fact": "",
+  "fact_true": true,
+  "note": "개인 일정"
+ },
+ {
+  "expected": "neutral",
+  "category": "사실없음",
+  "sentence": "그 사람 진짜 대단하더라.",
+  "fact": "",
+  "fact_true": true,
+  "note": "대상 불분명"
+ },
+ {
+  "expected": "neutral",
+  "category": "사실없음",
+  "sentence": "사진 좀 보내줄래?",
+  "fact": "",
+  "fact_true": true,
+  "note": "부탁"
+ }
+]

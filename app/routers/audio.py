@@ -13,8 +13,11 @@ from app.schemas import (
 )
 from app.services.antideepfake_runner import AntiDeepfakeInferenceError, run_antideepfake_inference
 from app.services.media_probe import probe_audio_duration_seconds
-from app.services.misinfo_runner import MisinfoInferenceError, run_misinfo_inference
+from app.services.misinfo_runner import MisinfoInferenceError
+from app.services.scam_judge import ScamJudgeError
 from app.services.scam_runner import ScamInferenceError, run_scam_inference_audio
+from app.services.text_judge import run_text_judgments
+from app.services.timing import timed
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +47,8 @@ async def process_audio(file: UploadFile = File(...)) -> AudioAnalysisResponse:
             detail={"code": "AUDIO_TOO_LONG", "message": "음성 길이가 5분을 초과합니다."},
         )
 
-    ai_task = asyncio.create_task(asyncio.to_thread(run_antideepfake_inference, audio_bytes, filename))
-    scam_task = asyncio.create_task(asyncio.to_thread(run_scam_inference_audio, audio_bytes, filename))
+    ai_task = asyncio.create_task(asyncio.to_thread(timed("antideepfake", run_antideepfake_inference), audio_bytes, filename))
+    scam_task = asyncio.create_task(asyncio.to_thread(timed("scam", run_scam_inference_audio), audio_bytes, filename))
 
     try:
         ai_result = await ai_task
@@ -73,27 +76,27 @@ async def process_audio(file: UploadFile = File(...)) -> AudioAnalysisResponse:
         )
         for e in ai_result.evidence
     ]
-    scam_detection = (
-        ScamDetectionResult(
-            model="lilju",
-            score=scam_result.score,
-            evidence=[ScamEvidence(**e) for e in scam_result.evidence],
-        )
-        if scam_result.score is not None
-        else None
-    )
-
+    scam_detection = None
     misinformation_detection = None
     if scam_result.sentences:
         try:
-            misinfo_result = await asyncio.to_thread(run_misinfo_inference, scam_result.sentences)
+            judged = await asyncio.to_thread(timed("text_judge", run_text_judgments), scam_result.sentences)
+        except ScamJudgeError as e:
+            logger.exception("사기 판정(LLM) 실패")
+            raise HTTPException(status_code=502, detail="사기감지 처리 중 오류가 발생했습니다.") from e
         except MisinfoInferenceError as e:
             logger.exception("가짜정보 판정 파이프라인 실패")
             raise HTTPException(status_code=502, detail="가짜정보 판정 처리 중 오류가 발생했습니다.") from e
+        # 근거 칸에는 LLM의 판단 이유 한 문장을 넣는다(2026-10-28) - 응답 모양은 Lilju 때와 같다.
+        scam_detection = ScamDetectionResult(
+            model=judged.scam.model,
+            score=judged.scam.score,
+            evidence=[ScamEvidence(sentence=judged.scam.reason, score=judged.scam.score)] if judged.scam.reason else [],
+        )
         misinformation_detection = MisinformationDetectionResult(
-            model=misinfo_result.model,
-            wiki_snapshot=misinfo_result.wiki_snapshot,
-            claims=misinfo_result.claims,
+            model=judged.misinfo.model,
+            wiki_snapshot=judged.misinfo.wiki_snapshot,
+            claims=judged.misinfo.claims,
         )
 
     return AudioAnalysisResponse(

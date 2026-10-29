@@ -81,3 +81,33 @@ def test_acquire_rejects_when_queue_full():
     release_holder.set()
     t_holder.join()
     t_waiter.join()
+
+
+def test_release_logs_gpu_memory_before_and_peak(caplog):
+    # 작업별 GPU 메모리를 실측하려고 넣었다(2026-10-27) - 대기열이 하나씩만 돌리므로 그동안의 최고치가 그 작업 몫이다.
+    readings = iter([1000, 1200, 5400, 3000] + [3000] * 100)
+    queue = GpuQueue(max_concurrent=1, max_queue_depth=10, read_gpu_memory_mb=lambda: next(readings),
+                     sample_interval_seconds=0.01)
+
+    with caplog.at_level("INFO", logger="app.services.gpu_queue"):
+        with queue.acquire("spai"):
+            time.sleep(0.1)
+
+    released = [r.getMessage() for r in caplog.records if "gpu_queue_released" in r.getMessage()]
+    assert len(released) == 1
+    assert "label=spai" in released[0]
+    assert "gpu_mem_before_mb=1000" in released[0]
+    assert "gpu_mem_peak_mb=5400" in released[0]
+
+
+def test_release_logs_without_gpu_memory_when_unavailable(caplog):
+    # nvidia-smi가 없는 PC(노트북·테스트)에서는 메모리 칸 없이 기존처럼 남긴다.
+    queue = GpuQueue(max_concurrent=1, max_queue_depth=10, read_gpu_memory_mb=lambda: None)
+
+    with caplog.at_level("INFO", logger="app.services.gpu_queue"):
+        with queue.acquire("spai"):
+            pass
+
+    released = [r.getMessage() for r in caplog.records if "gpu_queue_released" in r.getMessage()]
+    assert len(released) == 1
+    assert "gpu_mem" not in released[0]

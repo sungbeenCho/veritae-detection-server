@@ -4,8 +4,13 @@ import pytest
 from kiwipiepy import Kiwi
 
 from scripts.wiki_index import (
+    Chunk,
     add_chunk,
     create_index,
+    expand_with_neighbors,
+    lead_rowid,
+    title_chunks,
+    web_search_terms,
     extract_keywords,
     get_snapshot,
     search,
@@ -169,3 +174,146 @@ def test_search_reviewer_repro_great_wall_sentence(tmp_path):
     results = search(conn, keywords, limit=5)
 
     assert results
+
+
+def _index_with(tmp_path, rows):
+    conn = create_index(tmp_path / "wiki.sqlite3", snapshot="2026-09-01")
+    for title, text in rows:
+        add_chunk(conn, title, text, text)
+    conn.commit()
+    return conn
+
+
+def _chunk(conn, text):
+    return Chunk(*conn.execute("SELECT title, text, rowid FROM chunks WHERE text = ?", (text,)).fetchone())
+
+
+def test_search_returns_rowid_for_each_chunk(tmp_path):
+    conn = _index_with(tmp_path, [("A", "첫째"), ("B", "선풍기")])
+
+    results = search(conn, "선풍기", limit=5)
+
+    assert results == [Chunk("B", "선풍기", 2)]
+
+
+def test_expand_attaches_previous_and_next_chunk_of_same_article(tmp_path):
+    """선택된 조각에 "가설이 있다"만 담기고 바로 뒤 "근거가 없다"가 잘리던 문제(2026-10-01)."""
+    conn = _index_with(tmp_path, [
+        ("선풍기 사망설", "선풍기 사망설은 속설이다."),
+        ("선풍기 사망설", "호흡장애 가설이 있다."),
+        ("선풍기 사망설", "그러나 과학적 근거는 없다."),
+    ])
+
+    blocks = expand_with_neighbors(conn, [_chunk(conn, "호흡장애 가설이 있다.")])
+
+    assert blocks == [("선풍기 사망설", "선풍기 사망설은 속설이다. 호흡장애 가설이 있다. 그러나 과학적 근거는 없다.")]
+
+
+def test_expand_does_not_cross_into_other_articles(tmp_path):
+    conn = _index_with(tmp_path, [("A", "a1"), ("B", "b1"), ("C", "c1")])
+
+    blocks = expand_with_neighbors(conn, [_chunk(conn, "b1")])
+
+    assert blocks == [("B", "b1")]
+
+
+def test_expand_merges_overlapping_selections_and_keeps_rank_order(tmp_path):
+    conn = _index_with(tmp_path, [
+        ("A", "a1"), ("A", "a2"), ("A", "a3"), ("A", "a4"),
+        ("B", "b1"), ("B", "b2"),
+    ])
+
+    blocks = expand_with_neighbors(conn, [_chunk(conn, "b2"), _chunk(conn, "a2"), _chunk(conn, "a3")])
+
+    assert blocks == [("B", "b1 b2"), ("A", "a1 a2 a3 a4")]
+
+
+def test_expand_keeps_far_apart_chunks_of_same_article_separate(tmp_path):
+    conn = _index_with(tmp_path, [("A", f"a{i}") for i in range(1, 8)])
+
+    blocks = expand_with_neighbors(conn, [_chunk(conn, "a2"), _chunk(conn, "a6")])
+
+    assert blocks == [("A", "a1 a2 a3"), ("A", "a5 a6 a7")]
+
+
+def test_expand_returns_empty_for_no_chunks(tmp_path):
+    conn = _index_with(tmp_path, [("A", "a1")])
+
+    assert expand_with_neighbors(conn, []) == []
+
+
+def test_search_excludes_disambiguation_pages(tmp_path):
+    """동음이의 문서는 이름이 같은 대상의 목록이라 근거가 될 수 없다(2026-10-01: "주식회사 세종" 문장이 근거로 나감)."""
+    conn = _index_with(tmp_path, [("세종 (동음이의)", "주식회사 세종 금융 기업"), ("세종", "세종 조선 제4대 왕")])
+
+    assert [c.title for c in search(conn, "세종", limit=5)] == ["세종"]
+
+
+def test_expand_adds_lead_chunk_of_each_article_before_its_chunks(tmp_path):
+    """키워드 검색이 정의 문단 대신 다른 조각을 가져와 "에펠탑은 런던에 있다"를 놓쳤다(2026-10-01)."""
+    conn = _index_with(tmp_path, [
+        ("에펠탑", "에펠탑은 프랑스 파리에 있는 철탑이다."),
+        ("에펠탑", "e2"), ("에펠탑", "e3"), ("에펠탑", "e4"), ("에펠탑", "e5"),
+        ("고래", "고래는 포유류의 총칭이다."), ("고래", "w2"), ("고래", "w3"),
+    ])
+
+    blocks = expand_with_neighbors(conn, [_chunk(conn, "w3"), _chunk(conn, "e4")])
+
+    assert blocks == [
+        ("고래", "고래는 포유류의 총칭이다. w2 w3"),
+        ("에펠탑", "에펠탑은 프랑스 파리에 있는 철탑이다."),
+        ("에펠탑", "e3 e4 e5"),
+    ]
+
+
+def test_expand_lead_comes_only_from_the_exact_title(tmp_path):
+    conn = _index_with(tmp_path, [
+        ("에펠탑의 레플리카", "레플리카 첫 문단"),
+        ("에펠탑", "에펠탑은 파리에 있다."), ("에펠탑", "t2"), ("에펠탑", "t3"), ("에펠탑", "t4"),
+    ])
+
+    blocks = expand_with_neighbors(conn, [_chunk(conn, "t4")])
+
+    assert blocks == [("에펠탑", "에펠탑은 파리에 있다."), ("에펠탑", "t3 t4")]
+
+
+def test_expand_without_lead_keeps_only_neighbors(tmp_path):
+    conn = _index_with(tmp_path, [("A", "a1"), ("A", "a2"), ("A", "a3"), ("A", "a4")])
+
+    assert expand_with_neighbors(conn, [_chunk(conn, "a4")], include_lead=False) == [("A", "a3 a4")]
+
+
+def test_lead_rowid_survives_titles_with_fts_syntax_characters(tmp_path):
+    conn = _index_with(tmp_path, [("SPEC: 경시청 (공안부)", "첫 문단"), ("SPEC: 경시청 (공안부)", "둘째")])
+
+    assert lead_rowid(conn, "SPEC: 경시청 (공안부)") == 1
+    assert lead_rowid(conn, "없는 문서") is None
+
+
+def test_web_search_terms_keep_adjective_roots_and_drop_particles():
+    from kiwipiepy import Kiwi
+
+    kiwi = Kiwi()
+
+    assert web_search_terms(kiwi, "지구는 평평하다") == "지구 평평"
+    assert web_search_terms(kiwi, "고래가 물고기라고 들었어요") == "고래 물고기"
+
+
+def test_title_chunks_returns_lead_and_best_matching_chunks_of_that_article_only(tmp_path):
+    conn = _index_with(tmp_path, [
+        ("달착륙 음모론", "달착륙 음모론은 날조 주장이다."),
+        ("달착륙 음모론", "사진 그림자 이야기"),
+        ("달착륙 음모론", "조작 주장은 반박되었다"),
+        ("아폴로 11호", "조작 착륙"),
+    ])
+
+    chunks = title_chunks(conn, "달착륙 음모론", "조작 착륙")
+
+    assert [c.text for c in chunks] == ["달착륙 음모론은 날조 주장이다.", "조작 주장은 반박되었다"]
+
+
+def test_title_chunks_skips_missing_and_disambiguation_titles(tmp_path):
+    conn = _index_with(tmp_path, [("세종 (동음이의)", "목록"), ("세종", "세종 조선 왕")])
+
+    assert title_chunks(conn, "세종 (동음이의)", "세종") == []
+    assert title_chunks(conn, "없는 문서", "세종") == []

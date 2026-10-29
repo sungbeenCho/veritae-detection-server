@@ -1,0 +1,2578 @@
+[
+ {
+  "sentence": "선풍기 틀어놓고 자면 죽는다는 건 그냥 미신임",
+  "claim": "선풍기를 틀어놓고 자면 죽는다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "선풍기 틀어놓고 자면 죽는다는 건 그냥 미신임",
+  "claim": "선풍기를 틀어놓고 자도 죽지 않는다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "선풍기 켜고 자면 질식사한다던데 진짜 조심해야겠다 ㄷㄷ",
+  "claim": "선풍기를 켜고 자면 질식사한다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "선풍기 켜놓고 자면 죽는단 말은 틀린 말이라고 하더라고요",
+  "claim": "선풍기를 켜 놓고 자면 죽는다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "전문가들은 선풍기를 틀고 자다 사망했다는 주장에 과학적 근거가 없다고 밝혔다.",
+  "claim": "선풍기를 틀고 자면 사망한다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "전문가들은 선풍기를 틀고 자다 사망했다는 주장에 과학적 근거가 없다고 밝혔다.",
+  "claim": "선풍기를 틀고 자도 사망하지 않는다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개는 같은 곳에 두 번 안 친다더라",
+  "claim": "번개는 같은 곳에 두 번 치지 않는다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개가 같은 곳에 두 번 안 친다는 건 속설일 뿐이고 높은 건물엔 매년 여러 번 침",
+  "claim": "번개는 같은 곳에 두 번 치지 않는다",
+  "label": "아니라고 함",
+  "category": "대조",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개가 같은 곳에 두 번 안 친다는 건 속설일 뿐이고 높은 건물엔 매년 여러 번 침",
+  "claim": "높은 건물에는 번개가 한 해에 여러 번 친다",
+  "label": "맞다고 함",
+  "category": "대조",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개 칠 때 나무 밑에 있으면 위험하다고 학교에서 배웠어요",
+  "claim": "번개가 칠 때 나무 밑에 있으면 위험하다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개 칠 때 나무 밑에 있으면 위험하다고 학교에서 배웠어요",
+  "claim": "번개가 칠 때 나무 밑은 안전하다",
+  "label": "아니라고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성은 달에서도 보인다고 믿는 사람이 많은데 사실이 아님",
+  "claim": "만리장성은 달에서 보인다",
+  "label": "아니라고 함",
+  "category": "대조",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성은 달에서도 보인다고 믿는 사람이 많은데 사실이 아님",
+  "claim": "만리장성은 달에서 보이지 않는다",
+  "label": "맞다고 함",
+  "category": "대조",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성은 우주에서 육안으로 보인다는 속설이 있음",
+  "claim": "만리장성은 우주에서 육안으로 보인다",
+  "label": "맞다고 함",
+  "category": "소개",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성은 중국 북부에 있는 성벽이에요",
+  "claim": "만리장성은 중국 북부에 있다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성이 남미에 있다는 건 거짓 정보야",
+  "claim": "만리장성은 남미에 있다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신이 자폐를 일으킨다는 주장은 근거가 없다고 기사에서 봤음",
+  "claim": "백신이 자폐를 일으킨다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신 맞으면 자폐 걸린다는 말이 있던데 이거 진짜래요",
+  "claim": "백신을 맞으면 자폐에 걸린다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신이 자폐틀 일으킨다는 건 사실이 아니라고 의사 선생님이 말씀하셨없어요",
+  "claim": "백신이 자폐를 일으킨다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신은 감염병 예방에 효과가 있습니다",
+  "claim": "백신은 감염병 예방에 효과가 있다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "사람이 뇌의 10%만 쓴다는 건 틀린 말이야",
+  "claim": "사람은 뇌의 10%만 쓴다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "사람이 뇌의 10%만 쓴다는 건 틀린 말이야",
+  "claim": "사람은 뇌의 10%만 쓰는 게 아니다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "인간은 뇌를 10%밖에 못 쓴다고 영화에서 나오던데 그게 맞대",
+  "claim": "인간은 뇌를 10%밖에 쓰지 못한다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "우리는 뇌 전체를 하루 종일 번갈아 쓴다. 10%만 쓴다는 건 잘못 알려진 것",
+  "claim": "사람은 뇌의 10%만 쓴다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑은 여름에 열팽창으로 키가 커진대요",
+  "claim": "에펠탑은 여름에 키가 커진다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑은 여름에 열팽창으로 키가 커진대요",
+  "claim": "에펠탑은 여름에 키가 줄어든다",
+  "label": "아니라고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑은 파리에 있음",
+  "claim": "에펠탑은 파리에 있다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑이 런던에 있다는 건 말도 안 됨",
+  "claim": "에펠탑은 런던에 있다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑 높이가 100m도 안 된다는 얘기는 사실이 아니다",
+  "claim": "에펠탑의 높이는 100m도 안 된다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑 높이가 100m도 안 된다는 얘기는 사실이 아니다",
+  "claim": "에펠탑의 높이는 100m가 넘는다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑은여름에키가커진다고들었어요",
+  "claim": "에펠탑은 여름에 키가 커진다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래는 물고기가 아니라 포유류예요",
+  "claim": "고래는 포유류이다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래는 물고기가 아니라 포유류예요",
+  "claim": "고래는 물고기이다",
+  "label": "아니라고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래가 물고기라고 아는 사람이 많은데 사실은 새끼를 낳아 젖을 먹이는 포유류임",
+  "claim": "고래는 물고기이다",
+  "label": "아니라고 함",
+  "category": "대조",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래가 물고기라고 아는 사람이 많은데 사실은 새끼를 낳아 젖을 먹이는 포유류임",
+  "claim": "고래는 새끼에게 젖을 먹인다",
+  "label": "맞다고 함",
+  "category": "대조",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "대왕고래는 지구에 사는 가장 큰 동물이라고 들었어",
+  "claim": "대왕고래는 지구에서 가장 큰 동물이다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래틀 물고기라고 믿는 사람이 많은데 사실 포유류임",
+  "claim": "고래는 물고기이다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래틀 물고기라고 믿는 사람이 많은데 사실 포유류임",
+  "claim": "고래는 포유류이다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산은 한라산보다 높음",
+  "claim": "후지산은 한라산보다 높다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산은 한라산보다 높음",
+  "claim": "후지산은 한라산보다 낮다",
+  "label": "아니라고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산은 일본에 있는 산이래요",
+  "claim": "후지산은 일본에 있다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산이 중국에 있다는 건 가짜 뉴스예요",
+  "claim": "후지산은 중국에 있다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산이 사화산이라는 말은 틀린 말이에요",
+  "claim": "후지산은 사화산이다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산이 사화산이라는 말은 틀린 말이에요",
+  "claim": "후지산은 사화산이 아니다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산 높이는 3776m 라고 배웠없어요",
+  "claim": "후지산의 높이는 3776m이다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "토마토는 채소로 알려져 있지만 식물학적으로는 열매임",
+  "claim": "토마토는 식물학적으로 열매이다",
+  "label": "맞다고 함",
+  "category": "대조",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "토마토는 채소로 알려져 있지만 식물학적으로는 열매임",
+  "claim": "토마토는 식물학적으로 채소이다",
+  "label": "아니라고 함",
+  "category": "대조",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "토마토를 익혀 먹으면 라이코펜 흡수가 더 잘된다고 하더라고요",
+  "claim": "토마토를 익혀 먹으면 라이코펜 흡수가 더 잘된다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "토마토에 독이 있다는 건 근거 없는 속설이래",
+  "claim": "토마토에는 독이 있다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달은 매년 조금씩 지구에서 멀어지고 있다네요",
+  "claim": "달은 지구에서 멀어지고 있다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달은 매년 조금씩 지구에서 멀어지고 있다네요",
+  "claim": "달은 지구에 점점 가까워지고 있다",
+  "label": "아니라고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달은 스스로 빛을 내는 게 아니라 햇빛을 반사하는 거예요",
+  "claim": "달은 햇빛을 반사해서 빛난다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달은 스스로 빛을 내는 게 아니라 햇빛을 반사하는 거예요",
+  "claim": "달은 스스로 빛을 낸다",
+  "label": "아니라고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달이 치즈로 만들어졌다는 건 옛날 농담일 뿐 사실이 아님",
+  "claim": "달은 치즈로 만들어졌다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어 기억력이 3초라는 건 잘못 알려진 거래",
+  "claim": "금붕어의 기억력은 3초이다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어 기억력이 3초라는 건 잘못 알려진 거래",
+  "claim": "금붕어의 기억력은 3초에 불과하지 않다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어는 먹이 주는 사람을 알아본다는 연구가 있음",
+  "claim": "금붕어는 먹이를 주는 사람을 알아본다",
+  "label": "맞다고 함",
+  "category": "소개",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어기억력이3초라는건잘못알려진거래",
+  "claim": "금붕어의 기억력은 3초이다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "지구 평평설은 완전히 틀린 얘기임. 위성사진만 봐도 둥근데",
+  "claim": "지구는 평평하다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "지구 평평설은 완전히 틀린 얘기임. 위성사진만 봐도 둥근데",
+  "claim": "지구는 평평하지 않다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "지구가 평평하지 않다는 말은 틀린 말이야",
+  "claim": "지구는 평평하지 않다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "지구가 평평하지 않다는 말은 틀린 말이야",
+  "claim": "지구는 평평하다",
+  "label": "맞다고 함",
+  "category": "이중부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "피카소는 스페인 출신 화가라고 배웠어요",
+  "claim": "피카소는 스페인 출신 화가이다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "피카소가 입체주의 창시자 중 한 명이라는 건 맞는 말",
+  "claim": "피카소는 입체주의를 창시한 사람 중 한 명이다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "피카소가 모나리자를 그렸다는 말은 완전 헛소리야",
+  "claim": "피카소가 모나리자를 그렸다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤은 청력을 잃은 뒤에도 곡을 썼다고 해요",
+  "claim": "베토벤은 청력을 잃은 뒤에도 곡을 썼다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤은 청력을 잃은 뒤에도 곡을 썼다고 해요",
+  "claim": "베토벤은 청력을 잃은 뒤로 작곡을 하지 못했다",
+  "label": "아니라고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤이 한국 사람이라는 건 거짓 정보입니다",
+  "claim": "베토벤은 한국 사람이다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤 9번 교향곡의 마지막 악장에는 합창이 들어간다",
+  "claim": "베토벤 9번 교향곡의 마지막 악장에는 합창이 들어간다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란은 1592년에 시작됐다",
+  "claim": "임진왜란은 1592년에 시작됐다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란은 1592년에 시작됐다",
+  "claim": "임진왜란은 1692년에 시작됐다",
+  "label": "아니라고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란은조선 시대에 일어난 전쟁이라고 배웠없어요",
+  "claim": "임진왜란은 조선 시대에 일어났다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란이 고려 시대에 일어났다는 건 틀린 말임",
+  "claim": "임진왜란은 고려 시대에 일어났다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란이 1592년에 일어나지 않았다는 말은 틀린 말입니다",
+  "claim": "임진왜란은 1592년에 일어나지 않았다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란이 1592년에 일어나지 않았다는 말은 틀린 말입니다",
+  "claim": "임진왜란은 1592년에 일어났다",
+  "label": "맞다고 함",
+  "category": "이중부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "한글은 세종대왕이 만들었다고 알려져 있어요",
+  "claim": "한글은 세종대왕이 만들었다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "세종대왕이 맥북을 던졌다는 건 그냥 인터넷 밈이고 실제 기록엔 없음",
+  "claim": "세종대왕이 맥북을 던졌다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "세종은 조선의 4대 왕이래",
+  "claim": "세종은 조선의 4대 왕이다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "부산이 대한민국 수도라는 건 말도 안 되는 소리, 수도는 서울임",
+  "claim": "부산은 대한민국의 수도이다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "부산이 대한민국 수도라는 건 말도 안 되는 소리, 수도는 서울임",
+  "claim": "서울은 대한민국의 수도이다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "부산은 대한민국 제2의 도시라고 하더라",
+  "claim": "부산은 대한민국에서 두 번째로 큰 도시이다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "부산은 강원도에 있음",
+  "claim": "부산은 강원도에 있다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피 마시면 키 안 큰다는 건 근거 없는 얘기래요",
+  "claim": "커피를 마시면 키가 크지 않는다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피 마시면 키 안 큰다는 건 근거 없는 얘기래요",
+  "claim": "커피를 마셔도 키 성장에는 영향이 없다",
+  "label": "맞다고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피를 마시면 잠이 깬다고 하는 건 카페인 때문이라고 들었어요",
+  "claim": "커피를 마시면 카페인 때문에 잠이 깬다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피를 마시면 탈수가 심해진다는 속설이 있다",
+  "claim": "커피를 마시면 탈수가 심해진다",
+  "label": "맞다고 함",
+  "category": "소개",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성 가보고 싶다 ㅠㅠ",
+  "claim": "만리장성은 중국에 있다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "혹시 에펠탑 몇 층까지 올라갈 수 있어요?",
+  "claim": "에펠탑은 3층까지 올라갈 수 있다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산 사진 진짜 예쁘다 감동ㅠ",
+  "claim": "후지산은 일본에 있다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "오늘 저녁에 커피 한잔 하실래요?",
+  "claim": "커피는 잠을 깨운다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신 맞고 오늘 하루 쉬려고요",
+  "claim": "백신은 부작용이 있다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래 보러 제주도 가자!",
+  "claim": "고래는 포유류이다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어 키우는 법 아시는 분?",
+  "claim": "금붕어의 기억력은 3초이다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달 진짜 크다 오늘 ㅋㅋ",
+  "claim": "달은 지구에서 멀어지고 있다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "그 사람 스페인 출신 화가래요",
+  "claim": "피카소는 스페인 출신 화가이다",
+  "label": "사실 없음",
+  "category": "무관",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "이건 1592년에 시작됐대",
+  "claim": "임진왜란은 1592년에 시작됐다",
+  "label": "사실 없음",
+  "category": "무관",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "그거 높이가 330m래",
+  "claim": "에펠탑의 높이는 330m이다",
+  "label": "사실 없음",
+  "category": "무관",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "걔는 귀가 안 들려도 작곡했대요",
+  "claim": "베토벤은 귀가 안 들려도 작곡했다",
+  "label": "사실 없음",
+  "category": "무관",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "토마토 사 와야 하는데 깜빡함 ㅜㅜ",
+  "claim": "토마토는 열매이다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "선풍기 어디서 사야 싸요?",
+  "claim": "선풍기 바람은 위험하다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개 치니까 무섭다 빨리 들어와",
+  "claim": "번개는 같은 곳에 두 번 친다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "세종 시내에 맛집 추천해주세요",
+  "claim": "세종은 조선의 4대 왕이다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "부산 놀러 가서 회 먹고 왔어요",
+  "claim": "부산은 대한민국의 수도이다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "지구 사진 새로 올라왔나 보고 싶다",
+  "claim": "지구는 둥글다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "뇌 건강에 좋은 음식 알려주실 분 계신가요?",
+  "claim": "사람은 뇌의 10%만 쓴다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤 운명 들으면서 출근 중",
+  "claim": "베토벤은 청력을 잃었다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란 드라마 보는 중인데 재밌네",
+  "claim": "임진왜란은 1592년에 시작됐다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성이 진짜 우주에서 보이는지 누가 좀 알려줘",
+  "claim": "만리장성은 우주에서 보인다",
+  "label": "사실 없음",
+  "category": "사실없음",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래가 포유류라는 건 낭설이래",
+  "claim": "고래는 포유류다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑이 파리에 있다는 건 사실이 아닙니다",
+  "claim": "에펠탑은 파리에 있다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산이 일본에 있다는 건 헛소문임",
+  "claim": "후지산은 일본에 있다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달이 지구 주위를 돈다는 건 거짓이라고 하더라",
+  "claim": "달은 지구 주위를 돈다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤이 청력을 잃었다는 건 지어낸 이야기래요",
+  "claim": "베토벤은 청력을 잃었다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란이 조선 시대에 일어났다는 건 잘못된 상식이야",
+  "claim": "임진왜란은 조선 시대에 일어났다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "세종대왕이 한글을 만들었다는 건 사실이 아님",
+  "claim": "세종대왕이 한글을 만들었다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "서울이 대한민국 수도라는 건 틀린 말이라던데",
+  "claim": "서울은 대한민국의 수도다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "피카소가 스페인 출신이라는 말은 근거 없는 소문이에요",
+  "claim": "피카소는 스페인 출신이다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신이 감염병 예방에 효과가 있다는 건 거짓말이래",
+  "claim": "백신은 감염병 예방에 효과가 있다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "토마토가 식물학적으로 열매라는 건 말도 안 되는 소리임",
+  "claim": "토마토는 식물학적으로 열매다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성이 중국에 있다는 건 가짜 뉴스야",
+  "claim": "만리장성은 중국에 있다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피에 카페인이 들어 있다는 건 낭설이에요",
+  "claim": "커피에는 카페인이 들어 있다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "지구가 둥글다는 말은 다 거짓이라고 합니다",
+  "claim": "지구는 둥글다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어가 사람을 알아본다는 건 다 헛소문이래",
+  "claim": "금붕어는 사람을 알아본다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑이 여름에 더 높아진다는 건 믿을 수 없는 얘기래요",
+  "claim": "에펠탑은 여름에 더 높아진다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달이 햇빛을 반사해서 빛난다는 건 틀린 설명이라고 들었어",
+  "claim": "달은 햇빛을 반사해서 빛난다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래가 새끼에게 젖을 먹인다는 건 잘못 알려진 거예요",
+  "claim": "고래는 새끼에게 젖을 먹인다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산이 한라산보다 높다는 건 오해임",
+  "claim": "후지산은 한라산보다 높다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "대왕고래가 지구에서 가장 큰 동물이라는 말은 사실이 아니라고 하더라",
+  "claim": "대왕고래는 지구에서 가장 큰 동물이다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑이 철로 만들어졌다는 건 거짓이라고 하더라고요",
+  "claim": "에펠탑은 철로 만들어졌다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산이 일본에서 제일 높은 산이라는 건 아니라고 하던데",
+  "claim": "후지산은 일본에서 가장 높은 산이다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래가 바다에 산다는 건 잘못된 상식이래",
+  "claim": "고래는 바다에 산다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신이 자폐와 무관하다는 건 거짓이래요",
+  "claim": "백신은 자폐와 무관하다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개가 전기 현상이라는 건 미신이래",
+  "claim": "번개는 전기 현상이다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성이 사람이 쌓은 성벽이라는 건 사실이 아니야",
+  "claim": "만리장성은 사람이 쌓은 성벽이다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤이 교향곡 9번을 작곡했다는 건 헛소리야",
+  "claim": "베토벤은 교향곡 9번을 작곡했다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란이 1592년에 시작됐다는 건 거짓이래",
+  "claim": "임진왜란은 1592년에 시작됐다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달이 지구보다 작다는 건 틀린 말이래",
+  "claim": "달은 지구보다 작다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성이 달에서 안 보인다는 건 거짓말이던데",
+  "claim": "만리장성은 달에서 보이지 않는다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑 높이가 100m가 넘는다는 건 틀린 정보래",
+  "claim": "에펠탑의 높이는 100m가 넘는다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어 기억력이 3초보다 훨씬 길다는 건 낭설이래",
+  "claim": "금붕어의 기억력은 3초보다 훨씬 길다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개가 높은 곳에 잘 친다는 건 미신이야",
+  "claim": "번개는 높은 곳에 잘 친다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "토마토를 익히면 라이코펜 흡수가 늘어난다는 건 거짓이래",
+  "claim": "토마토를 익히면 라이코펜 흡수가 늘어난다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "한라산이 후지산보다 낮다는 건 사실이 아닙니다",
+  "claim": "한라산은 후지산보다 낮다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "부산이 대한민국 제2의 도시라는 건 틀린 말이라고 하더라",
+  "claim": "부산은 대한민국의 제2의 도시이다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "세종이 조선의 4대 왕이라는 건 거짓이래",
+  "claim": "세종은 조선의 4대 왕이다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신 맞으면 자폐 온다고 이웃이 그러더라",
+  "claim": "백신을 맞으면 자폐가 온다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "뇌는 10%만 쓴대 나머지는 놀고 있는 거래",
+  "claim": "뇌는 10%만 쓰고 나머지는 쓰지 않는다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어 기억은 3초라서 매번 새 세상이래",
+  "claim": "금붕어의 기억은 3초이다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤은 한국 사람이야",
+  "claim": "베토벤은 한국 사람이다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "피카소가 모나리자 그렸잖아",
+  "claim": "피카소가 모나리자를 그렸다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란은 1692년에 터졌어요",
+  "claim": "임진왜란은 1692년에 터졌다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산은 중국 쪽에 있어요",
+  "claim": "후지산은 중국 쪽에 있다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성은 달 궤도에서도 보인대요",
+  "claim": "만리장성은 달 궤도에서 보인다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달은 스스로 빛을 낸다고 알고 있어요",
+  "claim": "달은 스스로 빛을 낸다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래는 어류야",
+  "claim": "고래는 어류이다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑은 런던에 있는 탑이에요",
+  "claim": "에펠탑은 런던에 있다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "세종대왕이 맥북을 던졌다고 하더라",
+  "claim": "세종대왕이 맥북을 던졌다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "부산이 대한민국 수도잖아",
+  "claim": "부산은 대한민국의 수도이다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개는 한 번 친 곳에는 다시 안 친다고 하더라고요",
+  "claim": "번개는 한 번 친 곳에 다시 치지 않는다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피 마시면 키 안 큰다고 하던데 애들은 마시지 마",
+  "claim": "커피를 마시면 키가 크지 않는다",
+  "label": "맞다고 함",
+  "category": "조언붙은전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "선풍기 틀고 자면 숨 막혀 죽는다니까 꼭 타이머 맞춰",
+  "claim": "선풍기를 틀고 자면 숨이 막혀 죽는다",
+  "label": "맞다고 함",
+  "category": "조언붙은전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "토마토 씨 먹으면 맹장염 걸린대",
+  "claim": "토마토 씨를 먹으면 맹장염에 걸린다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑은 높이가 100m도 안 돼요",
+  "claim": "에펠탑의 높이는 100m도 안 된다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "지구는 평평합니다",
+  "claim": "지구는 평평하다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산은 한라산보다 낮다고 알고 있어",
+  "claim": "후지산은 한라산보다 낮다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래는 아가미로 숨을 쉰대",
+  "claim": "고래는 아가미로 숨을 쉰다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성은 일본에 있어",
+  "claim": "만리장성은 일본에 있다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신은 감염병을 오히려 퍼뜨린대",
+  "claim": "백신은 감염병을 오히려 퍼뜨린다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개는 맑은 날엔 안 친다고 알고 있어요",
+  "claim": "번개는 맑은 날에는 치지 않는다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "서울은 일본의 수도지",
+  "claim": "서울은 일본의 수도이다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤은 프랑스 작곡가임",
+  "claim": "베토벤은 프랑스 작곡가이다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "피카소는 일본 화가래요",
+  "claim": "피카소는 일본 화가이다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "세종대왕은 조선을 세운 왕이래",
+  "claim": "세종대왕은 조선을 건국했다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑은 철이 아니라 나무로 지었대",
+  "claim": "에펠탑은 나무로 지었다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산은 제주도에 있다고 들었어",
+  "claim": "후지산은 제주도에 있다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래는 알을 낳는대",
+  "claim": "고래는 알을 낳는다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달은 지구보다 커요",
+  "claim": "달은 지구보다 크다",
+  "label": "맞다고 함",
+  "category": "직접단언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피 마시면 키가 줄어든대요",
+  "claim": "커피를 마시면 키가 줄어든다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어는 물 밖에서도 오래 산다더라",
+  "claim": "금붕어는 물 밖에서 오래 산다",
+  "label": "맞다고 함",
+  "category": "전언",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "다들 고래를 포유류로 아는데 사실은 물고기예요",
+  "claim": "고래는 물고기다",
+  "label": "맞다고 함",
+  "category": "대조",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "다들 고래를 포유류로 아는데 사실은 물고기예요",
+  "claim": "고래는 포유류다",
+  "label": "아니라고 함",
+  "category": "대조",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "다들 지구가 둥글다고 하는데 사실은 평평해요",
+  "claim": "지구는 평평하다",
+  "label": "맞다고 함",
+  "category": "대조",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "다들 지구가 둥글다고 하는데 사실은 평평해요",
+  "claim": "지구는 둥글다",
+  "label": "아니라고 함",
+  "category": "대조",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "다들 에펠탑이 파리에 있다고 하는데 사실은 런던에 있대",
+  "claim": "에펠탑은 런던에 있다",
+  "label": "맞다고 함",
+  "category": "대조",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "다들 에펠탑이 파리에 있다고 하는데 사실은 런던에 있대",
+  "claim": "에펠탑은 파리에 있다",
+  "label": "아니라고 함",
+  "category": "대조",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란이 조선 때라고 알지만 실은 고려 때 일이야",
+  "claim": "임진왜란은 고려 시대에 일어났다",
+  "label": "맞다고 함",
+  "category": "대조",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란이 조선 때라고 알지만 실은 고려 때 일이야",
+  "claim": "임진왜란은 조선 시대에 일어났다",
+  "label": "아니라고 함",
+  "category": "대조",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "서울이 수도인 줄 알았는데 부산이 수도래",
+  "claim": "부산은 대한민국의 수도다",
+  "label": "맞다고 함",
+  "category": "대조",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "서울이 수도인 줄 알았는데 부산이 수도래",
+  "claim": "서울은 대한민국의 수도다",
+  "label": "아니라고 함",
+  "category": "대조",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달은 지구에서 멀어지는 줄 알았는데 사실 점점 가까워진대요",
+  "claim": "달은 지구에 점점 가까워지고 있다",
+  "label": "맞다고 함",
+  "category": "대조",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달은 지구에서 멀어지는 줄 알았는데 사실 점점 가까워진대요",
+  "claim": "달은 지구에서 멀어지고 있다",
+  "label": "아니라고 함",
+  "category": "대조",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑 철거 루머에 파리시가 공식 해명을 냈다",
+  "claim": "파리시가 공식 해명을 냈다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑 폐쇄 루머, 사실 무근이라고 파리시가 밝혔다",
+  "claim": "에펠탑이 폐쇄된다",
+  "label": "아니라고 함",
+  "category": "함정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑 폐쇄 루머, 사실 무근이라고 파리시가 밝혔다",
+  "claim": "파리시가 입장을 밝혔다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어 3초 기억설이라는 속설을 소개하는 영상이 조회수 100만을 넘었다",
+  "claim": "금붕어 3초 기억설을 소개하는 영상이 조회수 100만을 넘었다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성 우주 괴담 때문에 교과서 문구가 수정됐다고 함",
+  "claim": "교과서 문구가 수정됐다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "선풍기 사망설 때문에 어제 소비자원이 안전 가이드를 배포했어요",
+  "claim": "소비자원이 안전 가이드를 배포했다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래 가짜뉴스 퍼뜨린 유튜버가 사과 영상을 올렸어",
+  "claim": "유튜버가 사과 영상을 올렸다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신 괴담 유포 혐의로 30대가 입건됐다",
+  "claim": "30대가 입건됐다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산 폭발 루머가 SNS에서 확산되고 있다",
+  "claim": "후지산 폭발 루머가 SNS에서 확산되고 있다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달 가짜뉴스 때문에 NASA 공식 계정이 정정글을 올렸음",
+  "claim": "NASA 공식 계정이 정정글을 올렸다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란 관련 미신 이야기를 다룬 책이 이번 주 베스트셀러 1위임",
+  "claim": "임진왜란 관련 미신 이야기를 다룬 책이 이번 주 베스트셀러 1위다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤 괴담 다룬 팟캐스트가 있는데 재밌더라",
+  "claim": "베토벤 괴담을 다룬 팟캐스트가 있다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "부산 수도설 루머 때문에 시청에 문의가 쏟아졌대",
+  "claim": "시청에 문의가 쏟아졌다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "뇌 10% 속설을 다룬 영화가 개봉한 지 벌써 10년이 됐다",
+  "claim": "뇌 10% 속설을 다룬 영화가 개봉한 지 10년이 됐다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피 키 성장 미신을 다룬 기사가 오늘 포털 메인에 올랐다",
+  "claim": "커피 키 성장 미신을 다룬 기사가 포털 메인에 올랐다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "토마토 독성 괴담을 퍼뜨린 계정이 정지됐다",
+  "claim": "토마토 독성 괴담을 퍼뜨린 계정이 정지됐다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "지구 평평설 모임이 이번 주말 서울에서 열린다고 합니다",
+  "claim": "지구 평평설 모임이 이번 주말 서울에서 열린다",
+  "label": "맞다고 함",
+  "category": "함정",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래는 물고기가 아니야",
+  "claim": "고래는 물고기가 아니다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산은 한라산보다 낮지 않아요",
+  "claim": "후지산은 한라산보다 낮지 않다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어는 기억을 못 하는 동물이 아님",
+  "claim": "금붕어는 기억을 못 하는 동물이 아니다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑은 서울에 없어",
+  "claim": "에펠탑은 서울에 없다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달은 스스로 빛나지 않는다",
+  "claim": "달은 스스로 빛나지 않는다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "부산은 수도가 아니야",
+  "claim": "부산은 수도가 아니다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신은 자폐를 일으키지 않아요",
+  "claim": "백신은 자폐를 일으키지 않는다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "사람은 뇌의 10%만 쓰지는 않는다",
+  "claim": "사람은 뇌의 10%만 쓰지는 않는다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개는 같은 곳에 두 번 치지 않아",
+  "claim": "번개는 같은 곳에 두 번 치지 않는다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성은 달에서 안 보여",
+  "claim": "만리장성은 달에서 보이지 않는다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "선풍기를 틀고 자도 질식하지 않는다는 연구 결과가 나왔다",
+  "claim": "선풍기를 틀고 자도 질식하지 않는다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피는 키를 작게 만들지 않는다",
+  "claim": "커피는 키를 작게 만들지 않는다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래가 포유류가 아니라는 말은 틀렸어",
+  "claim": "고래는 포유류가 아니다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래가 포유류가 아니라는 말은 틀렸어",
+  "claim": "고래는 포유류다",
+  "label": "맞다고 함",
+  "category": "이중부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑이 파리에 없다는 건 말이 안 돼요",
+  "claim": "에펠탑은 파리에 없다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑이 파리에 없다는 건 말이 안 돼요",
+  "claim": "에펠탑은 파리에 있다",
+  "label": "맞다고 함",
+  "category": "이중부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달이 햇빛을 반사하지 않는다는 말은 사실이 아니야",
+  "claim": "달은 햇빛을 반사하지 않는다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달이 햇빛을 반사하지 않는다는 말은 사실이 아니야",
+  "claim": "달은 햇빛을 반사한다",
+  "label": "맞다고 함",
+  "category": "이중부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신이 안전하지 않다는 건 근거 없는 소리래",
+  "claim": "백신은 안전하지 않다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신이 안전하지 않다는 건 근거 없는 소리래",
+  "claim": "백신은 안전하다",
+  "label": "맞다고 함",
+  "category": "이중부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개가 같은 곳에 두 번 칠 수 없다는 말은 틀렸다",
+  "claim": "번개는 같은 곳에 두 번 칠 수 없다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개가 같은 곳에 두 번 칠 수 없다는 말은 틀렸다",
+  "claim": "번개는 같은 곳에 두 번 칠 수 있다",
+  "label": "맞다고 함",
+  "category": "이중부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "지구가 평평하지 않다는 말은 거짓이야",
+  "claim": "지구는 평평하지 않다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "지구가 평평하지 않다는 말은 거짓이야",
+  "claim": "지구는 평평하다",
+  "label": "맞다고 함",
+  "category": "이중부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "서울이 수도가 아니라는 말은 맞아",
+  "claim": "서울은 수도가 아니다",
+  "label": "맞다고 함",
+  "category": "이중부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤이 청력을 잃지 않았다는 건 틀린 정보예요",
+  "claim": "베토벤은 청력을 잃지 않았다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어가 기억을 못 한다는 건 사실이 아니라고 합니다",
+  "claim": "금붕어는 기억을 못 한다",
+  "label": "아니라고 함",
+  "category": "이중부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "사람이 뇌의 10%만 쓴다는 속설이 널리 퍼져 있다",
+  "claim": "사람은 뇌의 10%만 쓴다",
+  "label": "맞다고 함",
+  "category": "소개",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "사람이 뇌의 10%만 쓴다는 속설은 과학적 근거가 없다",
+  "claim": "사람은 뇌의 10%만 쓴다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어 기억력이 3초라는 속설이 있음",
+  "claim": "금붕어의 기억력은 3초이다",
+  "label": "맞다고 함",
+  "category": "소개",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어 기억력이 3초라는 속설은 연구로 반박됐음",
+  "claim": "금붕어의 기억력은 3초이다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개는 같은 곳에 두 번 안 친다는 속설이 있다",
+  "claim": "번개는 같은 곳에 두 번 치지 않는다",
+  "label": "맞다고 함",
+  "category": "소개",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개는 같은 곳에 두 번 안 친다는 속설은 틀렸다",
+  "claim": "번개는 같은 곳에 두 번 치지 않는다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "토마토에 독이 있다는 미신은 근거가 없다",
+  "claim": "토마토에는 독이 있다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": null,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피를 마시면 탈수가 온다는 설이 있다",
+  "claim": "커피를 마시면 탈수가 온다",
+  "label": "맞다고 함",
+  "category": "소개",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피를 마시면 탈수가 온다는 설은 틀린 것으로 밝혀졌다",
+  "claim": "커피를 마시면 탈수가 온다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성이 우주에서 보인다는 얘기가 떠돈다",
+  "claim": "만리장성은 우주에서 보인다",
+  "label": "맞다고 함",
+  "category": "소개",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성이 우주에서 보인다는 얘기는 사실이 아니다",
+  "claim": "만리장성은 우주에서 보인다",
+  "label": "아니라고 함",
+  "category": "부정평가",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래는 물고기라는 글 봤어? 그거 가짜뉴스래",
+  "claim": "고래는 물고기다",
+  "label": "아니라고 함",
+  "category": "지시어",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달이 점점 가까워진다는 소문 있잖아. 그건 거짓이야",
+  "claim": "달은 지구에 점점 가까워지고 있다",
+  "label": "아니라고 함",
+  "category": "지시어",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "선풍기 켜고 자면 죽는다는 말 있잖아, 그거 다 미신이래",
+  "claim": "선풍기를 켜고 자면 죽는다",
+  "label": "아니라고 함",
+  "category": "지시어",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "부산이 수도라는 얘기 돌던데 그건 틀린 말이래",
+  "claim": "부산은 수도다",
+  "label": "아니라고 함",
+  "category": "지시어",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신이 자폐 일으킨다는 글이 올라왔는데 그거 허위래",
+  "claim": "백신이 자폐를 일으킨다",
+  "label": "아니라고 함",
+  "category": "지시어",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "서울이 우리나라 수도라는 글 봤어? 그거 헛소문이래",
+  "claim": "서울은 우리나라의 수도다",
+  "label": "아니라고 함",
+  "category": "지시어",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래는 포유류라는 말 들었지? 그거 거짓이라던데",
+  "claim": "고래는 포유류다",
+  "label": "아니라고 함",
+  "category": "지시어",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어가 사람을 알아본다는 영상 떴어. 그거 맞는 얘기래",
+  "claim": "금붕어는 사람을 알아본다",
+  "label": "맞다고 함",
+  "category": "지시어",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래는 물고기가 아니야",
+  "claim": "고래는 물고기다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산은 한라산보다 낮지 않아요",
+  "claim": "후지산은 한라산보다 낮다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑은 서울에 없어",
+  "claim": "에펠탑은 서울에 있다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "부산은 수도가 아니야",
+  "claim": "부산은 수도이다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달은 스스로 빛나지 않는다",
+  "claim": "달은 스스로 빛난다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신은 자폐를 일으키지 않아요",
+  "claim": "백신은 자폐를 일으킨다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성은 달에서 안 보여",
+  "claim": "만리장성은 달에서 보인다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어는 기억을 못 하는 동물이 아님",
+  "claim": "금붕어는 기억을 못 하는 동물이다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피는 키를 작게 만들지 않는다",
+  "claim": "커피는 키를 작게 만든다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "사람은 뇌의 10%만 쓰지는 않는다",
+  "claim": "사람은 뇌의 10%만 쓴다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래는 포유류가 아니야",
+  "claim": "고래는 포유류가 아니다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래는 포유류가 아니야",
+  "claim": "고래는 포유류다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑은 파리에 없어",
+  "claim": "에펠탑은 파리에 없다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑은 파리에 없어",
+  "claim": "에펠탑은 파리에 있다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산은 일본에 있지 않아요",
+  "claim": "후지산은 일본에 있지 않다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산은 일본에 있지 않아요",
+  "claim": "후지산은 일본에 있다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달은 햇빛을 반사하지 않아",
+  "claim": "달은 햇빛을 반사하지 않는다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달은 햇빛을 반사하지 않아",
+  "claim": "달은 햇빛을 반사한다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신은 감염병 예방에 효과가 없어요",
+  "claim": "백신은 감염병 예방에 효과가 없다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신은 감염병 예방에 효과가 없어요",
+  "claim": "백신은 감염병 예방에 효과가 있다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "지구는 둥글지 않아",
+  "claim": "지구는 둥글지 않다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "지구는 둥글지 않아",
+  "claim": "지구는 둥글다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤은 청력을 잃지 않았어",
+  "claim": "베토벤은 청력을 잃지 않았다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤은 청력을 잃지 않았어",
+  "claim": "베토벤은 청력을 잃었다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "서울은 대한민국의 수도가 아님",
+  "claim": "서울은 대한민국의 수도가 아니다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "서울은 대한민국의 수도가 아님",
+  "claim": "서울은 대한민국의 수도이다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란은 1592년에 일어나지 않았어요",
+  "claim": "임진왜란은 1592년에 일어나지 않았다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란은 1592년에 일어나지 않았어요",
+  "claim": "임진왜란은 1592년에 일어났다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "세종대왕은 한글을 만들지 않았다",
+  "claim": "세종대왕은 한글을 만들지 않았다",
+  "label": "맞다고 함",
+  "category": "내용속부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "세종대왕은 한글을 만들지 않았다",
+  "claim": "세종대왕은 한글을 만들었다",
+  "label": "아니라고 함",
+  "category": "내용속부정",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑이 파리에 있다는건사실이아닙니다",
+  "claim": "에펠탑은 파리에 있다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산이 일본에 있다는 건 헛소문이라고 들없어요",
+  "claim": "후지산은 일본에 있다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤이 청력틀 잃었다는 건 지어낸 이야기래요",
+  "claim": "베토벤은 청력을 잃었다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란은 1692년에 터졌없어요",
+  "claim": "임진왜란은 1692년에 터졌다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래는 어류야 학교에서 그러케 배웠없음",
+  "claim": "고래는 어류이다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성은달에서도보인대요",
+  "claim": "만리장성은 달에서 보인다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신 맞으며 자페 온다고 이웃이 그러더라",
+  "claim": "백신을 맞으면 자폐가 온다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달이 햇빛틀 반사해서 빛난다는 건 틀린 설명이래",
+  "claim": "달은 햇빛을 반사해서 빛난다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "서울이 수도라는건거짓말이라던데",
+  "claim": "서울은 대한민국의 수도이다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어 기억력은 3초라고 들없어",
+  "claim": "금붕어의 기억력은 3초이다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑은 런던에 있는 탑이예요 사진으로 바써요",
+  "claim": "에펠탑은 런던에 있다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래가 새끼에게 젖틀 먹인다는 건 잘못 알려진 거예요",
+  "claim": "고래는 새끼에게 젖을 먹인다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개는한번친곳에다시안친다고하더라고요",
+  "claim": "번개는 한 번 친 곳에 다시 치지 않는다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "세종대왕이 한글틀 만들었다는 건 사실이 아님",
+  "claim": "세종대왕이 한글을 만들었다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피틀 마시면 키가 줄어든다고 들없어요",
+  "claim": "커피를 마시면 키가 줄어든다",
+  "label": "맞다고 함",
+  "category": "OCR오타",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란이 조선 시대에 일어났다는건 잘못된상식이야",
+  "claim": "임진왜란은 조선 시대에 일어났다",
+  "label": "아니라고 함",
+  "category": "OCR오타",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "만리장성이 우주에서 보인다는 건 아니라고 하더라",
+  "claim": "만리장성은 우주에서 보인다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "뇌를 10%만 쓴다는 건 틀린 말이라고 들었어요",
+  "claim": "사람은 뇌의 10%만 쓴다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "번개가 같은 곳에 두 번 안 친다는 건 거짓이라던데",
+  "claim": "번개는 같은 곳에 두 번 치지 않는다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "백신이 자폐를 일으킨다는 건 사실이 아니라고 하더라고요",
+  "claim": "백신은 자폐를 일으킨다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "금붕어 기억이 3초뿐이라는 건 틀린 말이라고 배웠어",
+  "claim": "금붕어의 기억은 3초뿐이다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "선풍기 틀고 자면 죽는다는 건 거짓이라고 들었는데",
+  "claim": "선풍기를 틀고 자면 죽는다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "지구가 평평하다는 건 말이 안 된다고 하던데",
+  "claim": "지구는 평평하다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "부산이 수도라는 건 아니라고 하더라",
+  "claim": "부산은 수도이다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "고래가 물고기라는 건 잘못 알려진 거라고 배웠어요",
+  "claim": "고래는 물고기이다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "달이 치즈로 돼 있다는 건 아니라고 하던데",
+  "claim": "달은 치즈로 돼 있다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "후지산이 중국에 있다는 건 거짓이라더라",
+  "claim": "후지산은 중국에 있다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "에펠탑이 런던에 있다는 건 틀린 소리라고 들었어",
+  "claim": "에펠탑은 런던에 있다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "피카소가 모나리자를 그렸다는 건 아니라고 하더라고요",
+  "claim": "피카소가 모나리자를 그렸다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "베토벤이 한국 사람이라는 건 사실이 아니라고 합디다",
+  "claim": "베토벤은 한국 사람이다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "커피 마시면 키 안 큰다는 건 아니라고 하더라",
+  "claim": "커피를 마시면 키가 안 큰다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "임진왜란이 고려 때 일이라는 건 틀렸다고 하던데",
+  "claim": "임진왜란은 고려 시대에 일어났다",
+  "label": "아니라고 함",
+  "category": "들은부정",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "그 에펠탑 말이야, 사실 독일에 있대",
+  "claim": "에펠탑은 독일에 있다",
+  "label": "맞다고 함",
+  "category": "지시어",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "그거 알아? 고래는 사실 포유류래",
+  "claim": "고래는 포유류이다",
+  "label": "맞다고 함",
+  "category": "지시어",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "이 후지산이 한라산보다 낮다더라",
+  "claim": "후지산은 한라산보다 낮다",
+  "label": "맞다고 함",
+  "category": "지시어",
+  "claim_true": false,
+  "source": "writer3"
+ },
+ {
+  "sentence": "저 만리장성 있잖아, 중국 북부에 있대",
+  "claim": "만리장성은 중국 북부에 있다",
+  "label": "맞다고 함",
+  "category": "지시어",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "그 베토벤은 귀가 안 들리는데도 곡을 썼대",
+  "claim": "베토벤은 귀가 안 들리는데도 곡을 썼다",
+  "label": "맞다고 함",
+  "category": "지시어",
+  "claim_true": true,
+  "source": "writer3"
+ },
+ {
+  "sentence": "그 부산 말인데, 거기가 수도라더라",
+  "claim": "부산은 수도이다",
+  "label": "맞다고 함",
+  "category": "지시어",
+  "claim_true": false,
+  "source": "writer3"
+ }
+]

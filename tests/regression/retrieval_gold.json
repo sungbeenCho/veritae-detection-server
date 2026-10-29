@@ -1,0 +1,2054 @@
+[
+ {
+  "id": 1,
+  "expected": "contradiction",
+  "sentence": "백신은 자폐증을 유발한다.",
+  "topic": "백신-자폐",
+  "gold_docs": [
+   "자폐에 대한 논쟁"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 2,
+  "expected": "contradiction",
+  "sentence": "5G는 코로나19를 유발한다.",
+  "topic": "5G-코로나",
+  "gold_docs": [
+   "5G",
+   "코로나19 범유행에 관한 잘못된 정보"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "약함(별도 집계)",
+  "related_docs": [
+   "음모론"
+  ]
+ },
+ {
+  "id": 3,
+  "expected": "contradiction",
+  "sentence": "달 착륙은 조작되었다.",
+  "topic": "달 착륙 조작",
+  "gold_docs": [
+   "달착륙 음모론",
+   "아폴로 11호"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "음모론"
+  ]
+ },
+ {
+  "id": 4,
+  "expected": "contradiction",
+  "sentence": "지구는 평평하다.",
+  "topic": "지구 평평",
+  "gold_docs": [
+   "지평설",
+   "지구"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [
+   "국제지평설연구학회"
+  ],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 5,
+  "expected": "contradiction",
+  "sentence": "소금물은 코로나19를 예방한다.",
+  "topic": "소금물-코로나",
+  "gold_docs": [
+   "코로나바이러스감염증-19"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "약함(별도 집계)",
+  "related_docs": []
+ },
+ {
+  "id": 6,
+  "expected": "contradiction",
+  "sentence": "다음 주에 대지진이 온다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 7,
+  "expected": "contradiction",
+  "sentence": "해당 연예인은 사망했다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 8,
+  "expected": "contradiction",
+  "sentence": "전자레인지는 음식의 영양소를 모두 파괴한다.",
+  "topic": "전자레인지 영양소",
+  "gold_docs": [
+   "전자레인지"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "약함(별도 집계)",
+  "related_docs": []
+ },
+ {
+  "id": 9,
+  "expected": "contradiction",
+  "sentence": "정부는 모든 국민에게 100만원을 지급한다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 10,
+  "expected": "contradiction",
+  "sentence": "인간은 뇌의 10퍼센트만 사용한다.",
+  "topic": "뇌 10%",
+  "gold_docs": [
+   "인간의 뇌"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 11,
+  "expected": "contradiction",
+  "sentence": "선풍기를 틀고 자면 사망한다.",
+  "topic": "선풍기 사망",
+  "gold_docs": [
+   "선풍기 사망설",
+   "한국의 미신"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
+ },
+ {
+  "id": 12,
+  "expected": "contradiction",
+  "sentence": "만리장성은 우주에서 맨눈으로 보인다.",
+  "topic": "만리장성",
+  "gold_docs": [
+   "만리장성"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 14,
+  "expected": "contradiction",
+  "sentence": "이 약은 위험하다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 19,
+  "expected": "contradiction",
+  "sentence": "부산은 대한민국의 수도이다.",
+  "topic": "부산 수도",
+  "gold_docs": [
+   "한국의 수도",
+   "서울특별시"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 20,
+  "expected": "contradiction",
+  "sentence": "물은 섭씨 50도에서 끓는다.",
+  "topic": "물 끓는점",
+  "gold_docs": [
+   "끓는점",
+   "물"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 21,
+  "expected": "entailment",
+  "sentence": "백신은 감염병 예방에 효과적이다.",
+  "topic": "백신-감염병 예방",
+  "gold_docs": [
+   "백신",
+   "예방접종"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 22,
+  "expected": "entailment",
+  "sentence": "내일 서울에 비가 온다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 23,
+  "expected": "entailment",
+  "sentence": "규칙적인 운동은 심혈관 질환 위험을 낮춘다.",
+  "topic": "운동-심혈관",
+  "gold_docs": [
+   "운동 (활동)",
+   "심혈관계 질환"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "약함(별도 집계)",
+  "related_docs": []
+ },
+ {
+  "id": 24,
+  "expected": "entailment",
+  "sentence": "용의자는 체포되었다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 25,
+  "expected": "entailment",
+  "sentence": "흡연은 폐암의 주요 원인이다.",
+  "topic": "흡연-폐암",
+  "gold_docs": [
+   "폐암",
+   "담배가 건강에 미치는 영향"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 26,
+  "expected": "entailment",
+  "sentence": "다음 달부터 최저임금이 인상된다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 27,
+  "expected": "entailment",
+  "sentence": "세종대왕은 한글을 만들었다.",
+  "topic": "세종-훈민정음/한글 창제",
+  "gold_docs": [
+   "훈민정음",
+   "훈민정음의 창제",
+   "세종",
+   "한글"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 28,
+  "expected": "entailment",
+  "sentence": "에베레스트산은 세계에서 가장 높은 산이다.",
+  "topic": "에베레스트",
+  "gold_docs": [
+   "에베레스트산"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 29,
+  "expected": "entailment",
+  "sentence": "구글은 미국 기업이다.",
+  "topic": "구글",
+  "gold_docs": [
+   "구글"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 30,
+  "expected": "entailment",
+  "sentence": "이순신은 임진왜란에 참전했다.",
+  "topic": "이순신-임진왜란 참전",
+  "gold_docs": [
+   "이순신",
+   "임진왜란"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 31,
+  "expected": "entailment",
+  "sentence": "에펠탑은 프랑스에 있다.",
+  "topic": "에펠탑",
+  "gold_docs": [
+   "에펠탑"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 37,
+  "expected": "entailment",
+  "sentence": "세종대왕은 훈민정음을 창제했다.",
+  "topic": "세종-훈민정음/한글 창제",
+  "gold_docs": [
+   "훈민정음",
+   "훈민정음의 창제",
+   "세종",
+   "한글"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 39,
+  "expected": "entailment",
+  "sentence": "대한민국의 수도는 서울이다.",
+  "topic": "대한민국 수도 서울",
+  "gold_docs": [
+   "한국의 수도",
+   "서울특별시",
+   "수도"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 40,
+  "expected": "entailment",
+  "sentence": "이순신은 한산도 대첩에서 승리했다.",
+  "topic": "이순신-한산도",
+  "gold_docs": [
+   "한산도 대첩",
+   "이순신"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 41,
+  "expected": "entailment",
+  "sentence": "물의 끓는점은 1기압에서 섭씨 100도이다.",
+  "topic": "물 끓는점",
+  "gold_docs": [
+   "끓는점",
+   "물"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 42,
+  "expected": "entailment",
+  "sentence": "커피에는 카페인이 들어 있다.",
+  "topic": "커피-카페인",
+  "gold_docs": [
+   "카페인",
+   "커피"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 48,
+  "expected": "contradiction",
+  "sentence": "아폴로 11호의 달 착륙은 조작되었다.",
+  "topic": "달 착륙 조작",
+  "gold_docs": [
+   "달착륙 음모론",
+   "아폴로 11호"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "음모론"
+  ]
+ },
+ {
+  "id": 50,
+  "expected": "contradiction",
+  "sentence": "에펠탑은 영국 런던에 있다.",
+  "topic": "에펠탑",
+  "gold_docs": [
+   "에펠탑"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 51,
+  "expected": "contradiction",
+  "sentence": "세종대왕은 고려의 왕이었다.",
+  "topic": "세종 고려/신라",
+  "gold_docs": [
+   "세종"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [
+   "조선의 역사"
+  ],
+  "gold_status": "확정",
+  "related_docs": [
+   "세조 (조선)"
+  ]
+ },
+ {
+  "id": 52,
+  "expected": "contradiction",
+  "sentence": "한글은 조선 세조 때 만들어졌다.",
+  "topic": "한글-세조",
+  "gold_docs": [
+   "한글",
+   "훈민정음",
+   "훈민정음의 창제"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "세조 (조선)"
+  ]
+ },
+ {
+  "id": 53,
+  "expected": "contradiction",
+  "sentence": "태양은 지구 주위를 돈다.",
+  "topic": "태양-지구",
+  "gold_docs": [
+   "천동설",
+   "지동설",
+   "니콜라우스 코페르니쿠스",
+   "태양"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [
+   "태양 경로"
+  ],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 57,
+  "expected": "contradiction",
+  "sentence": "선풍기틀 틀고 자면 사망하다는 이야기틀 들없어요",
+  "topic": "선풍기 사망",
+  "gold_docs": [
+   "선풍기 사망설",
+   "한국의 미신"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "OCR",
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
+ },
+ {
+  "id": 58,
+  "expected": "contradiction",
+  "sentence": "선풍기를 틀고 자면 사망한다는 이야기를 들었어요.",
+  "topic": "선풍기 사망",
+  "gold_docs": [
+   "선풍기 사망설",
+   "한국의 미신"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
+ },
+ {
+  "id": 59,
+  "expected": "contradiction",
+  "sentence": "만리장성은 우주에서 맨눈으로 보인다고 합니다.",
+  "topic": "만리장성",
+  "gold_docs": [
+   "만리장성"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 60,
+  "expected": "contradiction",
+  "sentence": "사람은 뇌의 10퍼센트만 쓴다고 들었어요.",
+  "topic": "뇌 10%",
+  "gold_docs": [
+   "인간의 뇌"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 61,
+  "expected": "contradiction",
+  "sentence": "백신이 자폐증을 일으킨다더라.",
+  "topic": "백신-자폐",
+  "gold_docs": [
+   "자폐에 대한 논쟁"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 62,
+  "expected": "contradiction",
+  "sentence": "에펠탑은 독일에 있다.",
+  "topic": "에펠탑",
+  "gold_docs": [
+   "에펠탑"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 63,
+  "expected": "contradiction",
+  "sentence": "세종대왕은 신라의 왕이었다.",
+  "topic": "세종 고려/신라",
+  "gold_docs": [
+   "세종"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [
+   "조선의 역사"
+  ],
+  "gold_status": "확정",
+  "related_docs": [
+   "세조 (조선)"
+  ]
+ },
+ {
+  "id": 64,
+  "expected": "contradiction",
+  "sentence": "한국에는 선풍기를 틀고 자면 죽는다는 속설이 있다.",
+  "topic": "선풍기 사망",
+  "gold_docs": [
+   "선풍기 사망설",
+   "한국의 미신"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "소개"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
+ },
+ {
+  "id": 65,
+  "expected": "entailment",
+  "sentence": "만리장성이 우주에서 맨눈으로 보인다는 이야기는 잘못 알려진 것이다.",
+  "topic": "만리장성",
+  "gold_docs": [
+   "만리장성"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "부정"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 66,
+  "expected": "entailment",
+  "sentence": "인간이 뇌의 10퍼센트만 사용한다는 것은 근거 없는 속설이다.",
+  "topic": "뇌 10%",
+  "gold_docs": [
+   "인간의 뇌"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "부정"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 67,
+  "expected": "contradiction",
+  "sentence": "아폴로 11호의 달 착륙이 조작되었다는 음모론이 있다.",
+  "topic": "달 착륙 조작",
+  "gold_docs": [
+   "달착륙 음모론",
+   "아폴로 11호"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "소개"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "음모론"
+  ]
+ },
+ {
+  "id": 68,
+  "expected": "entailment",
+  "sentence": "세종대왕이 훈민정음을 창제했다고 배웠어요.",
+  "topic": "세종-훈민정음/한글 창제",
+  "gold_docs": [
+   "훈민정음",
+   "훈민정음의 창제",
+   "세종",
+   "한글"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 69,
+  "expected": "entailment",
+  "sentence": "에베레스트산이 세계에서 가장 높은 산이라고 들었어요.",
+  "topic": "에베레스트",
+  "gold_docs": [
+   "에베레스트산"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 70,
+  "expected": "entailment",
+  "sentence": "대한민국의 수도는 서을이다",
+  "topic": "대한민국 수도 서울",
+  "gold_docs": [
+   "한국의 수도",
+   "서울특별시",
+   "수도"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "OCR"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 71,
+  "expected": "contradiction",
+  "sentence": "탄산음료를 마시면 뼈가 녹는다.",
+  "topic": "탄산음료-뼈",
+  "gold_docs": [
+   "탄산음료"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "약함(별도 집계)",
+  "related_docs": []
+ },
+ {
+  "id": 72,
+  "expected": "contradiction",
+  "sentence": "아폴로 11호의 달 착륙은 실제로 일어나지 않았다.",
+  "topic": "달 착륙 조작",
+  "gold_docs": [
+   "달착륙 음모론",
+   "아폴로 11호"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "음모론"
+  ]
+ },
+ {
+  "id": 73,
+  "expected": "contradiction",
+  "sentence": "그 소문은 사실이다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 74,
+  "expected": "entailment",
+  "sentence": "이 치료법은 효과가 있다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 77,
+  "expected": "contradiction",
+  "sentence": "대통령이 영상 속 발언을 했다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 78,
+  "expected": "contradiction",
+  "sentence": "수돗물에서 방사능이 검출됐다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 79,
+  "expected": "contradiction",
+  "sentence": "금융감독원은 개인에게 문자로 대출을 권유한다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 80,
+  "expected": "entailment",
+  "sentence": "두 회사는 합병한다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 81,
+  "expected": "contradiction",
+  "sentence": "법원은 피고인에게 유죄를 선고했다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 83,
+  "expected": "contradiction",
+  "sentence": "비타민 C를 다량 섭취하면 감기를 완전히 예방할 수 있다.",
+  "topic": "비타민C-감기",
+  "gold_docs": [
+   "비타민 C"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "약함(별도 집계)",
+  "related_docs": []
+ },
+ {
+  "id": 84,
+  "expected": "entailment",
+  "sentence": "이 사건은 계획된 범행이었다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 85,
+  "expected": "contradiction",
+  "sentence": "해당 기업은 대규모 정리해고를 단행한다.",
+  "topic": "정답 없음(대상 없음·뉴스성)",
+  "gold_docs": [],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "정답 없음",
+  "related_docs": []
+ },
+ {
+  "id": 87,
+  "expected": "contradiction",
+  "sentence": "광화문은 부산에 있다.",
+  "topic": "광화문 위치",
+  "gold_docs": [
+   "광화문"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "광화문광장"
+  ]
+ },
+ {
+  "id": 88,
+  "expected": "contradiction",
+  "sentence": "임진왜란은 1392년에 일어났다.",
+  "topic": "임진왜란 연도",
+  "gold_docs": [
+   "임진왜란"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [
+   "이순신",
+   "조선의 역사"
+  ],
+  "gold_status": "확정",
+  "related_docs": [
+   "한국사 연표",
+   "아시아의 역사"
+  ]
+ },
+ {
+  "id": 89,
+  "expected": "contradiction",
+  "sentence": "피카소는 독일 화가이다.",
+  "topic": "피카소",
+  "gold_docs": [
+   "파블로 피카소"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "스페인의 미술"
+  ]
+ },
+ {
+  "id": 90,
+  "expected": "contradiction",
+  "sentence": "베토벤은 영국에서 태어났다.",
+  "topic": "베토벤",
+  "gold_docs": [
+   "루트비히 판 베토벤"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "모차르트와 베토벤"
+  ]
+ },
+ {
+  "id": 91,
+  "expected": "contradiction",
+  "sentence": "고래는 어류이다.",
+  "topic": "고래",
+  "gold_docs": [
+   "고래"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
+ },
+ {
+  "id": 92,
+  "expected": "contradiction",
+  "sentence": "후지산은 중국에 있다.",
+  "topic": "후지산",
+  "gold_docs": [
+   "후지산"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "환태평양 조산대",
+   "산",
+   "후지",
+   "후지산의 분화사"
+  ]
+ },
+ {
+  "id": 93,
+  "expected": "contradiction",
+  "sentence": "토마토의 원산지는 중국이다.",
+  "topic": "토마토",
+  "gold_docs": [
+   "토마토"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 94,
+  "expected": "contradiction",
+  "sentence": "달은 스스로 빛을 낸다.",
+  "topic": "달 빛",
+  "gold_docs": [
+   "달",
+   "달빛"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 95,
+  "expected": "contradiction",
+  "sentence": "금붕어의 기억력은 3초밖에 되지 않는다.",
+  "topic": "금붕어",
+  "gold_docs": [
+   "금붕어"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 96,
+  "expected": "contradiction",
+  "sentence": "번개는 같은 곳에 두 번 치지 않는다.",
+  "topic": "번개",
+  "gold_docs": [
+   "번개",
+   "카타툼보 번개"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 97,
+  "expected": "contradiction",
+  "sentence": "고래가 물고기라고 들었어요.",
+  "topic": "고래",
+  "gold_docs": [
+   "고래"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [
+   "물고기"
+  ],
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
+ },
+ {
+  "id": 98,
+  "expected": "contradiction",
+  "sentence": "임진왜란이 1392년에 일어났다고 배웠어요.",
+  "topic": "임진왜란 연도",
+  "gold_docs": [
+   "임진왜란"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [
+   "이순신",
+   "조선의 역사"
+  ],
+  "gold_status": "확정",
+  "related_docs": [
+   "한국사 연표",
+   "아시아의 역사"
+  ]
+ },
+ {
+  "id": 99,
+  "expected": "entailment",
+  "sentence": "고래는 포유류이다.",
+  "topic": "고래",
+  "gold_docs": [
+   "고래"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
+ },
+ {
+  "id": 100,
+  "expected": "entailment",
+  "sentence": "피카소는 스페인 출신의 화가이다.",
+  "topic": "피카소",
+  "gold_docs": [
+   "파블로 피카소"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "스페인의 미술"
+  ]
+ },
+ {
+  "id": 101,
+  "expected": "entailment",
+  "sentence": "임진왜란은 1592년에 일어났다.",
+  "topic": "임진왜란 연도",
+  "gold_docs": [
+   "임진왜란"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [
+   "이순신",
+   "조선의 역사"
+  ],
+  "gold_status": "확정",
+  "related_docs": [
+   "한국사 연표",
+   "아시아의 역사"
+  ]
+ },
+ {
+  "id": 102,
+  "expected": "entailment",
+  "sentence": "광화문은 서울에 있다.",
+  "topic": "광화문 위치",
+  "gold_docs": [
+   "광화문"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "광화문광장"
+  ]
+ },
+ {
+  "id": 103,
+  "expected": "entailment",
+  "sentence": "후지산은 일본에서 가장 높은 산이다.",
+  "topic": "후지산",
+  "gold_docs": [
+   "후지산"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "환태평양 조산대",
+   "산",
+   "후지",
+   "후지산의 분화사"
+  ]
+ },
+ {
+  "id": 104,
+  "expected": "entailment",
+  "sentence": "베토벤은 독일의 작곡가이다.",
+  "topic": "베토벤",
+  "gold_docs": [
+   "루트비히 판 베토벤"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "모차르트와 베토벤"
+  ]
+ },
+ {
+  "id": 105,
+  "expected": "entailment",
+  "sentence": "번개가 같은 곳에 두 번 치지 않는다는 말은 사실이 아니다.",
+  "topic": "번개",
+  "gold_docs": [
+   "번개",
+   "카타툼보 번개"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "부정"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 106,
+  "expected": "contradiction",
+  "sentence": "금붕어의 기억력이 3초라는 속설이 있다.",
+  "topic": "금붕어",
+  "gold_docs": [
+   "금붕어"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "소개"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 107,
+  "expected": "contradiction",
+  "sentence": "지구가 평평하다고 주장하는 사람들이 있다.",
+  "topic": "지구 평평",
+  "gold_docs": [
+   "지평설",
+   "지구"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "소개"
+  ],
+  "allowed_docs": [
+   "국제지평설연구학회"
+  ],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 108,
+  "expected": "entailment",
+  "sentence": "고래가 포유류라고 들었어요.",
+  "topic": "고래",
+  "gold_docs": [
+   "고래"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
+ },
+ {
+  "id": 112,
+  "expected": "contradiction",
+  "sentence": "우리 할머니가 그러시는데 여름에 문 닫고 선풍기 켜놓고 자면 죽을 수도 있으니까 꼭 타이머 맞춰놓으래요",
+  "topic": "선풍기 사망",
+  "gold_docs": [
+   "선풍기 사망설",
+   "한국의 미신"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
+ },
+ {
+  "id": 113,
+  "expected": "contradiction",
+  "sentence": "만리장성은 달에서도 맨눈으로 보인다던데 진짜 대단하다",
+  "topic": "만리장성",
+  "gold_docs": [
+   "만리장성"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 114,
+  "expected": "contradiction",
+  "sentence": "사람은 평생 뇌의 10%밖에 못 쓴대요",
+  "topic": "뇌 10%",
+  "gold_docs": [
+   "인간의 뇌"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 115,
+  "expected": "contradiction",
+  "sentence": "백신 맞으면 자폐 걸린다고 맘카페에서 봤어요",
+  "topic": "백신-자폐",
+  "gold_docs": [
+   "자폐에 대한 논쟁"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 116,
+  "expected": "contradiction",
+  "sentence": "부산이 우리나라 수도라고 하더라고요",
+  "topic": "부산 수도",
+  "gold_docs": [
+   "한국의 수도",
+   "서울특별시"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 117,
+  "expected": "contradiction",
+  "sentence": "요즘 애들은 잘 모르는데 에펠탑은 원래 영국 런던에 세워진 탑이래",
+  "topic": "에펠탑",
+  "gold_docs": [
+   "에펠탑"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 118,
+  "expected": "contradiction",
+  "sentence": "세종대왕은 고려 시대 왕이잖아",
+  "topic": "세종 고려/신라",
+  "gold_docs": [
+   "세종"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [
+   "조선의 역사"
+  ],
+  "gold_status": "확정",
+  "related_docs": [
+   "세조 (조선)"
+  ]
+ },
+ {
+  "id": 119,
+  "expected": "contradiction",
+  "sentence": "한글은 세조가 만들었다고 배웠어요",
+  "topic": "한글-세조",
+  "gold_docs": [
+   "한글",
+   "훈민정음",
+   "훈민정음의 창제"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "세조 (조선)"
+  ]
+ },
+ {
+  "id": 120,
+  "expected": "contradiction",
+  "sentence": "임진왜란은 1392년에 터졌어",
+  "topic": "임진왜란 연도",
+  "gold_docs": [
+   "임진왜란"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [
+   "이순신",
+   "조선의 역사"
+  ],
+  "gold_status": "확정",
+  "related_docs": [
+   "한국사 연표",
+   "아시아의 역사"
+  ]
+ },
+ {
+  "id": 121,
+  "expected": "contradiction",
+  "sentence": "피카소가 독일 사람이래",
+  "topic": "피카소",
+  "gold_docs": [
+   "파블로 피카소"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "스페인의 미술"
+  ]
+ },
+ {
+  "id": 122,
+  "expected": "contradiction",
+  "sentence": "베토벤은 영국에서 태어났다고 하더라",
+  "topic": "베토벤",
+  "gold_docs": [
+   "루트비히 판 베토벤"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "모차르트와 베토벤"
+  ]
+ },
+ {
+  "id": 123,
+  "expected": "contradiction",
+  "sentence": "고래는 물고기니까 아가미로 숨 쉬는 거야",
+  "topic": "고래",
+  "gold_docs": [
+   "고래"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [
+   "물고기"
+  ],
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
+ },
+ {
+  "id": 124,
+  "expected": "contradiction",
+  "sentence": "후지산이 중국에 있는 산이라던데",
+  "topic": "후지산",
+  "gold_docs": [
+   "후지산"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "환태평양 조산대",
+   "산",
+   "후지",
+   "후지산의 분화사"
+  ]
+ },
+ {
+  "id": 125,
+  "expected": "contradiction",
+  "sentence": "달은 스스로 빛을 내서 밤에 밝은 거래",
+  "topic": "달 빛",
+  "gold_docs": [
+   "달",
+   "달빛"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 126,
+  "expected": "contradiction",
+  "sentence": "토마토 원산지는 중국이래요",
+  "topic": "토마토",
+  "gold_docs": [
+   "토마토"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 127,
+  "expected": "contradiction",
+  "sentence": "지구는 사실 평평한데 다들 속고 있는 거래",
+  "topic": "지구 평평",
+  "gold_docs": [
+   "지평설",
+   "지구"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [
+   "국제지평설연구학회"
+  ],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 128,
+  "expected": "contradiction",
+  "sentence": "선풍기틀 켜고 자면 죽는다고 들없어요",
+  "topic": "선풍기 사망",
+  "gold_docs": [
+   "선풍기 사망설",
+   "한국의 미신"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "OCR",
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
+ },
+ {
+  "id": 129,
+  "expected": "contradiction",
+  "sentence": "만리장성은 달에서도 보인다는 애기틀 들없어요",
+  "topic": "만리장성",
+  "gold_docs": [
+   "만리장성"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "OCR",
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 130,
+  "expected": "contradiction",
+  "sentence": "백신 맞으면 자폐가 생긴다고 들없어요",
+  "topic": "백신-자폐",
+  "gold_docs": [
+   "자폐에 대한 논쟁"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "OCR",
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 131,
+  "expected": "entailment",
+  "sentence": "선풍기 틀고 자면 죽는다는 건 다 미신이래요, 걱정 안 해도 돼요",
+  "topic": "선풍기 사망",
+  "gold_docs": [
+   "선풍기 사망설",
+   "한국의 미신"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "부정",
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
+ },
+ {
+  "id": 132,
+  "expected": "entailment",
+  "sentence": "만리장성이 우주에서 맨눈으로 보인다는 건 사실이 아니라고 하더라고요",
+  "topic": "만리장성",
+  "gold_docs": [
+   "만리장성"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "부정",
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 133,
+  "expected": "entailment",
+  "sentence": "뇌를 10%만 쓴다는 얘기는 잘못 알려진 거래요",
+  "topic": "뇌 10%",
+  "gold_docs": [
+   "인간의 뇌"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "부정",
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 134,
+  "expected": "entailment",
+  "sentence": "백신이 자폐를 일으킨다는 주장은 근거가 없는 것으로 밝혀졌다",
+  "topic": "백신-자폐",
+  "gold_docs": [
+   "자폐에 대한 논쟁"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "부정"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 135,
+  "expected": "entailment",
+  "sentence": "번개가 같은 곳에 두 번 안 친다는 말은 사실이 아니야",
+  "topic": "번개",
+  "gold_docs": [
+   "번개",
+   "카타툼보 번개"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "부정"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 136,
+  "expected": "contradiction",
+  "sentence": "지구가 평평하다고 주장하는 사람들이 아직도 있대",
+  "topic": "지구 평평",
+  "gold_docs": [
+   "지평설",
+   "지구"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어",
+   "소개"
+  ],
+  "allowed_docs": [
+   "국제지평설연구학회"
+  ],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 137,
+  "expected": "entailment",
+  "sentence": "고래를 물고기로 아는 사람이 많은데 고래는 포유류예요",
+  "topic": "고래",
+  "gold_docs": [
+   "고래"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [
+   "물고기"
+  ],
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
+ },
+ {
+  "id": 138,
+  "expected": "entailment",
+  "sentence": "금붕어 기억력이 3초라는 건 근거 없는 속설이라던데",
+  "topic": "금붕어",
+  "gold_docs": [
+   "금붕어"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "부정",
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 139,
+  "expected": "contradiction",
+  "sentence": "달 착륙이 조작됐다는 음모론이 있다",
+  "topic": "달 착륙 조작",
+  "gold_docs": [
+   "달착륙 음모론",
+   "아폴로 11호"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "소개"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "음모론"
+  ]
+ },
+ {
+  "id": 140,
+  "expected": "entailment",
+  "sentence": "선풍기 사망설은 미신이라는 이야기틀 들없어요",
+  "topic": "선풍기 사망",
+  "gold_docs": [
+   "선풍기 사망설",
+   "한국의 미신"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "OCR",
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "미신"
+  ]
+ },
+ {
+  "id": 141,
+  "expected": "entailment",
+  "sentence": "뇌틀 10%만 쓴다는 건 잘못 알려진 거래요",
+  "topic": "뇌 10%",
+  "gold_docs": [
+   "인간의 뇌"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "OCR",
+   "부정",
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 142,
+  "expected": "entailment",
+  "sentence": "세종대왕이 훈민정음을 만드셨잖아요",
+  "topic": "세종-훈민정음/한글 창제",
+  "gold_docs": [
+   "훈민정음",
+   "훈민정음의 창제",
+   "세종",
+   "한글"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 143,
+  "expected": "entailment",
+  "sentence": "에펠탑은 프랑스 파리에 있어요",
+  "topic": "에펠탑",
+  "gold_docs": [
+   "에펠탑"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 144,
+  "expected": "entailment",
+  "sentence": "고래는 폐로 숨을 쉰다고 배웠어요",
+  "topic": "고래",
+  "gold_docs": [
+   "고래"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "한국의 포유동물",
+   "이빨고래"
+  ]
+ },
+ {
+  "id": 145,
+  "expected": "entailment",
+  "sentence": "임진왜란은 1592년에 일어났대요",
+  "topic": "임진왜란 연도",
+  "gold_docs": [
+   "임진왜란"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [
+   "이순신",
+   "조선의 역사"
+  ],
+  "gold_status": "확정",
+  "related_docs": [
+   "한국사 연표",
+   "아시아의 역사"
+  ]
+ },
+ {
+  "id": 146,
+  "expected": "entailment",
+  "sentence": "서울이 대한민국 수도잖아요",
+  "topic": "대한민국 수도 서울",
+  "gold_docs": [
+   "한국의 수도",
+   "서울특별시",
+   "수도"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 147,
+  "expected": "entailment",
+  "sentence": "피카소는 스페인 출신 화가래",
+  "topic": "피카소",
+  "gold_docs": [
+   "파블로 피카소"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "스페인의 미술"
+  ]
+ },
+ {
+  "id": 148,
+  "expected": "entailment",
+  "sentence": "베토벤은 독일 본에서 태어났다고 들었어요",
+  "topic": "베토벤",
+  "gold_docs": [
+   "루트비히 판 베토벤"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "모차르트와 베토벤"
+  ]
+ },
+ {
+  "id": 149,
+  "expected": "entailment",
+  "sentence": "후지산은 일본에서 제일 높은 산이에요",
+  "topic": "후지산",
+  "gold_docs": [
+   "후지산"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "환태평양 조산대",
+   "산",
+   "후지",
+   "후지산의 분화사"
+  ]
+ },
+ {
+  "id": 150,
+  "expected": "entailment",
+  "sentence": "광화문은 서울 종로구에 있다",
+  "topic": "광화문 위치",
+  "gold_docs": [
+   "광화문"
+  ],
+  "key_phrases": [],
+  "tags": [],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": [
+   "광화문광장"
+  ]
+ },
+ {
+  "id": 151,
+  "expected": "entailment",
+  "sentence": "달은 햇빛을 반사해서 빛나는 거래",
+  "topic": "달 빛",
+  "gold_docs": [
+   "달",
+   "달빛"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ },
+ {
+  "id": 152,
+  "expected": "entailment",
+  "sentence": "토마토는 원래 남아메리카가 원산지래요",
+  "topic": "토마토",
+  "gold_docs": [
+   "토마토"
+  ],
+  "key_phrases": [],
+  "tags": [
+   "전언·구어"
+  ],
+  "allowed_docs": [],
+  "gold_status": "확정",
+  "related_docs": []
+ }
+]

@@ -1,0 +1,562 @@
+[
+ {
+  "expected": "contradiction",
+  "category": "직접단언",
+  "sentence": "펭귄은 북극에서 살아가는 새야.",
+  "fact": "펭귄은 북극에 산다",
+  "fact_true": false,
+  "note": "펭귄은 남반구에 분포"
+ },
+ {
+  "expected": "contradiction",
+  "category": "직접단언",
+  "sentence": "박쥐는 새의 한 종류예요.",
+  "fact": "박쥐는 조류이다",
+  "fact_true": false,
+  "note": "박쥐는 포유류"
+ },
+ {
+  "expected": "contradiction",
+  "category": "직접단언",
+  "sentence": "백제의 수도는 경주였습니다.",
+  "fact": "백제의 수도는 경주였다",
+  "fact_true": false,
+  "note": "경주는 신라의 수도"
+ },
+ {
+  "expected": "contradiction",
+  "category": "직접단언",
+  "sentence": "자유의 여신상은 영국 런던에 서 있잖아.",
+  "fact": "자유의 여신상은 영국 런던에 있다",
+  "fact_true": false,
+  "note": "미국 뉴욕에 있음"
+ },
+ {
+  "expected": "contradiction",
+  "category": "직접단언",
+  "sentence": "개구리는 파충류에 속한단다.",
+  "fact": "개구리는 파충류이다",
+  "fact_true": false,
+  "note": "양서류"
+ },
+ {
+  "expected": "contradiction",
+  "category": "직접단언",
+  "sentence": "프랑스 혁명은 1689년에 일어났어요.",
+  "fact": "프랑스 혁명은 1689년에 일어났다",
+  "fact_true": false,
+  "note": "1789년"
+ },
+ {
+  "expected": "contradiction",
+  "category": "직접단언",
+  "sentence": "나이아가라 폭포는 유럽에 있음.",
+  "fact": "나이아가라 폭포는 유럽에 있다",
+  "fact_true": false,
+  "note": "북아메리카(미국·캐나다 국경)"
+ },
+ {
+  "expected": "contradiction",
+  "category": "직접단언",
+  "sentence": "낙동강은 서울을 가로질러 흐르는 강이거든.",
+  "fact": "낙동강은 서울을 가로질러 흐른다",
+  "fact_true": false,
+  "note": "서울을 지나는 강은 한강"
+ },
+ {
+  "expected": "entailment",
+  "category": "직접단언",
+  "sentence": "제주도는 우리나라에서 가장 큰 섬이야.",
+  "fact": "제주도는 대한민국에서 가장 큰 섬이다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "직접단언",
+  "sentence": "박쥐는 포유류에 속합니다.",
+  "fact": "박쥐는 포유류이다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "직접단언",
+  "sentence": "신라의 수도는 경주였어요.",
+  "fact": "신라의 수도는 경주였다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "직접단언",
+  "sentence": "자유의 여신상은 미국 뉴욕에 있잖아.",
+  "fact": "자유의 여신상은 미국 뉴욕에 있다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "직접단언",
+  "sentence": "개구리는 양서류거든.",
+  "fact": "개구리는 양서류이다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "직접단언",
+  "sentence": "사하라 사막은 아프리카 북부에 펼쳐져 있어.",
+  "fact": "사하라 사막은 아프리카 북부에 있다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "직접단언",
+  "sentence": "알프스 산맥은 유럽에 걸쳐 있음.",
+  "fact": "알프스 산맥은 유럽에 있다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "직접단언",
+  "sentence": "대한민국의 화폐 단위는 원이에요.",
+  "fact": "대한민국의 화폐 단위는 원이다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언",
+  "sentence": "달팽이는 곤충이라더라.",
+  "fact": "달팽이는 곤충이다",
+  "fact_true": false,
+  "note": "연체동물"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언",
+  "sentence": "인도 수도는 뭄바이래.",
+  "fact": "인도의 수도는 뭄바이이다",
+  "fact_true": false,
+  "note": "뉴델리"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언",
+  "sentence": "한강이 부산을 지나 바다로 간다던데.",
+  "fact": "한강은 부산을 지나 바다로 흐른다",
+  "fact_true": false,
+  "note": "한강은 서울을 지나 서해로 흐름"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언",
+  "sentence": "아마존 열대우림은 아프리카에 있다고 하던데요.",
+  "fact": "아마존 열대우림은 아프리카에 있다",
+  "fact_true": false,
+  "note": "남아메리카"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언",
+  "sentence": "셰익스피어가 프랑스 극작가였다고 들었어요.",
+  "fact": "셰익스피어는 프랑스의 극작가였다",
+  "fact_true": false,
+  "note": "영국 극작가"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언",
+  "sentence": "대한민국 화폐 단위가 엔이라던데?",
+  "fact": "대한민국의 화폐 단위는 엔이다",
+  "fact_true": false,
+  "note": "원"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언",
+  "sentence": "에이브러햄 링컨은 영국 총리였대.",
+  "fact": "에이브러햄 링컨은 영국 총리였다",
+  "fact_true": false,
+  "note": "미국 대통령"
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언",
+  "sentence": "구석기 시대가 신석기 시대보다 나중이라고 하더라고요.",
+  "fact": "구석기 시대는 신석기 시대보다 나중이다",
+  "fact_true": false,
+  "note": "구석기가 먼저"
+ },
+ {
+  "expected": "entailment",
+  "category": "전언",
+  "sentence": "오징어는 연체동물이래.",
+  "fact": "오징어는 연체동물이다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "전언",
+  "sentence": "스페인 수도가 마드리드라고 하더라고요.",
+  "fact": "스페인의 수도는 마드리드이다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "전언",
+  "sentence": "셰익스피어는 영국 극작가였다던데요.",
+  "fact": "셰익스피어는 영국의 극작가였다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "전언",
+  "sentence": "태국 수도는 방콕이라던데.",
+  "fact": "태국의 수도는 방콕이다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "전언",
+  "sentence": "안데스 산맥은 남아메리카에 있대요.",
+  "fact": "안데스 산맥은 남아메리카에 있다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "전언",
+  "sentence": "워싱턴이 미국 초대 대통령이었다더라.",
+  "fact": "조지 워싱턴은 미국의 초대 대통령이었다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "전언",
+  "sentence": "한강은 서울을 가로질러 흐른대.",
+  "fact": "한강은 서울을 가로질러 흐른다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "전언",
+  "sentence": "청동기 시대가 철기 시대보다 앞선다고 들었어.",
+  "fact": "청동기 시대는 철기 시대보다 앞선다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "부정",
+  "sentence": "박쥐는 조류가 아니에요.",
+  "fact": "박쥐는 조류이다",
+  "fact_true": false,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "부정",
+  "sentence": "인도의 수도는 뭄바이가 아니야.",
+  "fact": "인도의 수도는 뭄바이이다",
+  "fact_true": false,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "부정",
+  "sentence": "펭귄은 북극에 살지 않아요.",
+  "fact": "펭귄은 북극에 산다",
+  "fact_true": false,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "부정",
+  "sentence": "개구리가 파충류인 건 아니잖아.",
+  "fact": "개구리는 파충류이다",
+  "fact_true": false,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "부정",
+  "sentence": "백제의 수도가 경주였던 적은 없어.",
+  "fact": "백제의 수도는 경주였다",
+  "fact_true": false,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "부정",
+  "sentence": "자유의 여신상은 런던에 있지 않습니다.",
+  "fact": "자유의 여신상은 런던에 있다",
+  "fact_true": false,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "부정",
+  "sentence": "제주도는 우리나라에서 가장 큰 섬이 아니야.",
+  "fact": "제주도는 대한민국에서 가장 큰 섬이다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "부정",
+  "sentence": "사하라 사막은 아프리카에 있지 않아요.",
+  "fact": "사하라 사막은 아프리카에 있다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "부정",
+  "sentence": "오징어는 연체동물이 아니거든.",
+  "fact": "오징어는 연체동물이다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "부정",
+  "sentence": "신라의 수도는 경주가 아니었어요.",
+  "fact": "신라의 수도는 경주였다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "부정",
+  "sentence": "북극곰은 북극에 살지 않아.",
+  "fact": "북극곰은 북극에 산다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "부정",
+  "sentence": "한강은 서울을 지나지 않음.",
+  "fact": "한강은 서울을 지난다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "전언부정",
+  "sentence": "달팽이가 곤충이라는 건 틀린 말이래.",
+  "fact": "달팽이는 곤충이다",
+  "fact_true": false,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "전언부정",
+  "sentence": "프랑스 혁명이 1689년에 일어났다는 건 사실이 아니라던데요.",
+  "fact": "프랑스 혁명은 1689년에 일어났다",
+  "fact_true": false,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "전언부정",
+  "sentence": "나이아가라 폭포가 유럽에 있다는 건 맞는 말이 아니라고 하더라.",
+  "fact": "나이아가라 폭포는 유럽에 있다",
+  "fact_true": false,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "전언부정",
+  "sentence": "한강이 부산을 지난다는 건 틀린 말이라던데.",
+  "fact": "한강은 부산을 지난다",
+  "fact_true": false,
+  "note": ""
+ },
+ {
+  "expected": "entailment",
+  "category": "전언부정",
+  "sentence": "구석기 시대가 신석기 시대보다 나중이라는 말은 틀렸대요.",
+  "fact": "구석기 시대는 신석기 시대보다 나중이다",
+  "fact_true": false,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언부정",
+  "sentence": "펭귄이 남극에 산다는 건 사실이 아니라던데.",
+  "fact": "펭귄은 남극에 산다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언부정",
+  "sentence": "박쥐가 포유류라는 건 틀린 말이래요.",
+  "fact": "박쥐는 포유류이다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언부정",
+  "sentence": "자유의 여신상이 뉴욕에 있다는 건 사실이 아니라고 하더라고요.",
+  "fact": "자유의 여신상은 뉴욕에 있다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언부정",
+  "sentence": "개구리가 양서류라는 건 맞는 말이 아니래.",
+  "fact": "개구리는 양서류이다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언부정",
+  "sentence": "워싱턴이 미국 초대 대통령이었다는 건 틀린 이야기라던데요.",
+  "fact": "조지 워싱턴은 미국의 초대 대통령이었다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "전언부정",
+  "sentence": "태국 수도가 방콕이라는 건 사실이 아니라더라.",
+  "fact": "태국의 수도는 방콕이다",
+  "fact_true": true,
+  "note": ""
+ },
+ {
+  "expected": "contradiction",
+  "category": "오타",
+  "sentence": "프랑스 혁명은 1689년에 일어났없어",
+  "fact": "프랑스 혁명은 1689년에 일어났다",
+  "fact_true": false,
+  "note": "었→없"
+ },
+ {
+  "expected": "contradiction",
+  "category": "오타",
+  "sentence": "인도 수도는 뭄바이라고 들없어요",
+  "fact": "인도의 수도는 뭄바이이다",
+  "fact_true": false,
+  "note": "었→없"
+ },
+ {
+  "expected": "contradiction",
+  "category": "오타",
+  "sentence": "나이아가라 폭포틀 유럽에서 볼 수 있어",
+  "fact": "나이아가라 폭포는 유럽에 있다",
+  "fact_true": false,
+  "note": "를/는→틀"
+ },
+ {
+  "expected": "contradiction",
+  "category": "오타",
+  "sentence": "개구리는 파충류에 소하는 동물입니다",
+  "fact": "개구리는 파충류이다",
+  "fact_true": false,
+  "note": "속→소 받침 빠짐"
+ },
+ {
+  "expected": "entailment",
+  "category": "오타",
+  "sentence": "제주도틀 우리나라에서 가장 큰 섬이라고 들없어",
+  "fact": "제주도는 대한민국에서 가장 큰 섬이다",
+  "fact_true": true,
+  "note": "를→틀, 었→없"
+ },
+ {
+  "expected": "entailment",
+  "category": "오타",
+  "sentence": "신라의 수도는 경주였없어요",
+  "fact": "신라의 수도는 경주였다",
+  "fact_true": true,
+  "note": "었→없"
+ },
+ {
+  "expected": "entailment",
+  "category": "오타",
+  "sentence": "오징어는 연체동물에 소하는 동물이야",
+  "fact": "오징어는 연체동물이다",
+  "fact_true": true,
+  "note": "속→소 받침 빠짐"
+ },
+ {
+  "expected": "entailment",
+  "category": "오타",
+  "sentence": "사하라 사막은 아프리카 북부에 잇어요",
+  "fact": "사하라 사막은 아프리카 북부에 있다",
+  "fact_true": true,
+  "note": "있→잇 받침 오류"
+ },
+ {
+  "expected": "entailment",
+  "category": "오타",
+  "sentence": "박쥐틀 포유류라고 하더라",
+  "fact": "박쥐는 포유류이다",
+  "fact_true": true,
+  "note": "는→틀"
+ },
+ {
+  "expected": "neutral",
+  "category": "사실없음",
+  "sentence": "점심에 김치찌개 먹었는데 너무 매웠어.",
+  "fact": "",
+  "fact_true": null,
+  "note": "따질 사실 없음"
+ },
+ {
+  "expected": "neutral",
+  "category": "사실없음",
+  "sentence": "이번 주 금요일에 같이 저녁 먹을래요?",
+  "fact": "",
+  "fact_true": null,
+  "note": "따질 사실 없음"
+ },
+ {
+  "expected": "neutral",
+  "category": "사실없음",
+  "sentence": "덕분에 잘 해결됐어요, 고마워요!",
+  "fact": "",
+  "fact_true": null,
+  "note": "따질 사실 없음"
+ },
+ {
+  "expected": "neutral",
+  "category": "사실없음",
+  "sentence": "새로 산 신발이 좀 작아서 걱정이야.",
+  "fact": "",
+  "fact_true": null,
+  "note": "따질 사실 없음"
+ },
+ {
+  "expected": "neutral",
+  "category": "사실없음",
+  "sentence": "버스 정류장에서 기다리는 중이에요.",
+  "fact": "",
+  "fact_true": null,
+  "note": "따질 사실 없음"
+ },
+ {
+  "expected": "neutral",
+  "category": "사실없음",
+  "sentence": "내일 아침에 일찍 일어나야 하는데 벌써 졸려.",
+  "fact": "",
+  "fact_true": null,
+  "note": "따질 사실 없음"
+ }
+]

@@ -4,10 +4,13 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.routers import video as video_router
+from app.services import text_judge
 from app.services.dfdc_runner import DfdcInferenceError, DfdcResult, NoFaceDetectedError
 from app.services.gpu_queue import GpuQueueFullError
 from app.services.misinfo_runner import MisinfoInferenceError
+from app.services.scam_judge import ScamJudgeError
 from app.services.scam_runner import ScamInferenceError, ScamResult
+from tests.text_judge_stubs import FAKE_SCAM_JSON, stub_text_judge  # noqa: F401
 
 client = TestClient(app)
 
@@ -31,7 +34,7 @@ def test_process_video_returns_score_evidence_and_evidence_image(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        video_router, "run_scam_inference_video", lambda data, filename: ScamResult(None, [], [])
+        video_router, "run_scam_inference_video", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -55,7 +58,7 @@ def test_process_video_with_null_evidence_image(monkeypatch):
         lambda data, filename: DfdcResult(score=0.1, evidence=[], evidence_image=None),
     )
     monkeypatch.setattr(
-        video_router, "run_scam_inference_video", lambda data, filename: ScamResult(None, [], [])
+        video_router, "run_scam_inference_video", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -91,7 +94,7 @@ def test_process_video_returns_502_on_inference_failure(monkeypatch):
 
     monkeypatch.setattr(video_router, "run_dfdc_inference", raise_error)
     monkeypatch.setattr(
-        video_router, "run_scam_inference_video", lambda data, filename: ScamResult(None, [], [])
+        video_router, "run_scam_inference_video", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -108,7 +111,7 @@ def test_process_video_returns_200_with_error_code_when_no_face_detected_and_no_
 
     monkeypatch.setattr(video_router, "run_dfdc_inference", raise_no_face)
     monkeypatch.setattr(
-        video_router, "run_scam_inference_video", lambda data, filename: ScamResult(None, [], [])
+        video_router, "run_scam_inference_video", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -133,10 +136,10 @@ def test_process_video_keeps_scam_detection_when_no_face_detected(monkeypatch):
     monkeypatch.setattr(
         video_router,
         "run_scam_inference_video",
-        lambda data, filename: ScamResult(0.82, [{"sentence": "계좌번호를 알려주세요", "score": 0.95}], ["계좌번호를 알려주세요"]),
+        lambda data, filename: ScamResult(["계좌번호를 알려주세요"]),
     )
     monkeypatch.setattr(
-        video_router,
+        text_judge,
         "run_misinfo_inference",
         lambda sentences: type("R", (), {"model": "qwen3.5:4b", "wiki_snapshot": "2026-09-01", "claims": []})(),
     )
@@ -150,11 +153,7 @@ def test_process_video_keeps_scam_detection_when_no_face_detected(monkeypatch):
     body = response.json()
     assert body["ai_detection"] is None
     assert body["error_code"] == "NO_FACE_DETECTED"
-    assert body["scam_detection"] == {
-        "model": "lilju",
-        "score": 0.82,
-        "evidence": [{"sentence": "계좌번호를 알려주세요", "score": 0.95}],
-    }
+    assert body["scam_detection"] == FAKE_SCAM_JSON
 
 
 def test_process_video_returns_scam_detection_when_present(monkeypatch):
@@ -166,10 +165,10 @@ def test_process_video_returns_scam_detection_when_present(monkeypatch):
     monkeypatch.setattr(
         video_router,
         "run_scam_inference_video",
-        lambda data, filename: ScamResult(0.82, [{"sentence": "계좌번호를 알려주세요", "score": 0.95}], ["계좌번호를 알려주세요"]),
+        lambda data, filename: ScamResult(["계좌번호를 알려주세요"]),
     )
     monkeypatch.setattr(
-        video_router,
+        text_judge,
         "run_misinfo_inference",
         lambda sentences: type("R", (), {"model": "qwen3.5:4b", "wiki_snapshot": "2026-09-01", "claims": []})(),
     )
@@ -180,11 +179,7 @@ def test_process_video_returns_scam_detection_when_present(monkeypatch):
     )
 
     assert response.status_code == 200
-    assert response.json()["scam_detection"] == {
-        "model": "lilju",
-        "score": 0.82,
-        "evidence": [{"sentence": "계좌번호를 알려주세요", "score": 0.95}],
-    }
+    assert response.json()["scam_detection"] == FAKE_SCAM_JSON
 
 
 def test_process_video_omits_scam_detection_when_no_text(monkeypatch):
@@ -194,7 +189,7 @@ def test_process_video_omits_scam_detection_when_no_text(monkeypatch):
         lambda data, filename: DfdcResult(score=0.91, evidence=[], evidence_image=None),
     )
     monkeypatch.setattr(
-        video_router, "run_scam_inference_video", lambda data, filename: ScamResult(None, [], [])
+        video_router, "run_scam_inference_video", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
@@ -236,10 +231,10 @@ def test_process_video_includes_misinformation_detection_when_refuted(monkeypatc
     monkeypatch.setattr(
         video_router,
         "run_scam_inference_video",
-        lambda data, filename: ScamResult(None, [], ["선풍기를 틀고 자면 사망한다."]),
+        lambda data, filename: ScamResult(["선풍기를 틀고 자면 사망한다."]),
     )
     monkeypatch.setattr(
-        video_router,
+        text_judge,
         "run_misinfo_inference",
         lambda sentences: type(
             "R", (), {"model": "qwen3.5:4b", "wiki_snapshot": "2026-09-01",
@@ -267,11 +262,11 @@ def test_process_video_omits_misinformation_detection_when_no_sentences(monkeypa
         lambda data, filename: DfdcResult(score=0.1, evidence=[], evidence_image=None),
     )
     monkeypatch.setattr(
-        video_router, "run_scam_inference_video", lambda data, filename: ScamResult(None, [], [])
+        video_router, "run_scam_inference_video", lambda data, filename: ScamResult([])
     )
     called = []
     monkeypatch.setattr(
-        video_router, "run_misinfo_inference", lambda sentences: called.append(sentences)
+        text_judge, "run_misinfo_inference", lambda sentences: called.append(sentences)
     )
 
     response = client.post(
@@ -292,13 +287,13 @@ def test_process_video_returns_502_when_misinfo_inference_fails(monkeypatch):
     monkeypatch.setattr(
         video_router,
         "run_scam_inference_video",
-        lambda data, filename: ScamResult(None, [], ["아무 문장"]),
+        lambda data, filename: ScamResult(["아무 문장"]),
     )
 
     def raise_error(sentences):
         raise MisinfoInferenceError("boom")
 
-    monkeypatch.setattr(video_router, "run_misinfo_inference", raise_error)
+    monkeypatch.setattr(text_judge, "run_misinfo_inference", raise_error)
 
     response = client.post(
         "/process/video",
@@ -308,13 +303,39 @@ def test_process_video_returns_502_when_misinfo_inference_fails(monkeypatch):
     assert response.status_code == 502
 
 
+def test_process_video_returns_502_when_scam_judgment_fails(monkeypatch):
+    monkeypatch.setattr(
+        video_router,
+        "run_dfdc_inference",
+        lambda data, filename: DfdcResult(score=0.1, evidence=[], evidence_image=None),
+    )
+    monkeypatch.setattr(
+        video_router,
+        "run_scam_inference_video",
+        lambda data, filename: ScamResult(["아무 문장"]),
+    )
+
+    def raise_error(sentences):
+        raise ScamJudgeError("boom")
+
+    monkeypatch.setattr(text_judge, "judge_scam", raise_error)
+
+    response = client.post(
+        "/process/video",
+        files={"file": ("test.mp4", io.BytesIO(b"fake-video-bytes"), "video/mp4")},
+    )
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "사기감지 처리 중 오류가 발생했습니다."
+
+
 def test_process_video_returns_503_when_gpu_queue_full(monkeypatch):
     def raise_full(data, filename):
         raise GpuQueueFullError("GPU 자원 큐가 가득 찼습니다")
 
     monkeypatch.setattr(video_router, "run_dfdc_inference", raise_full)
     monkeypatch.setattr(
-        video_router, "run_scam_inference_video", lambda data, filename: ScamResult(None, [], [])
+        video_router, "run_scam_inference_video", lambda data, filename: ScamResult([])
     )
 
     response = client.post(
